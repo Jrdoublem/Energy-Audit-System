@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../../layouts/AppLayout';
-import { useFactory } from '../../context/factoryStore.js';
+import { matchesFactory, useFactory } from '../../context/factoryStore.js';
+import { GlassSearchInput, GlassSelect, ShellActionButton } from '../../components/ui';
 import CalcModal from './CalcModal';
 import {
   ChevronDownIcon,
@@ -17,20 +18,11 @@ import {
   PencilIcon,
   PlusIcon,
   TrashIcon,
-  SearchIcon,
   SnowflakeIcon,
   UserIcon,
 } from '../../components/icons';
-
-const INITIAL_CATEGORIES = [
-  { key: 'all', label: 'ALL', icon: ClipboardIcon },
-  { key: 'chiller', label: 'Chiller', icon: SnowflakeIcon },
-  { key: 'compressor', label: 'Compressor', icon: CompressorIcon },
-  { key: 'pump', label: 'Pump', icon: DropletIcon },
-  { key: 'boiler', label: 'Boiler', icon: FlameIcon },
-  { key: 'cooling', label: 'Cooling Tower', icon: CoolingTowerIcon },
-  { key: 'electrical', label: 'Electrical', icon: LightningIcon },
-];
+import { ICON_MAP } from '../../components/iconMap.js';
+import { loadCategories } from './categories.js';
 
 const ICON_OPTIONS = [
   { key: 'GearIcon', label: 'Gear', icon: GearIcon },
@@ -68,8 +60,8 @@ const FORM_FIELDS = [
 ];
 
 function Equipment() {
-  const { selectedFactory, refreshFactories } = useFactory();
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const { selectedFactory, allowedFactories, refreshFactories } = useFactory();
+  const [categories, setCategories] = useState(loadCategories);
   const [equipment, setEquipment] = useState(() => {
     try {
       const saved = localStorage.getItem('equipment');
@@ -94,7 +86,7 @@ function Equipment() {
 
   const filtered = equipment
     .filter((item) => {
-      if (selectedFactory && item.factory !== selectedFactory) return false;
+      if (!matchesFactory(item.factory, selectedFactory, allowedFactories)) return false;
       if (category !== 'all' && item.category !== category) return false;
       if (search && !item.id.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
@@ -194,45 +186,52 @@ function Equipment() {
     if (!form.name) return;
     const rawKey = form.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const newKey = rawKey || `cat-${categories.length}`;
-    const icon = form.iconComponent || GearIcon;
-    setCategories((prev) => [...prev, { key: newKey, label: form.name, icon }]);
+    setCategories((prev) => {
+      const next = [...prev, { key: newKey, label: form.name, iconKey: form.iconKey || 'GearIcon' }];
+      localStorage.setItem('categories', JSON.stringify(next));
+      return next;
+    });
     closeModal();
   };
 
   return (
-    <AppLayout hideHeader flatBackground fullBleed>
+    <AppLayout hideHeader fullBleed>
       <div className={`flex min-h-dvh lg:min-h-screen lg:gap-4 ${railOpen ? 'gap-3' : 'gap-0'}`}>
 
         {/* Rail */}
-        <div className={`flex flex-col gap-2.5 bg-[#FFFCF5] shadow-[4px_0_12px_rgba(15,40,84,0.12)] shrink-0 transition-[width,padding] duration-200 overflow-hidden lg:!w-auto lg:!p-3 ${railOpen ? 'p-3 w-[5.5rem]' : 'p-0 w-0'}`}>
+        <div className={`flex flex-col gap-2.5 bg-white shadow-[4px_0_12px_rgba(15,40,84,0.06)] border-r border-[#EEF3FB] shrink-0 transition-[width,padding] duration-200 overflow-hidden lg:!w-auto lg:!p-3 ${railOpen ? 'p-3 w-[5.5rem]' : 'p-0 w-0'}`}>
           {/* Close button — mobile only */}
           <button
             type="button"
             onClick={() => setRailOpen(false)}
-            className="lg:hidden w-full h-8 rounded-xl flex items-center justify-center text-[#0F2854]/40 hover:text-[#0F2854] hover:bg-[#F7F8F0] transition-colors shrink-0"
+            className="lg:hidden w-full h-8 rounded-xl flex items-center justify-center text-[#0F2854]/40 hover:text-[#0F2854] hover:bg-[#F4F7FC] transition-colors shrink-0"
           >
             <ChevronDownIcon className="w-4 h-4 rotate-90" />
           </button>
-          {categories.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              title={label}
-              onClick={() => setCategory(key)}
-              className={`w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 transition-colors ${
-                category === key ? 'bg-[#0F2854] text-white' : 'text-[#0F2854] hover:bg-[#F7F8F0]'
-              }`}
-            >
-              <Icon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
-              <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">{label}</span>
-            </button>
-          ))}
+          {categories.map(({ key, label, iconKey }) => {
+            const Icon = ICON_MAP[iconKey] || ClipboardIcon;
+            const active = category === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                title={label}
+                onClick={() => setCategory(key)}
+                className={`relative w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 transition-colors ${
+                  active ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854]'
+                }`}
+              >
+                <Icon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
+                <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">{label}</span>
+              </button>
+            );
+          })}
           <div className="h-px bg-gray-100 my-1.5"></div>
           <button
             type="button"
             title="เพิ่มหมวดหมู่อุปกรณ์"
             onClick={() => { setForm({}); setModal('add-category'); }}
-            className="w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854] hover:bg-[#F7F8F0] transition-colors"
+            className="w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854] transition-colors"
           >
             <PlusIcon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
             <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">เพิ่ม</span>
@@ -246,67 +245,52 @@ function Equipment() {
             <button
               type="button"
               onClick={() => setRailOpen(true)}
-              className="lg:hidden absolute left-0 top-4 z-10 w-6 h-10 bg-[#FFFCF5] rounded-r-xl shadow-[2px_0_8px_rgba(15,40,84,0.12)] flex items-center justify-center text-[#0F2854]/50 hover:text-[#0F2854] transition-colors"
+              className="lg:hidden absolute left-0 top-4 z-10 w-6 h-10 bg-white shadow-md border border-[#EEF3FB] rounded-r-xl flex items-center justify-center text-[#0F2854]/60 hover:text-[#0F2854] transition-colors"
             >
               <ChevronDownIcon className="w-4 h-4 -rotate-90" />
             </button>
           )}
           <div className="flex items-center gap-2 mb-4">
             <p className="text-xl font-bold text-[#0F2854]">ทะเบียนอุปกรณ์</p>
-            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-white text-[#1C4D8D]">
+            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-white border border-[#0F2854]/10 shadow-sm text-[#0F2854]">
               {activeCategory.label}
             </span>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 mb-4">
-            <div className="relative flex-1 min-w-0">
-              <SearchIcon className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="ค้นหา เช่น รหัสอุปกรณ์ ..."
-                className="w-full pl-10 pr-3.5 py-2.5 rounded-full bg-white text-base focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={openAddModal}
-              className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors"
-            >
+            <GlassSearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="ค้นหา เช่น รหัสอุปกรณ์ ..."
+            />
+            <ShellActionButton onClick={openAddModal}>
               <PlusIcon className="w-4 h-4" />
               เพิ่มทะเบียนอุปกรณ์
-            </button>
+            </ShellActionButton>
           </div>
 
           <div className="flex items-center justify-between mb-3">
-            <p className="text-base text-[#0F2854]/70">
-              {category === 'all' ? 'อุปกรณ์ทั้งหมด' : `รายการ ${activeCategory.label}`}({filtered.length})
+            <p className="text-sm text-[#0F2854]/60">
+              {category === 'all' ? 'อุปกรณ์ทั้งหมด' : `รายการ ${activeCategory.label}`} ({filtered.length})
             </p>
-            <div className="relative">
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="appearance-none pl-3 pr-7 py-1 rounded-full bg-white text-xs font-medium text-[#0F2854] focus:outline-none focus:ring-2 focus:ring-[#4988C4] cursor-pointer"
-              >
-                <option value="newest">ล่าสุดก่อน</option>
-                <option value="az">A-Z</option>
-                <option value="za">Z-A</option>
-                <option value="num">เลขน้อยไปมาก</option>
-                <option value="numd">เลขมากไปน้อย</option>
-              </select>
-              <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#4988C4]" />
-            </div>
+            <GlassSelect value={sortOrder} onChange={setSortOrder}>
+              <option value="newest" className="text-gray-800">ล่าสุดก่อน</option>
+              <option value="az" className="text-gray-800">A-Z</option>
+              <option value="za" className="text-gray-800">Z-A</option>
+              <option value="num" className="text-gray-800">เลขน้อยไปมาก</option>
+              <option value="numd" className="text-gray-800">เลขมากไปน้อย</option>
+            </GlassSelect>
           </div>
 
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <GearIcon className="w-10 h-10 mb-2 text-[#1C4D8D]/30" />
-              <p className="text-sm text-[#1C4D8D]/60">ไม่พบอุปกรณ์</p>
+              <GearIcon className="w-10 h-10 mb-2 text-[#0F2854]/20" />
+              <p className="text-sm text-[#0F2854]/50">ไม่พบอุปกรณ์</p>
             </div>
           ) : (
             <div className="space-y-2.5">
               {filtered.map((item) => {
-                const ItemIcon = categories.find((c) => c.key === item.category)?.icon || ClipboardIcon;
+                const ItemIcon = ICON_MAP[categories.find((c) => c.key === item.category)?.iconKey] || ClipboardIcon;
                 return (
                   <div
                     key={item.id}
@@ -398,21 +382,24 @@ function Equipment() {
                     <ChevronDownIcon className="w-4 h-4 text-[#0F2854] rotate-90" />
                   </button>
                   <div ref={catScrollRef} className="flex gap-2 overflow-x-auto pb-1 scrollbar-none sm:px-5">
-                    {categories.filter((c) => c.key !== 'all').map(({ key, label, icon: Icon }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setForm((p) => ({ ...p, category: key, brandModel: '', id: getNextId(key), ...(key === 'chiller' ? CHILLER_DEFAULTS : {}) }))}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-colors text-sm font-semibold shrink-0 ${
-                          form.category === key
-                            ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                            : 'border-gray-200 bg-gray-50 text-[#0F2854] hover:border-[#0F2854]/40'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5 shrink-0" />
-                        {label}
-                      </button>
-                    ))}
+                    {categories.filter((c) => c.key !== 'all').map(({ key, label, iconKey }) => {
+                      const Icon = ICON_MAP[iconKey] || GearIcon;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setForm((p) => ({ ...p, category: key, brandModel: '', id: getNextId(key), ...(key === 'chiller' ? CHILLER_DEFAULTS : {}) }))}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-colors text-sm font-semibold shrink-0 ${
+                            form.category === key
+                              ? 'border-[#0F2854] bg-[#0F2854] text-white'
+                              : 'border-gray-200 bg-gray-50 text-[#0F2854] hover:border-[#0F2854]/40'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                          {label}
+                        </button>
+                      );
+                    })}
                   </div>
                   <button
                     type="button"

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import companyLogo from '../assets/Logo.png';
 import { useFactory } from '../context/factoryStore.js';
+import { getSession, logout as clearSession } from '../context/authStore.js';
 import { useLang } from '../pages/auth/translations.js';
 import { LangToggle } from '../pages/auth/LangToggle.jsx';
 import {
@@ -11,6 +12,7 @@ import {
   DocumentIcon,
   GearIcon,
   HomeIcon,
+  MapPinIcon,
   PlusIcon,
 } from '../components/icons';
 
@@ -22,28 +24,38 @@ const ROLE_LABELS = { admin: 'ผู้ดูแลระบบ', user: 'ผู�
 
 function RoleBadge({ role }) {
   return (
-    <div className="flex items-center gap-1.5 bg-white/10 rounded-full pl-3 pr-3.5 py-2 text-sm font-medium text-white/80 border border-white/20 backdrop-blur-sm shrink-0">
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+    <div className="flex items-center gap-1.5 bg-white rounded-full pl-3 pr-3.5 py-2 text-sm font-medium text-[#0F2854]/80 border border-[#0F2854]/10 shadow-sm shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
       {role}
     </div>
   );
 }
 
-function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories }) {
+function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role }) {
+  // An engineer assigned to 0-1 factories has nothing to switch between —
+  // show it as a plain badge instead of a dropdown with a single option.
+  if (role === 'engineer' && factories.length <= 1) {
+    return (
+      <div className="flex items-center bg-white rounded-full pl-3.5 pr-4 py-2 text-sm font-medium text-[#0F2854]/90 border border-[#0F2854]/10 shadow-sm shrink-0 max-w-[11rem] truncate">
+        {factories[0] || 'ไม่มีโรงงานที่ได้รับมอบหมาย'}
+      </div>
+    );
+  }
+  const allLabel = role === 'engineer' ? 'โรงงานทั้งหมดของฉัน' : 'ทุกโรงงาน';
   return (
     <div className="relative shrink-0">
       <select
         value={selectedFactory}
         onChange={(e) => setSelectedFactory(e.target.value)}
         onFocus={refreshFactories}
-        className="appearance-none bg-white/10 rounded-full pl-3.5 pr-8 py-2 text-sm font-medium text-white/90 border border-white/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/30 backdrop-blur-sm max-w-[11rem] truncate"
+        className="appearance-none bg-white rounded-full pl-3.5 pr-8 py-2 text-sm font-medium text-[#0F2854]/90 border border-[#0F2854]/10 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#4988C4]/30 max-w-[11rem] truncate"
       >
-        <option value="" className="text-gray-700">ทุกโรงงาน</option>
+        <option value="" className="text-gray-700">{allLabel}</option>
         {factories.map((f) => (
           <option key={f} value={f} className="text-gray-700">{f}</option>
         ))}
       </select>
-      <ChevronDownIcon className="w-3 h-3 text-white/50 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <ChevronDownIcon className="w-3 h-3 text-[#4988C4] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
     </div>
   );
 }
@@ -53,16 +65,30 @@ const navItems = [
   { to: '/equipment', label: 'อุปกรณ์', icon: ClipboardIcon },
   { to: '/history', label: 'ประวัติ',  icon: ClockIcon },
   { to: '/reports', label: 'รายงาน', icon: DocumentIcon },
+  { to: '/factories', label: 'โรงงาน', icon: MapPinIcon, adminOnly: true },
   { to: '/settings', label: 'ตั้งค่า', icon: GearIcon },
 ];
 
-function AppLayout({ title, actions, children, hideHeader = false, flatBackground = false, fullBleed = false }) {
+function initialsOf(name) {
+  const parts = (name || '').trim().split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (name || '?').slice(0, 2).toUpperCase();
+}
+
+function AppLayout({ title, actions, children, hideHeader = false, fullBleed = false }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
   const { factories, selectedFactory, setSelectedFactory, refreshFactories } = useFactory();
   const { lang, setLang } = useLang();
-  const roleLabel = ROLE_LABELS[sessionStorage.getItem('userRole')] || ROLE_LABELS.admin;
+  const session = getSession();
+  const roleLabel = ROLE_LABELS[session.role] || ROLE_LABELS.admin;
+  const visibleNavItems = navItems.filter((n) => !n.adminOnly || session.role === 'admin');
+
+  const handleLogout = () => {
+    clearSession();
+    setMenuOpen(false);
+    navigate('/login');
+  };
 
   const toggleCollapsed = () => {
     setCollapsed((v) => {
@@ -73,15 +99,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
 
   return (
     <div className="w-full font-sans relative overflow-x-hidden">
-      {flatBackground ? (
-        <div className="fixed inset-0 z-0 bg-[#DDF1F3]"></div>
-      ) : (
-        <div className="fixed inset-0 z-0 bg-shell-gradient">
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute w-full h-[150%] top-[-25%] bg-tech-grid animate-grid-pan opacity-80 lg:opacity-40"></div>
-          </div>
-        </div>
-      )}
+      <div className="fixed inset-0 z-0 bg-shell-gradient"></div>
 
       {/* Desktop sidebar */}
       <aside
@@ -104,7 +122,6 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
         <div className={`flex items-center gap-3 mb-6 ${collapsed ? 'justify-center px-0' : 'px-1'}`}>
           <div className="relative shrink-0">
             <img src={companyLogo} alt="Logo" className="w-9 h-9 object-contain drop-shadow" />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border-2 border-[#0A1B3D]" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
@@ -112,7 +129,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
                 style={{ fontFamily: "'Courier New', monospace" }}>
                 ENGINSPECT
               </div>
-              <div className="text-[10px] text-[#38BDF8]/50 leading-tight tracking-[0.1em] uppercase mt-0.5">
+              <div className="text-[10px] text-[#38BDF8]/50 leading-tight tracking-[0.05em] uppercase mt-0.5 whitespace-nowrap">
                 Energy Audit System
               </div>
             </div>
@@ -121,14 +138,14 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
 
         <div className="h-px bg-white/8 mb-5" />
 
-        <nav className="flex flex-col gap-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
+        <nav className="flex flex-col gap-1.5">
+          {visibleNavItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               title={collapsed ? label : undefined}
               className={({ isActive }) =>
-                `group relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                `group relative flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-base font-medium transition-all ${
                   collapsed ? 'justify-center' : ''
                 } ${isActive
                   ? 'bg-white/8 text-white'
@@ -144,7 +161,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
                   {isActive && collapsed && (
                     <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#38BDF8]" />
                   )}
-                  <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? 'text-[#38BDF8]' : ''}`} />
+                  <Icon className={`w-6 h-6 shrink-0 transition-colors ${isActive ? 'text-[#38BDF8]' : ''}`} />
                   {!collapsed && (
                     <span className={`tracking-wide ${isActive ? 'font-semibold' : ''}`}>{label}</span>
                   )}
@@ -185,13 +202,13 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
             }`}
           >
             <span className="w-8 h-8 rounded-lg bg-[#1C4D8D] border border-[#38BDF8]/20 flex items-center justify-center text-sm font-bold shrink-0 font-mono">
-              S
+              {initialsOf(session.name)}
             </span>
             {!collapsed && (
               <>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate tracking-wide">SID-EN</p>
-                  <p className="text-[9px] text-[#38BDF8]/50 truncate tracking-widest font-mono uppercase">Administrator</p>
+                  <p className="text-sm font-semibold truncate tracking-wide">{session.name}</p>
+                  <p className="text-[9px] text-[#38BDF8]/50 truncate tracking-widest font-mono uppercase">{roleLabel}</p>
                 </div>
                 <ChevronDownIcon className="w-3.5 h-3.5 text-white/20 shrink-0" />
               </>
@@ -213,7 +230,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
                   ตั้งค่า
                 </button>
                 <div className="h-px bg-white/8" />
-                <button type="button" onClick={() => { setMenuOpen(false); navigate('/login'); }}
+                <button type="button" onClick={handleLogout}
                   className="w-full text-left px-4 py-2.5 text-red-400 hover:bg-white/5 transition-colors">
                   ออกจากระบบ
                 </button>
@@ -242,6 +259,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
             setSelectedFactory={setSelectedFactory}
             refreshFactories={refreshFactories}
             factories={factories}
+            role={session.role}
           />
         </div>
 
@@ -250,7 +268,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
             hideHeader ? 'hidden' : 'flex'
           } ${title ? 'pt-8 pb-4 lg:pt-8 lg:pb-4' : 'pt-5 pb-3 lg:pt-6 lg:pb-3'}`}
         >
-          {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-white drop-shadow shrink-0">{title}</h1>}
+          {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] shrink-0">{title}</h1>}
           <div className="hidden lg:flex flex-1 items-center justify-end gap-3">
             <RoleBadge role={roleLabel} />
             <FactorySelect
@@ -258,6 +276,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
               setSelectedFactory={setSelectedFactory}
               refreshFactories={refreshFactories}
               factories={factories}
+              role={session.role}
             />
             {actions}
           </div>
@@ -266,14 +285,14 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
               <button
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-2.5 p-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                className="flex items-center gap-2.5 p-1 rounded-full bg-white hover:bg-[#F4F7FC] shadow-sm transition-colors"
               >
-                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] ring-2 ring-white/30 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                  ส
+                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  {initialsOf(session.name)}
                 </span>
             </button>
             <span className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap bg-[#0F2854] text-white text-xs font-medium px-2.5 py-1.5 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-40">
-              SID-EN
+              {session.name}
             </span>
             {menuOpen && (
               <>
@@ -301,10 +320,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      navigate('/login');
-                    }}
+                    onClick={handleLogout}
                     className="w-full text-left px-4 py-2.5 text-red-500 hover:bg-gray-50 transition-colors"
                   >
                     ออกจากระบบ
@@ -333,7 +349,7 @@ function AppLayout({ title, actions, children, hideHeader = false, flatBackgroun
         <nav className="relative bg-[#0A1B3D]/95 backdrop-blur-md rounded-2xl border border-white/10 flex items-center justify-between px-1.5 py-1.5"
           style={{ boxShadow: '0 8px 32px rgba(10,27,61,0.7), 0 0 0 1px rgba(56,189,248,0.08)' }}>
           <span className="absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#38BDF8]/40 to-transparent pointer-events-none" />
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {visibleNavItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDownIcon } from '../../components/icons';
+import { loadSettings } from '../../context/settingsStore.js';
 
 const GRADE_LABEL = { good: 'ดี', ok: 'ปานกลาง', poor: 'ต้องปรับปรุง' };
 
@@ -352,10 +353,11 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
 function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData, onChange, onSave, initialEvalData }) {
   const ref = useRef(null);
   const [showEval, setShowEval]   = useState(!!initialEvalData?.percentReduction);
+  const appDefaults = loadSettings();
   const [evalData, setEvalData]   = useState({
     percentReduction: '',
-    operatingHours:   '8000',
-    electricityRate:  '4.50',
+    operatingHours:   appDefaults.defaultOperatingHours,
+    electricityRate:  appDefaults.defaultElectricityRate,
     investmentCost:   '0',
     note:             '',
     ...initialEvalData,

@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../../layouts/AppLayout';
-import { useFactory } from '../../context/factoryStore.js';
+import { matchesFactory, useFactory } from '../../context/factoryStore.js';
+import { GlassSearchInput, GlassSelect, PageHeader } from '../../components/ui';
 import CalcResult from '../equipment/CalcResult';
 import MeasureSelect from './MeasureSelect';
 import {
   SnowflakeIcon, DropletIcon, FlameIcon, LightningIcon,
-  CoolingTowerIcon, CompressorIcon, TrashIcon, ChevronDownIcon,
+  CoolingTowerIcon, CompressorIcon, TrashIcon,
 } from '../../components/icons';
 
 const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
@@ -47,24 +48,8 @@ function groupByMonth(records) {
   return groups;
 }
 
-function FilterSelect({ value, onChange, placeholder, children }) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-white/20 hover:bg-white/30 text-white text-xs font-semibold pl-3 pr-7 py-2 rounded-full focus:outline-none transition-colors cursor-pointer"
-      >
-        <option value="" className="text-gray-800">{placeholder}</option>
-        {children}
-      </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/80" />
-    </div>
-  );
-}
-
 function History() {
-  const { selectedFactory } = useFactory();
+  const { selectedFactory, allowedFactories } = useFactory();
   const [viewing, setViewing]           = useState(null);
   const [viewingMeasure, setViewingMeasure] = useState(null);
   const [confirmId, setConfirmId]     = useState(null);
@@ -108,7 +93,7 @@ function History() {
   const filtered = useMemo(() => records.filter((r) => {
     const d  = new Date(r.savedAt);
     const eq = r.item || r.equipment || {};
-    if (selectedFactory && eq.factory !== selectedFactory) return false;
+    if (!matchesFactory(eq.factory, selectedFactory, allowedFactories)) return false;
     if (filterMonth !== '' && d.getMonth() !== parseInt(filterMonth)) return false;
     if (filterYear  !== '' && d.getFullYear() !== parseInt(filterYear))  return false;
     if (search.trim()) {
@@ -120,64 +105,44 @@ function History() {
       ) return false;
     }
     return true;
-  }), [records, selectedFactory, filterMonth, filterYear, search]);
+  }), [records, selectedFactory, allowedFactories, filterMonth, filterYear, search]);
 
   const groups    = useMemo(() => groupByMonth(filtered), [filtered]);
   const monthKeys = Object.keys(groups);
 
   return (
     <AppLayout hideHeader fullBleed>
-      <div className="flex flex-col min-h-screen bg-[#DDF1F3]">
+      <div className="flex flex-col min-h-screen">
 
-        {/* ── Blue header card ── */}
-        <div
-          className="shrink-0 px-5 pt-14 lg:pt-8 pb-7 rounded-b-3xl lg:rounded-b-none lg:rounded-br-[3rem] bg-[#0F2854]"
-        >
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-white text-center mb-4">
-            ประวัติการตรวจอุปกรณ์
-          </h1>
-
-          {/* Filter pills — centered */}
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <FilterSelect value={filterMonth} onChange={setFilterMonth} placeholder="ทุกเดือน">
-              {THAI_MONTHS.map((m, i) => (
-                <option key={i} value={i} className="text-gray-800">{m}</option>
-              ))}
-            </FilterSelect>
-            <FilterSelect value={filterYear} onChange={setFilterYear} placeholder="ทุกปี">
-              {availableYears.map((y) => (
-                <option key={y} value={y} className="text-gray-800">{y+543}</option>
-              ))}
-            </FilterSelect>
-            {(filterMonth !== '' || filterYear !== '') && (
-              <button
-                type="button"
-                onClick={() => { setFilterMonth(''); setFilterYear(''); }}
-                className="text-xs text-white/70 hover:text-white underline underline-offset-2 transition-colors"
-              >
-                รีเซ็ต
-              </button>
-            )}
-          </div>
-
-          {/* Search bar */}
-          <div className="relative">
-            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="7" /><path strokeLinecap="round" d="M21 21l-4.3-4.3" />
-            </svg>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="ค้นหาอุปกรณ์..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white/15 placeholder-white/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
-            />
-          </div>
-        </div>
+        <PageHeader title="ประวัติการตรวจอุปกรณ์" subtitle="ค้นหาและกรองบันทึกการตรวจวัดทั้งหมด">
+          <GlassSelect value={filterMonth} onChange={setFilterMonth}>
+            <option value="" className="text-gray-800">ทุกเดือน</option>
+            {THAI_MONTHS.map((m, i) => (
+              <option key={i} value={i} className="text-gray-800">{m}</option>
+            ))}
+          </GlassSelect>
+          <GlassSelect value={filterYear} onChange={setFilterYear}>
+            <option value="" className="text-gray-800">ทุกปี</option>
+            {availableYears.map((y) => (
+              <option key={y} value={y} className="text-gray-800">{y + 543}</option>
+            ))}
+          </GlassSelect>
+          {(filterMonth !== '' || filterYear !== '') && (
+            <button
+              type="button"
+              onClick={() => { setFilterMonth(''); setFilterYear(''); }}
+              className="text-xs text-[#0F2854]/60 hover:text-[#0F2854] underline underline-offset-2 transition-colors"
+            >
+              รีเซ็ต
+            </button>
+          )}
+          <GlassSearchInput value={search} onChange={setSearch} placeholder="ค้นหาอุปกรณ์..." className="w-full" />
+        </PageHeader>
 
         {/* ── Content ── */}
-        <div className="flex-1 px-5 pt-6 pb-28 lg:pb-10">
+        <div className="flex-1 px-5 pt-2 pb-28 lg:pb-10">
           {monthKeys.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 mt-24 text-gray-300">
+            <div className="flex flex-col items-center justify-center gap-3 mt-24 text-[#0F2854]/25">
               <svg className="w-14 h-14" fill="none" stroke="currentColor" strokeWidth="1.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
               </svg>
@@ -187,7 +152,7 @@ function History() {
             <div className="flex flex-col gap-7">
               {monthKeys.map((month) => (
                 <div key={month}>
-                  <p className="text-sm font-bold text-[#0F2854] mb-3">{month}</p>
+                  <p className="text-sm font-bold text-[#0F2854]/80 mb-3 tracking-wide">{month}</p>
                   <div className="flex flex-col gap-2">
                     {groups[month].map((record) => {
                       const eq        = record.item || record.equipment || {};
@@ -195,6 +160,11 @@ function History() {
                       const iconCls   = CATEGORY_COLOR[eq.category] || 'bg-gray-100 text-gray-500';
                       const gradeCls  = GRADE_COLOR[record.result.grade] || '';
                       const gradeLabel = GRADE_LABEL[record.result.grade] || '';
+                      const metrics = record.result.metrics || [
+                        { key: 'coolingLoad', label: 'Cooling Load', value: record.result.coolingLoad != null ? Number(record.result.coolingLoad).toFixed(1) : '-', unit: 'TR' },
+                        { key: 'powerCF', label: 'Power (CF)', value: record.result.powerCF ?? '-', unit: 'kW' },
+                        { key: 'efficiency', label: 'Efficiency', value: record.result.efficiency ?? '-', unit: 'kW/TR' },
+                      ];
                       const { date, time } = formatThaiDateTime(record.savedAt);
                       return (
                         <div
@@ -230,14 +200,10 @@ function History() {
                             </div>
                             {/* Desktop-only metrics */}
                             <div className="hidden lg:flex flex-1 items-center justify-end gap-4 px-4">
-                              {[
-                                ['Cooling Load', record.result.coolingLoad != null ? Number(record.result.coolingLoad).toFixed(1) : '-', 'TR'],
-                                ['Power (CF)',   record.result.powerCF ?? '-', 'kW'],
-                                ['Efficiency',   record.result.efficiency ?? '-', 'kW/TR'],
-                              ].map(([label, val, unit]) => (
-                                <div key={label} className="flex flex-col items-center bg-gray-50 rounded-xl px-4 py-2 min-w-[90px]">
+                              {metrics.map(({ key, label, value, unit }) => (
+                                <div key={key || label} className="flex flex-col items-center bg-gray-50 rounded-xl px-4 py-2 min-w-[90px]">
                                   <p className="text-[11px] text-gray-400 leading-tight">{label}</p>
-                                  <p className="text-base font-extrabold text-[#0F2854]">{val}</p>
+                                  <p className="text-base font-extrabold text-[#0F2854]">{value}</p>
                                   <p className="text-[11px] text-gray-400">{unit}</p>
                                 </div>
                               ))}

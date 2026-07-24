@@ -70,6 +70,11 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
     if (onMeasure) { onMeasure(); } else { setShowMeasure(true); }
   };
   const cfg = GRADE_CONFIG[result.grade] || GRADE_CONFIG.ok;
+  const metrics = result.metrics || [
+    { key: 'coolingLoad', label: 'Cooling Load', value: result.coolingLoad != null ? Number(result.coolingLoad).toFixed(2) : '-', unit: 'TR' },
+    { key: 'powerCF', label: 'Power (CF)', value: result.powerCF ?? '-', unit: 'kW' },
+    { key: 'efficiency', label: 'Efficiency', value: result.efficiency || '-', unit: 'kW/TR' },
+  ];
 
   const handleSave = () => {
     const existing = JSON.parse(localStorage.getItem('history') || '[]');
@@ -111,16 +116,13 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
         {/* Title */}
         <h1 className={`text-3xl font-extrabold text-center leading-tight ${cfg.textColor}`}>{cfg.label}</h1>
 
-        {/* Metrics */}
-        <div className="w-full grid grid-cols-3 gap-2">
-          {[
-            ['Cooling Load', result.coolingLoad != null ? Number(result.coolingLoad).toFixed(2) : '-', 'TR'],
-            ['Power (CF)', result.powerCF, 'kW'],
-            ['Efficiency', result.efficiency || '-', 'kW/TR'],
-          ].map(([label, val, unit]) => (
-            <div key={label} className="bg-white rounded-2xl p-3 text-center shadow-sm">
+        {/* Metrics — generic result.metrics (any category); falls back to the
+            original chiller-only 3-tuple for records saved before metrics existed */}
+        <div className={`w-full grid gap-2 ${metrics.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {metrics.map(({ key, label, value, unit }) => (
+            <div key={key || label} className="bg-white rounded-2xl p-3 text-center shadow-sm">
               <p className="text-[11px] text-gray-400 mb-1 leading-tight">{label}</p>
-              <p className="text-lg font-extrabold text-[#0F2854]">{val}</p>
+              <p className="text-lg font-extrabold text-[#0F2854]">{value}</p>
               <p className="text-[11px] text-gray-400 mt-0.5">{unit}</p>
             </div>
           ))}

@@ -8,6 +8,7 @@ export const TRANSLATIONS = {
     remember: 'จดจำฉันในอุปกรณ์นี้',
     forgot: 'ลืมรหัสผ่าน?',
     confirmPasswordLabel: 'ยืนยันรหัสผ่าน',
+    loginBtn: 'เข้าสู่ระบบ',
     // ForgotPassword
     forgotTitle: 'Forgot Password',
     forgotDesc: 'กรอกอีเมลของคุณ เราจะส่งรหัสยืนยัน\nสำหรับตั้งรหัสผ่านใหม่ให้',
@@ -36,6 +37,7 @@ export const TRANSLATIONS = {
     remember: 'Remember this device',
     forgot: 'Forgot password?',
     confirmPasswordLabel: 'Confirm Password',
+    loginBtn: 'LOGIN',
     // ForgotPassword
     forgotTitle: 'Forgot Password',
     forgotDesc: 'Enter your email and we will send\na verification code to reset your password.',

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AppLayout from '../../layouts/AppLayout';
-import { useFactory } from '../../context/factoryStore.js';
+import { matchesFactory, useFactory } from '../../context/factoryStore.js';
+import { GlassSearchInput, PageHeader } from '../../components/ui';
 import { ChevronDownIcon } from '../../components/icons';
 
 /* ── helpers ── */
@@ -56,7 +57,7 @@ function SubSection({ title, children }) {
   );
 }
 
-function SectionHeader({ num, title }) {
+function StepHeader({ num, title }) {
   return (
     <div className="flex items-center gap-2.5">
       <div className="w-8 h-8 rounded-full bg-[#0F2854] flex items-center justify-center text-white text-sm font-extrabold shrink-0">{num}</div>
@@ -67,12 +68,12 @@ function SectionHeader({ num, title }) {
 
 /* ── Report List (nav bar entry) ── */
 function ReportList({ onOpen, onNew }) {
-  const { selectedFactory } = useFactory();
+  const { selectedFactory, allowedFactories } = useFactory();
   const [reports, setReports] = useState(loadReports);
   const [search, setSearch]   = useState('');
 
   const filtered = reports.filter((r) => {
-    if (selectedFactory && (r.item?.factory || r.form?.factory) !== selectedFactory) return false;
+    if (!matchesFactory(r.item?.factory || r.form?.factory, selectedFactory, allowedFactories)) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -90,29 +91,15 @@ function ReportList({ onOpen, onNew }) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#DDF1F3]">
+    <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <div className="shrink-0 px-5 pt-14 lg:pt-8 pb-7 rounded-b-3xl bg-[#0F2854]">
-        <h1 className="text-2xl lg:text-3xl font-extrabold text-white text-center mb-4">
-          รายงานการอนุรักษ์พลังงาน
-        </h1>
-        {/* Search */}
-        <div className="relative">
-          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="7"/><path strokeLinecap="round" d="M21 21l-4.3-4.3"/>
-          </svg>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหารายงาน..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white/15 placeholder-white/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
-          />
-        </div>
-      </div>
+      <PageHeader title="รายงานการอนุรักษ์พลังงาน" subtitle="สร้างและจัดการรายงานผลก่อน-หลังของแต่ละมาตรการ">
+        <GlassSearchInput value={search} onChange={setSearch} placeholder="ค้นหารายงาน..." className="w-full" />
+      </PageHeader>
 
-      <div className="flex-1 px-5 pt-6 pb-32 flex flex-col gap-2">
+      <div className="flex-1 px-5 pt-2 pb-32 flex flex-col gap-2">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 mt-24 text-gray-400">
+          <div className="flex flex-col items-center justify-center gap-3 mt-24 text-[#0F2854]/25">
             <svg className="w-14 h-14" fill="none" stroke="currentColor" strokeWidth="1.2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
             </svg>
@@ -253,14 +240,14 @@ function ReportForm({ initData, onBack }) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#DDF1F3]">
+    <div className="flex flex-col min-h-screen">
 
       {/* Back button */}
       <div className="shrink-0 px-5 pt-14 lg:pt-6 pb-2">
         <button
           type="button"
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-white/70 hover:bg-white flex items-center justify-center text-[#0F2854] shadow-sm transition-colors"
+          className="w-9 h-9 rounded-full bg-white shadow-sm hover:bg-[#F4F7FC] flex items-center justify-center text-[#0F2854] transition-colors"
         >
           <ChevronDownIcon className="w-5 h-5 rotate-90" />
         </button>
@@ -283,7 +270,7 @@ function ReportForm({ initData, onBack }) {
       {/* Form sections */}
       <div className="flex-1 px-5 pb-32 flex flex-col gap-5">
         <div className="flex flex-col gap-3">
-          <SectionHeader num="1" title="ข้อมูลเบื้องต้นอุปกรณ์" />
+          <StepHeader num="1" title="ข้อมูลเบื้องต้นอุปกรณ์" />
 
           <SubSection title="เลือกเครื่องจักรและมาตรการ">
             <Field label="อุปกรณ์*"  value={form.equipmentId} onChange={set('equipmentId')} auto={autoFields.has('equipmentId')} />
@@ -312,7 +299,7 @@ function ReportForm({ initData, onBack }) {
       </div>
 
       {/* Save button */}
-      <div className="fixed bottom-0 inset-x-0 px-5 pb-8 pt-4 bg-gradient-to-t from-[#DDF1F3] to-transparent pointer-events-none">
+      <div className="fixed bottom-0 inset-x-0 px-5 pb-8 pt-4 bg-gradient-to-t from-[#BDE8F5] via-[#BDE8F5]/80 to-transparent pointer-events-none">
         <button
           type="button"
           onClick={handleSave}

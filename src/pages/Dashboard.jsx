@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
-import { useFactory } from '../context/factoryStore.js';
+import { matchesFactory, useFactory } from '../context/factoryStore.js';
+import { Panel, SectionHeader } from '../components/ui';
 import {
   ChevronDownIcon,
   ClipboardIcon,
@@ -69,24 +70,6 @@ function QuickStat({ icon, label, sublabel, value, onClick, border }) {
         </p>
       </div>
     </button>
-  );
-}
-
-/* ── Section header ── */
-function SectionHeader({ title, tag, right, live }) {
-  return (
-    <div className="flex items-center gap-2.5 mb-4">
-      <span className="w-[3px] h-4 rounded-full bg-[#4988C4] shrink-0" />
-      <p className="text-sm font-bold text-[#0F2854]">{title}</p>
-      {tag && <span className="text-[9px] tracking-[0.2em] text-[#4988C4]/50 uppercase ml-1">{tag}</span>}
-      {live && (
-        <div className="flex items-center gap-1 ml-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <span className="text-[9px] tracking-widest text-emerald-500 font-bold uppercase">LIVE</span>
-        </div>
-      )}
-      {right && <span className="ml-auto">{right}</span>}
-    </div>
   );
 }
 
@@ -339,38 +322,19 @@ function formatShortDate(iso) {
 const GRADE_LABEL = { good: 'เกณฑ์ดี', ok: 'ปานกลาง', poor: 'ต้องปรับปรุง' };
 const GRADE_COLOR = { good: 'bg-emerald-50 text-emerald-600 border border-emerald-100', ok: 'bg-amber-50 text-amber-600 border border-amber-100', poor: 'bg-red-50 text-red-500 border border-red-100' };
 
-/* ── Panel wrapper ── */
-function Panel({ children, className = '', crosshair = false }) {
-  return (
-    <div className={`bg-white rounded-2xl shadow-sm border border-[#EEF3FB] relative overflow-hidden ${className}`}>
-      {crosshair && (
-        <>
-          <span className="absolute top-2.5 left-2.5 w-3 h-3 border-t border-l border-[#4988C4]/20 pointer-events-none" />
-          <span className="absolute top-2.5 right-2.5 w-3 h-3 border-t border-r border-[#4988C4]/20 pointer-events-none" />
-          <span className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b border-l border-[#4988C4]/20 pointer-events-none" />
-          <span className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b border-r border-[#4988C4]/20 pointer-events-none" />
-        </>
-      )}
-      {children}
-    </div>
-  );
-}
-
 /* ── Dashboard ── */
 function Dashboard() {
   const navigate = useNavigate();
 
-  const { selectedFactory } = useFactory();
+  const { selectedFactory, allowedFactories } = useFactory();
 
   const recentHistory = useMemo(() => {
     try {
       const all = JSON.parse(localStorage.getItem('history') || '[]');
-      const scoped = selectedFactory
-        ? all.filter((r) => (r.item || r.equipment || {}).factory === selectedFactory)
-        : all;
+      const scoped = all.filter((r) => matchesFactory((r.item || r.equipment || {}).factory, selectedFactory, allowedFactories));
       return scoped.slice(0, 5);
     } catch { return []; }
-  }, [selectedFactory]);
+  }, [selectedFactory, allowedFactories]);
 
   return (
     <AppLayout
@@ -385,7 +349,7 @@ function Dashboard() {
               <span className="w-2 h-8 rounded-full bg-[#4988C4]" />
               Dashboard
             </span>
-            <span className="text-sm font-medium text-blue-100/70 pl-5 tracking-wide">
+            <span className="text-sm font-medium text-[#0F2854]/60 pl-5 tracking-wide">
               ภาพรวมข้อมูลพลังงานและมาตรการประหยัดพลังงาน
             </span>
           </span>

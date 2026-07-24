@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import companyLogo from '../../assets/Logo.png';
 import { useLang } from './translations.js';
 import { LangToggle } from './LangToggle.jsx';
+import { login } from '../../context/authStore.js';
 
 function useClock() {
   const [time, setTime] = useState(() => new Date());
@@ -15,6 +16,8 @@ function useClock() {
 
 const DEMO_ACCOUNTS = [
   { name: 'Admin User', email: 'admin@enginspect.com', password: 'admin1234', role: 'Admin', avatarBg: 'bg-[#0F2854]', badge: 'bg-red-50 text-red-500 border border-red-100' },
+  { name: 'วิศวกร ทดสอบ', email: 'engineer@enginspect.com', password: 'engineer1234', role: 'Engineer', avatarBg: 'bg-[#4988C4]', badge: 'bg-sky-50 text-sky-600 border border-sky-100' },
+  { name: 'วิศวกร มานะ', email: 'mana@enginspect.com', password: 'engineer1234', role: 'Engineer', avatarBg: 'bg-[#4988C4]', badge: 'bg-sky-50 text-sky-600 border border-sky-100' },
 ];
 
 function initialsOf(name) {
@@ -27,16 +30,23 @@ function Login() {
   const [showPw, setShowPw] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const { lang, setLang, t } = useLang();
   const clock = useClock();
 
   const handleLogin = () => {
+    const user = login(email, password);
+    if (!user) {
+      setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      return;
+    }
     navigate('/home');
   };
 
   const fillDemo = (account) => {
     setEmail(account.email);
     setPassword(account.password);
+    setError('');
   };
 
   return (
@@ -104,18 +114,18 @@ function Login() {
         <span className="absolute bottom-3.5 left-3.5 w-4 h-4 border-b-[1.5px] border-l-[1.5px] border-[#38BDF8]/50 pointer-events-none" />
         <span className="absolute bottom-3.5 right-3.5 w-4 h-4 border-b-[1.5px] border-r-[1.5px] border-[#38BDF8]/50 pointer-events-none" />
 
-        {/* Quick demo access */}
+        {/* Quick demo access — vertical list, scrolls naturally with the mouse wheel / touch once it overflows */}
         <div className="bg-[#F4F7FC] rounded-2xl p-4 mb-4">
           <p className="text-xs font-bold text-[#0F2854] tracking-wide mb-3">
             Quick Demo Access (Click to autofill):
           </p>
-          <div className="flex flex-col gap-2 max-h-44 overflow-y-auto pr-1">
+          <div className="flex flex-col gap-2 max-h-32 overflow-y-auto pr-1">
             {DEMO_ACCOUNTS.map((account) => (
               <button
                 key={account.email}
                 type="button"
                 onClick={() => fillDemo(account)}
-                className="w-full flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 text-left border border-[#EEF3FB] hover:border-[#4988C4]/40 hover:shadow-sm transition-all"
+                className="w-full flex items-center gap-2.5 bg-white rounded-xl px-3 py-2.5 text-left border border-[#EEF3FB] hover:border-[#4988C4]/40 hover:shadow-sm transition-all shrink-0"
               >
                 <span className={`w-9 h-9 rounded-lg ${account.avatarBg} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
                   {initialsOf(account.name)}
@@ -124,7 +134,7 @@ function Login() {
                   <p className="text-sm font-bold text-[#0F2854] truncate leading-tight">{account.name}</p>
                   <p className="text-xs text-[#64748B] truncate leading-tight mt-0.5">{account.email}</p>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${account.badge}`}>
+                <span className={`text-[9px] font-bold px-2 py-1 rounded-full shrink-0 ${account.badge}`}>
                   {account.role}
                 </span>
               </button>
@@ -148,7 +158,7 @@ function Login() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 placeholder="your@email.com"
                 className="login-input w-full pl-11 pr-4 py-3.5 rounded-xl text-base font-medium"
               />
@@ -169,7 +179,7 @@ function Login() {
               <input
                 type={showPw ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 placeholder="••••••••"
                 className="login-input w-full pl-11 pr-12 py-3.5 rounded-xl text-base font-medium"
               />
@@ -190,6 +200,10 @@ function Login() {
               </button>
             </div>
           </div>
+
+          {error && (
+            <p className="text-sm font-medium text-red-500 -mt-2">{error}</p>
+          )}
 
           {/* Remember me + Forgot password */}
           <div className="flex items-center justify-between mt-1">
@@ -225,7 +239,7 @@ function Login() {
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 28px rgba(56,189,248,0.35)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 4px 20px rgba(15,40,84,0.35)'}
           >
-            LOGIN
+            {t.loginBtn}
           </button>
         </form>
 

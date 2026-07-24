@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` utilities apply whenever `.dark` is on
+   <html> (or an ancestor) — toggled by src/context/themeStore.js, not tied
+   to OS preference alone (though that's the first-visit default). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
 }
@@ -7,6 +12,18 @@
 html,
 body {
   background-color: #0F2854;
+}
+
+/* Tailwind's spacing/typography utilities are all rem-based (relative to
+   the root font-size), so shrinking it here scales the whole desktop
+   layout down proportionally in one place. Browser zoom still works
+   normally on top of this — it's just a smaller starting baseline,
+   matched to the existing lg: (1024px) breakpoint used everywhere else.
+   Mobile is untouched (stays at the browser default, usually 16px). */
+@media (min-width: 1024px) {
+  html {
+    font-size: 85%; /* 16px -> 13.6px */
+  }
 }
 
 /* --- พื้นหลังไล่สีสไตล์ Premium Enterprise --- */
@@ -46,18 +63,16 @@ body {
   }
 }
 
-/* --- พื้นหลังแชลล์แอป: มือถือใช้ไล่สีแบบเคลื่อนไหว, คอมใช้ไล่สีนิ่งจากบนลงล่าง --- */
+/* --- พื้นหลังแชลล์แอป (หลังล็อกอิน): โทนอ่อนจากพาเลตแบรนด์
+   ตั้งใจแยกจาก sidebar สีเข้ม (#0A1B3D) ให้เห็นชั้นชัดเจน แทนที่จะไล่เฉด
+   เข้มต่อเนื่องกันจนดูกลืนเป็นก้อนเดียว --- */
 .bg-shell-gradient {
-  background: linear-gradient(-45deg, #0F2854, #1C4D8D, #0F2854, #4988C4);
-  background-size: 400% 400%;
-  animation: gradientMove 12s ease infinite;
+  background: linear-gradient(160deg, #FFFFFF 0%, #BDE8F5 100%);
 }
-
-@media (min-width: 1024px) {
-  .bg-shell-gradient {
-    background: linear-gradient(160deg, #0F2854 0%, #1C4D8D 55%, #4988C4 100%);
-    animation: none;
-  }
+.dark .bg-shell-gradient {
+  /* Muted/less saturated than the old pre-light-mode shell — easier on the
+     eyes at night than the punchier version this replaced. */
+  background: linear-gradient(160deg, #0B1B33 0%, #142C4E 100%);
 }
 
 .scrollbar-none {
