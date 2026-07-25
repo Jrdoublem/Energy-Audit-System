@@ -18,11 +18,11 @@ const CATEGORY_ICON = {
   boiler: FlameIcon, cooling: CoolingTowerIcon, electrical: LightningIcon,
 };
 const CATEGORY_COLOR = {
-  chiller: 'bg-blue-100 text-blue-600', compressor: 'bg-purple-100 text-purple-600',
-  pump: 'bg-cyan-100 text-cyan-600', boiler: 'bg-orange-100 text-orange-600',
-  cooling: 'bg-teal-100 text-teal-600', electrical: 'bg-yellow-100 text-yellow-600',
+  chiller: 'bg-blue-100 dark:bg-blue-500/10 text-blue-600', compressor: 'bg-purple-100 dark:bg-purple-500/10 text-purple-600',
+  pump: 'bg-cyan-100 dark:bg-cyan-500/10 text-cyan-600', boiler: 'bg-orange-100 dark:bg-orange-500/10 text-orange-600',
+  cooling: 'bg-teal-100 dark:bg-teal-500/10 text-teal-600', electrical: 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-600',
 };
-const GRADE_COLOR  = { good: 'bg-green-100 text-green-600', ok: 'bg-orange-100 text-orange-500', poor: 'bg-red-100 text-red-500' };
+const GRADE_COLOR  = { good: 'bg-green-100 dark:bg-green-500/10 text-green-600', ok: 'bg-orange-100 dark:bg-orange-500/10 text-orange-500', poor: 'bg-red-100 dark:bg-red-500/10 text-red-500' };
 const GRADE_LABEL  = { good: 'เกณฑ์ดี', ok: 'ปานกลาง', poor: 'ต้องปรับปรุง' };
 
 function formatThaiDateTime(iso) {
@@ -131,7 +131,7 @@ function History() {
             <button
               type="button"
               onClick={() => { setFilterMonth(''); setFilterYear(''); }}
-              className="text-xs text-[#0F2854]/60 hover:text-[#0F2854] underline underline-offset-2 transition-colors"
+              className="text-xs text-[#0F2854]/60 dark:text-[#7E93AF] hover:text-[#0F2854] dark:text-[#E7EEF7] underline underline-offset-2 transition-colors"
             >
               รีเซ็ต
             </button>
@@ -142,7 +142,7 @@ function History() {
         {/* ── Content ── */}
         <div className="flex-1 px-5 pt-2 pb-28 lg:pb-10">
           {monthKeys.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 mt-24 text-[#0F2854]/25">
+            <div className="flex flex-col items-center justify-center gap-3 mt-24 text-[#0F2854]/25 dark:text-[#4A5F7D]">
               <svg className="w-14 h-14" fill="none" stroke="currentColor" strokeWidth="1.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
               </svg>
@@ -152,12 +152,12 @@ function History() {
             <div className="flex flex-col gap-7">
               {monthKeys.map((month) => (
                 <div key={month}>
-                  <p className="text-sm font-bold text-[#0F2854]/80 mb-3 tracking-wide">{month}</p>
+                  <p className="text-sm font-bold text-[#0F2854]/80 dark:text-[#C3D2E5] mb-3 tracking-wide">{month}</p>
                   <div className="flex flex-col gap-2">
                     {groups[month].map((record) => {
                       const eq        = record.item || record.equipment || {};
                       const Icon      = CATEGORY_ICON[eq.category] || SnowflakeIcon;
-                      const iconCls   = CATEGORY_COLOR[eq.category] || 'bg-gray-100 text-gray-500';
+                      const iconCls   = CATEGORY_COLOR[eq.category] || 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-[#8CA3C0]';
                       const gradeCls  = GRADE_COLOR[record.result.grade] || '';
                       const gradeLabel = GRADE_LABEL[record.result.grade] || '';
                       const metrics = record.result.metrics || [
@@ -169,7 +169,7 @@ function History() {
                       return (
                         <div
                           key={record.id}
-                          className="flex items-center gap-3 bg-white rounded-2xl px-4 py-5 lg:py-3.5 shadow-sm"
+                          className="flex items-center gap-3 bg-white dark:bg-[#111F35] rounded-2xl px-4 py-5 lg:py-3.5 shadow-sm"
                         >
                           <button
                             type="button"
@@ -186,11 +186,11 @@ function History() {
                               <Icon className="w-5 h-5" />
                             </div>
                             <div className="min-w-0 lg:w-52 shrink-0">
-                              <p className="text-sm lg:text-base font-bold text-[#0F2854] truncate">{eq.id}</p>
-                              <p className="text-xs lg:text-sm text-gray-500 mt-0.5 truncate">{date} | {time}</p>
-                              {eq.factory && <p className="text-xs lg:text-sm text-gray-400 truncate">{eq.factory}</p>}
+                              <p className="text-sm lg:text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] truncate">{eq.id}</p>
+                              <p className="text-xs lg:text-sm text-gray-500 dark:text-[#8CA3C0] mt-0.5 truncate">{date} | {time}</p>
+                              {eq.factory && <p className="text-xs lg:text-sm text-gray-400 dark:text-[#7E93AF] truncate">{eq.factory}</p>}
                               {hasMeasures(eq.id) && (
-                                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 px-2 py-0.5 rounded-full">
                                   <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                   </svg>
@@ -201,10 +201,10 @@ function History() {
                             {/* Desktop-only metrics */}
                             <div className="hidden lg:flex flex-1 items-center justify-end gap-4 px-4">
                               {metrics.map(({ key, label, value, unit }) => (
-                                <div key={key || label} className="flex flex-col items-center bg-gray-50 rounded-xl px-4 py-2 min-w-[90px]">
-                                  <p className="text-[11px] text-gray-400 leading-tight">{label}</p>
-                                  <p className="text-base font-extrabold text-[#0F2854]">{value}</p>
-                                  <p className="text-[11px] text-gray-400">{unit}</p>
+                                <div key={key || label} className="flex flex-col items-center bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-2 min-w-[90px]">
+                                  <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] leading-tight">{label}</p>
+                                  <p className="text-base font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{value}</p>
+                                  <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">{unit}</p>
                                 </div>
                               ))}
                             </div>
@@ -218,7 +218,7 @@ function History() {
                             <button
                               type="button"
                               onClick={() => confirmDelete(record.id)}
-                              className="w-full py-1 lg:py-1.5 rounded-full bg-red-100 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center gap-1.5 transition-colors"
+                              className="w-full py-1 lg:py-1.5 rounded-full bg-red-100 dark:bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center gap-1.5 transition-colors"
                             >
                               <TrashIcon className="w-3 h-3 lg:w-3.5 lg:h-3.5 shrink-0" />
                               <span className="text-[11px] lg:text-sm font-semibold">ลบ</span>
@@ -239,19 +239,19 @@ function History() {
       {confirmId !== null && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6 font-sans">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmId(null)} />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
+          <div className="relative bg-white dark:bg-[#111F35] rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
             <div className="flex flex-col items-center gap-2 text-center">
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500">
                 <TrashIcon className="w-6 h-6" />
               </div>
-              <p className="text-base font-bold text-[#0F2854]">ลบรายการนี้?</p>
-              <p className="text-sm text-gray-400">รายการที่ลบแล้วจะไม่สามารถกู้คืนได้</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">ลบรายการนี้?</p>
+              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">รายการที่ลบแล้วจะไม่สามารถกู้คืนได้</p>
             </div>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmId(null)}
-                className="flex-1 py-3 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold text-sm transition-colors"
+                className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
               >
                 ยกเลิก
               </button>

@@ -3,8 +3,11 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import companyLogo from '../assets/Logo.png';
 import { useFactory } from '../context/factoryStore.js';
 import { getSession, logout as clearSession } from '../context/authStore.js';
-import { useLang } from '../pages/auth/translations.js';
+import { useTheme } from '../context/themeStore.js';
+import { useLang } from '../context/languageStore.js';
 import { LangToggle } from '../pages/auth/LangToggle.jsx';
+import { ThemeToggle } from '../components/ThemeToggle.jsx';
+import { Select } from '../components/Dropdown.jsx';
 import {
   ChevronDownIcon,
   ClipboardIcon,
@@ -20,53 +23,46 @@ function getInitialCollapsed() {
   return localStorage.getItem('sidebarCollapsed') === 'true';
 }
 
-const ROLE_LABELS = { admin: 'ผู้ดูแลระบบ', user: 'ผู้ใช้งานทั่วไป' };
-
 function RoleBadge({ role }) {
   return (
-    <div className="flex items-center gap-1.5 bg-white rounded-full pl-3 pr-3.5 py-2 text-sm font-medium text-[#0F2854]/80 border border-[#0F2854]/10 shadow-sm shrink-0">
+    <div className="flex items-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full pl-3 pr-3.5 py-2 text-sm font-medium text-[#0F2854]/80 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm shrink-0">
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
       {role}
     </div>
   );
 }
 
-function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role }) {
+function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role, t }) {
   // An engineer assigned to 0-1 factories has nothing to switch between —
   // show it as a plain badge instead of a dropdown with a single option.
   if (role === 'engineer' && factories.length <= 1) {
     return (
-      <div className="flex items-center bg-white rounded-full pl-3.5 pr-4 py-2 text-sm font-medium text-[#0F2854]/90 border border-[#0F2854]/10 shadow-sm shrink-0 max-w-[11rem] truncate">
-        {factories[0] || 'ไม่มีโรงงานที่ได้รับมอบหมาย'}
+      <div className="flex items-center bg-white dark:bg-[#111F35] rounded-full pl-3.5 pr-4 py-2 text-sm font-medium text-[#0F2854]/90 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm shrink-0 max-w-[11rem] truncate">
+        {factories[0] || t.nav.noFactoryAssigned}
       </div>
     );
   }
-  const allLabel = role === 'engineer' ? 'โรงงานทั้งหมดของฉัน' : 'ทุกโรงงาน';
+  const allLabel = role === 'engineer' ? t.nav.allFactoriesMine : t.nav.allFactories;
   return (
-    <div className="relative shrink-0">
-      <select
-        value={selectedFactory}
-        onChange={(e) => setSelectedFactory(e.target.value)}
-        onFocus={refreshFactories}
-        className="appearance-none bg-white rounded-full pl-3.5 pr-8 py-2 text-sm font-medium text-[#0F2854]/90 border border-[#0F2854]/10 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#4988C4]/30 max-w-[11rem] truncate"
-      >
-        <option value="" className="text-gray-700">{allLabel}</option>
-        {factories.map((f) => (
-          <option key={f} value={f} className="text-gray-700">{f}</option>
-        ))}
-      </select>
-      <ChevronDownIcon className="w-3 h-3 text-[#4988C4] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-    </div>
+    <Select
+      value={selectedFactory}
+      onChange={setSelectedFactory}
+      onOpen={refreshFactories}
+      options={[{ value: '', label: allLabel }, ...factories.map((f) => ({ value: f, label: f }))]}
+      className="shrink-0"
+      triggerClassName="flex items-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full pl-3.5 pr-3 py-2 text-sm font-medium text-[#0F2854]/90 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm transition-colors max-w-[11rem]"
+      panelClassName="min-w-[11rem]"
+    />
   );
 }
 
 const navItems = [
-  { to: '/home', label: 'หน้าหลัก', icon: HomeIcon },
-  { to: '/equipment', label: 'อุปกรณ์', icon: ClipboardIcon },
-  { to: '/history', label: 'ประวัติ',  icon: ClockIcon },
-  { to: '/reports', label: 'รายงาน', icon: DocumentIcon },
-  { to: '/factories', label: 'โรงงาน', icon: MapPinIcon, adminOnly: true },
-  { to: '/settings', label: 'ตั้งค่า', icon: GearIcon },
+  { to: '/home', labelKey: 'home', icon: HomeIcon },
+  { to: '/equipment', labelKey: 'equipment', icon: ClipboardIcon },
+  { to: '/history', labelKey: 'history', icon: ClockIcon },
+  { to: '/reports', labelKey: 'reports', icon: DocumentIcon },
+  { to: '/factories', labelKey: 'factories', icon: MapPinIcon, adminOnly: true },
+  { to: '/settings', labelKey: 'settings', icon: GearIcon },
 ];
 
 function initialsOf(name) {
@@ -79,9 +75,10 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
   const { factories, selectedFactory, setSelectedFactory, refreshFactories } = useFactory();
-  const { lang, setLang } = useLang();
+  const { lang, setLang, t } = useLang();
   const session = getSession();
-  const roleLabel = ROLE_LABELS[session.role] || ROLE_LABELS.admin;
+  const roleLabel = session.role === 'admin' ? t.nav.roleAdmin : t.nav.roleUser;
+  const { theme, toggleTheme } = useTheme();
   const visibleNavItems = navItems.filter((n) => !n.adminOnly || session.role === 'admin');
 
   const handleLogout = () => {
@@ -139,7 +136,9 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
         <div className="h-px bg-white/8 mb-5" />
 
         <nav className="flex flex-col gap-1.5">
-          {visibleNavItems.map(({ to, label, icon: Icon }) => (
+          {visibleNavItems.map(({ to, labelKey, icon: Icon }) => {
+            const label = t.nav[labelKey];
+            return (
             <NavLink
               key={to}
               to={to}
@@ -173,19 +172,20 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
                 </>
               )}
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
 
         <button
           type="button"
           onClick={() => navigate('/equipment')}
-          title={collapsed ? 'เพิ่มการตรวจวัดใหม่' : undefined}
+          title={collapsed ? t.nav.newMeasurement : undefined}
           className={`mt-5 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 hover:bg-[#38BDF8]/8 text-[#38BDF8] text-xs font-semibold transition-all ${
             collapsed ? '' : 'mx-1'
           }`}
         >
           <PlusIcon className="w-4 h-4 shrink-0" />
-          {!collapsed && 'เพิ่มการตรวจวัดใหม่'}
+          {!collapsed && t.nav.newMeasurement}
         </button>
 
         <div className="flex-1" />
@@ -219,20 +219,20 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
               <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
               <div className="absolute left-0 bottom-full mb-2 w-48 bg-[#0A1B3D] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-40 text-sm">
                 <div className="px-3 py-2 border-b border-white/8">
-                  <p className="text-[9px] font-mono text-white/30 tracking-widest uppercase">User Menu</p>
+                  <p className="text-[9px] font-mono text-white/30 tracking-widest uppercase">{t.nav.userMenu}</p>
                 </div>
                 <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }}
                   className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                  โปรไฟล์
+                  {t.nav.profile}
                 </button>
                 <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }}
                   className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                  ตั้งค่า
+                  {t.nav.settings}
                 </button>
                 <div className="h-px bg-white/8" />
                 <button type="button" onClick={handleLogout}
                   className="w-full text-left px-4 py-2.5 text-red-400 hover:bg-white/5 transition-colors">
-                  ออกจากระบบ
+                  {t.nav.logout}
                 </button>
               </div>
             </>
@@ -240,8 +240,9 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
         </div>
 
         {!collapsed && (
-          <div className="mt-4">
+          <div className="mt-4 flex items-center gap-2">
             <LangToggle lang={lang} setLang={setLang} />
+            <ThemeToggle />
           </div>
         )}
       </aside>
@@ -259,6 +260,7 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
             setSelectedFactory={setSelectedFactory}
             refreshFactories={refreshFactories}
             factories={factories}
+            t={t}
             role={session.role}
           />
         </div>
@@ -268,7 +270,7 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
             hideHeader ? 'hidden' : 'flex'
           } ${title ? 'pt-8 pb-4 lg:pt-8 lg:pb-4' : 'pt-5 pb-3 lg:pt-6 lg:pb-3'}`}
         >
-          {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] shrink-0">{title}</h1>}
+          {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] shrink-0">{title}</h1>}
           <div className="hidden lg:flex flex-1 items-center justify-end gap-3">
             <RoleBadge role={roleLabel} />
             <FactorySelect
@@ -277,6 +279,7 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
               refreshFactories={refreshFactories}
               factories={factories}
               role={session.role}
+              t={t}
             />
             {actions}
           </div>
@@ -285,7 +288,7 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
               <button
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-2.5 p-1 rounded-full bg-white hover:bg-[#F4F7FC] shadow-sm transition-colors"
+                className="flex items-center gap-2.5 p-1 rounded-full bg-white dark:bg-[#111F35] hover:bg-[#F4F7FC] dark:hover:bg-white/5 shadow-sm transition-colors"
               >
                 <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-white text-sm font-bold shrink-0">
                   {initialsOf(session.name)}
@@ -297,16 +300,16 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)}></div>
-                <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl overflow-hidden z-40 text-sm">
+                <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-[#111F35] rounded-xl shadow-xl overflow-hidden z-40 text-sm">
                   <button
                     type="button"
                     onClick={() => {
                       setMenuOpen(false);
                       navigate('/settings');
                     }}
-                    className="w-full text-left px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full text-left px-4 py-2.5 text-gray-700 dark:text-[#C3D2E5] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
-                    โปรไฟล์
+                    {t.nav.profile}
                   </button>
                   <button
                     type="button"
@@ -314,16 +317,23 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
                       setMenuOpen(false);
                       navigate('/settings');
                     }}
-                    className="w-full text-left px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full text-left px-4 py-2.5 text-gray-700 dark:text-[#C3D2E5] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
-                    ตั้งค่า
+                    {t.nav.settings}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); toggleTheme(); }}
+                    className="w-full text-left px-4 py-2.5 text-gray-700 dark:text-[#C3D2E5] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                  >
+                    {theme === 'dark' ? t.nav.lightMode : t.nav.darkMode}
                   </button>
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full text-left px-4 py-2.5 text-red-500 hover:bg-gray-50 transition-colors"
+                    className="w-full text-left px-4 py-2.5 text-red-500 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
-                    ออกจากระบบ
+                    {t.nav.logout}
                   </button>
                 </div>
               </>
@@ -349,7 +359,7 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
         <nav className="relative bg-[#0A1B3D]/95 backdrop-blur-md rounded-2xl border border-white/10 flex items-center justify-between px-1.5 py-1.5"
           style={{ boxShadow: '0 8px 32px rgba(10,27,61,0.7), 0 0 0 1px rgba(56,189,248,0.08)' }}>
           <span className="absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#38BDF8]/40 to-transparent pointer-events-none" />
-          {visibleNavItems.map(({ to, label, icon: Icon }) => (
+          {visibleNavItems.map(({ to, labelKey, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -365,7 +375,7 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
                     <span className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#38BDF8]" />
                   )}
                   <Icon className="w-5 h-5 mt-1" />
-                  {label}
+                  {t.nav[labelKey]}
                 </>
               )}
             </NavLink>

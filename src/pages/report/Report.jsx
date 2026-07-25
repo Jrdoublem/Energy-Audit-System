@@ -25,14 +25,14 @@ function saveReports(list) {
 /* ── shared UI ── */
 function Field({ label, value, onChange, placeholder, span2 = false, textarea = false, auto = false }) {
   const inputCls = `w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent${textarea ? ' resize-none' : ''} ${
-    auto ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-700'
+    auto ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-[#111F35] border-gray-200 dark:border-white/10 text-gray-700 dark:text-[#E7EEF7]'
   }`;
   return (
     <div className={span2 ? 'col-span-2' : ''}>
       <div className="flex items-end gap-1.5 mb-1.5 min-h-[1.25rem]">
-        <label className="text-xs font-medium text-gray-500 leading-tight">{label}</label>
+        <label className="text-xs font-medium text-gray-500 dark:text-[#7E93AF] leading-tight">{label}</label>
         {auto && (
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 leading-none shrink-0">
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 leading-none shrink-0">
             auto
           </span>
         )}
@@ -50,8 +50,8 @@ function Field({ label, value, onChange, placeholder, span2 = false, textarea = 
 
 function SubSection({ title, children }) {
   return (
-    <div className="bg-white rounded-2xl px-4 pt-3.5 pb-4 flex flex-col gap-3 shadow-sm">
-      <p className="text-xs font-bold text-[#0F2854] border-b border-gray-100 pb-2">{title}</p>
+    <div className="bg-white dark:bg-[#111F35] rounded-2xl px-4 pt-3.5 pb-4 flex flex-col gap-3 shadow-sm">
+      <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] border-b border-gray-100 dark:border-white/8 pb-2">{title}</p>
       <div className="grid grid-cols-2 gap-x-3 gap-y-3">{children}</div>
     </div>
   );
@@ -61,7 +61,7 @@ function StepHeader({ num, title }) {
   return (
     <div className="flex items-center gap-2.5">
       <div className="w-8 h-8 rounded-full bg-[#0F2854] flex items-center justify-center text-white text-sm font-extrabold shrink-0">{num}</div>
-      <p className="text-base font-extrabold text-[#0F2854]">{title}</p>
+      <p className="text-base font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{title}</p>
     </div>
   );
 }
@@ -99,7 +99,7 @@ function ReportList({ onOpen, onNew }) {
 
       <div className="flex-1 px-5 pt-2 pb-32 flex flex-col gap-2">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 mt-24 text-[#0F2854]/25">
+          <div className="flex flex-col items-center justify-center gap-3 mt-24 text-[#0F2854]/25 dark:text-[#7E93AF]/40">
             <svg className="w-14 h-14" fill="none" stroke="currentColor" strokeWidth="1.2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
             </svg>
@@ -111,35 +111,35 @@ function ReportList({ onOpen, onNew }) {
               key={r.id}
               type="button"
               onClick={() => onOpen(r)}
-              className="w-full text-left bg-white rounded-2xl px-4 py-4 shadow-sm flex items-center gap-3"
+              className="w-full text-left bg-white dark:bg-[#111F35] rounded-2xl px-4 py-4 shadow-sm flex items-center gap-3"
             >
               <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                r.status === 'done' ? 'bg-emerald-100' : 'bg-amber-100'
+                r.status === 'done' ? 'bg-emerald-100 dark:bg-emerald-500/15' : 'bg-amber-100 dark:bg-amber-500/15'
               }`}>
-                <svg className={`w-5 h-5 ${r.status === 'done' ? 'text-emerald-600' : 'text-amber-500'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg className={`w-5 h-5 ${r.status === 'done' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500 dark:text-amber-400'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#0F2854] truncate">
+                <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] truncate">
                   {r.form?.reportTitle || r.form?.equipmentId || 'ไม่มีชื่อรายงาน'}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                <p className="text-xs text-gray-400 dark:text-[#7E93AF] mt-0.5 truncate">
                   {r.form?.equipmentId}{r.form?.equipmentId && ' · '}{formatDate(r.updatedAt)}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
                 <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
                   r.status === 'done'
-                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                    : 'bg-amber-50 text-amber-600 border border-amber-100'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20'
+                    : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20'
                 }`}>
                   {r.status === 'done' ? 'เสร็จแล้ว' : 'กำลังทำ'}
                 </span>
                 <button
                   type="button"
                   onClick={(e) => handleDelete(r.id, e)}
-                  className="text-red-300 hover:text-red-500 transition-colors"
+                  className="text-red-300 dark:text-red-500/50 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M3 7h18" />
@@ -247,7 +247,7 @@ function ReportForm({ initData, onBack }) {
         <button
           type="button"
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-white shadow-sm hover:bg-[#F4F7FC] flex items-center justify-center text-[#0F2854] transition-colors"
+          className="w-9 h-9 rounded-full bg-white dark:bg-[#111F35] shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 flex items-center justify-center text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
         >
           <ChevronDownIcon className="w-5 h-5 rotate-90" />
         </button>
@@ -299,7 +299,7 @@ function ReportForm({ initData, onBack }) {
       </div>
 
       {/* Save button */}
-      <div className="fixed bottom-0 inset-x-0 px-5 pb-8 pt-4 bg-gradient-to-t from-[#BDE8F5] via-[#BDE8F5]/80 to-transparent pointer-events-none">
+      <div className="fixed bottom-0 inset-x-0 px-5 pb-8 pt-4 bg-gradient-to-t from-[#BDE8F5] dark:from-[#0B1B33] via-[#BDE8F5]/80 dark:via-[#0B1B33]/80 to-transparent pointer-events-none">
         <button
           type="button"
           onClick={handleSave}

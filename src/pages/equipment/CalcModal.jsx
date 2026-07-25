@@ -10,6 +10,7 @@ import {
 } from '../../components/icons';
 import CalcResult from './CalcResult';
 import { CALCULATORS, defaultFormFor } from './calculators.js';
+import { Select } from '../../components/Dropdown.jsx';
 
 const INITIAL_CALC_FORM = {
   pInput: '646', load: '70', refrigerant: '',
@@ -31,14 +32,14 @@ const toF = (c) => (parseFloat(c) * 9 / 5 + 32).toFixed(2);
 function TempToggle({ fieldKey, fieldUnits, onToggle }) {
   const unit = fieldUnits[fieldKey];
   return (
-    <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+    <div className="flex bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 gap-0.5">
       {['F', 'C'].map((u) => (
         <button
           key={u}
           type="button"
           onClick={() => unit !== u && onToggle(fieldKey)}
           className={`px-2 py-0.5 rounded-md text-xs font-bold transition-colors ${
-            unit === u ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 hover:text-[#0F2854]'
+            unit === u ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
           }`}
         >
           °{u}
@@ -143,7 +144,7 @@ function CalcModal({ item, onClose }) {
       type="number"
       value={calcForm[key] || ''}
       onChange={(e) => setCalcForm((p) => ({ ...p, [key]: e.target.value }))}
-      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
     />
   );
 
@@ -166,24 +167,24 @@ function CalcModal({ item, onClose }) {
 
       {/* Header */}
       <div className="relative z-10 flex items-center gap-3 px-5 pt-12 lg:pt-6 pb-4 shrink-0">
-        <button type="button" onClick={onClose} className="flex items-center gap-1.5 text-[#0F2854]/60 hover:text-[#0F2854] transition-colors">
+        <button type="button" onClick={onClose} className="flex items-center gap-1.5 text-[#0F2854]/60 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7] transition-colors">
           <ChevronDownIcon className="w-5 h-5 rotate-90 shrink-0" />
           <span className="text-sm font-medium">กลับ</span>
         </button>
-        <h1 className="flex-1 text-center text-xl font-bold text-[#0F2854]">คำนวณประสิทธิภาพ</h1>
-        <button type="button" onClick={onClose} className="hidden lg:flex w-8 h-8 rounded-full bg-white shadow-sm hover:bg-[#F4F7FC] items-center justify-center text-[#0F2854] font-bold transition-colors">✕</button>
+        <h1 className="flex-1 text-center text-xl font-bold text-[#0F2854] dark:text-[#E7EEF7]">คำนวณประสิทธิภาพ</h1>
+        <button type="button" onClick={onClose} className="hidden lg:flex w-8 h-8 rounded-full bg-white dark:bg-[#111F35] shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 items-center justify-center text-[#0F2854] dark:text-[#E7EEF7] font-bold transition-colors">✕</button>
       </div>
 
       {/* Scrollable body */}
       <div className="relative z-10 flex-1 overflow-y-auto px-4 lg:px-6 pb-6 space-y-4">
 
         {/* Equipment info */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
+        <div className="bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
               <ClipboardIcon className="w-4 h-4 text-white" />
             </div>
-            <p className="text-base font-bold text-[#0F2854]">ข้อมูลอุปกรณ์</p>
+            <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">ข้อมูลอุปกรณ์</p>
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
             {[
@@ -198,8 +199,8 @@ function CalcModal({ item, onClose }) {
               ...(item.electricityCost ? [['Electricity Cost', `${item.electricityCost} บาท/kWh`]] : []),
             ].map(([label, val]) => (
               <div key={label}>
-                <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                <p className="text-sm font-semibold text-[#0F2854]">{val || '-'}</p>
+                <p className="text-xs text-gray-400 dark:text-[#7E93AF] mb-0.5">{label}</p>
+                <p className="text-sm font-semibold text-[#0F2854] dark:text-[#E7EEF7]">{val || '-'}</p>
               </div>
             ))}
           </div>
@@ -207,59 +208,56 @@ function CalcModal({ item, onClose }) {
 
         {isChiller && <>
         {/* Electric Power */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
+        <div className="bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
               <LightningIcon className="w-4 h-4 text-white" />
             </div>
-            <p className="text-base font-bold text-[#0F2854]">Electric Power</p>
+            <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">Electric Power</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             {[['Power (kW)', 'pInput'], ['โหลด (%)', 'load']].map(([label, key]) => (
               <div key={key}>
-                <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">{label}</label>
+                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{label}</label>
                 <input
                   type="number"
                   value={calcForm[key] || ''}
                   onChange={(e) => setCalcForm((p) => ({ ...p, [key]: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 />
               </div>
             ))}
             <div className="col-span-2">
-              <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">สารทำความเย็น</label>
-              <select
+              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">สารทำความเย็น</label>
+              <Select
                 value={calcForm.refrigerant || ''}
-                onChange={(e) => setCalcForm((p) => ({ ...p, refrigerant: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-              >
-                <option value="">เลือก...</option>
-                {['R-11', 'R-12', 'R-22', 'R-123', 'R-134a', 'R-407C', 'R-410A', 'R-717'].map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+                onChange={(v) => setCalcForm((p) => ({ ...p, refrigerant: v }))}
+                placeholder="เลือก..."
+                options={['R-11', 'R-12', 'R-22', 'R-123', 'R-134a', 'R-407C', 'R-410A', 'R-717']}
+                triggerClassName="flex items-center w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5]"
+              />
             </div>
           </div>
         </div>
 
         {/* Water Flow */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
+        <div className="bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
               <DropletIcon className="w-4 h-4 text-white" />
             </div>
-            <p className="text-base font-bold text-[#0F2854]">Water Flow</p>
+            <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">Water Flow</p>
           </div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[13px] font-bold text-[#0F2854]">Ultraflow Sonic ({flowUnit})</label>
-            <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+            <label className="text-[13px] font-bold text-[#0F2854] dark:text-[#E7EEF7]">Ultraflow Sonic ({flowUnit})</label>
+            <div className="flex bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 gap-0.5">
               {['GPM', 'm³/h'].map((unit) => (
                 <button
                   key={unit}
                   type="button"
                   onClick={() => flowUnit !== unit && toggleFlowUnit()}
                   className={`px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
-                    flowUnit === unit ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 hover:text-[#0F2854]'
+                    flowUnit === unit ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
                   }`}
                 >
                   {unit}
@@ -271,14 +269,14 @@ function CalcModal({ item, onClose }) {
             type="number"
             value={calcForm.ultraflowSonic || ''}
             onChange={(e) => setCalcForm((p) => ({ ...p, ultraflowSonic: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+            className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
           />
         </div>
 
         {/* Global temperature unit toggle */}
         <div className="flex items-center justify-between px-1">
-          <p className="text-sm font-semibold text-[#0F2854]/70">เปลี่ยนหน่วยอุณหภูมิทั้งหมด</p>
-          <div className="flex bg-[#0F2854]/8 rounded-xl p-1 gap-1">
+          <p className="text-sm font-semibold text-[#0F2854]/70 dark:text-[#7E93AF]">เปลี่ยนหน่วยอุณหภูมิทั้งหมด</p>
+          <div className="flex bg-[#0F2854]/8 dark:bg-white/5 rounded-xl p-1 gap-1">
             {['F', 'C'].map((u) => {
               const allSame = Object.values(fieldUnits).every((v) => v === u);
               return (
@@ -287,7 +285,7 @@ function CalcModal({ item, onClose }) {
                   type="button"
                   onClick={() => !allSame && toggleAllTempUnit()}
                   className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${
-                    allSame ? 'bg-white text-[#0F2854] shadow-sm' : 'text-[#0F2854]/50 hover:text-[#0F2854]'
+                    allSame ? 'bg-white dark:bg-white/15 text-[#0F2854] dark:text-[#E7EEF7] shadow-sm' : 'text-[#0F2854]/50 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
                   }`}
                 >
                   °{u}
@@ -298,12 +296,12 @@ function CalcModal({ item, onClose }) {
         </div>
 
         {/* Chilled Water */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
+        <div className="bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-[#4988C4] flex items-center justify-center shrink-0">
               <DropletIcon className="w-4 h-4 text-white" />
             </div>
-            <p className="text-base font-bold text-[#0F2854]">Chilled Water</p>
+            <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">Chilled Water</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -313,7 +311,7 @@ function CalcModal({ item, onClose }) {
             ].map(([label, key, span]) => (
               <div key={key} className={span}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[13px] font-bold text-[#0F2854] whitespace-pre-line">{label} (°{fieldUnits[key]})</label>
+                  <label className="text-[13px] font-bold text-[#0F2854] dark:text-[#E7EEF7] whitespace-pre-line">{label} (°{fieldUnits[key]})</label>
                   <TempToggle fieldKey={key} fieldUnits={fieldUnits} onToggle={toggleFieldUnit} />
                 </div>
                 {tempInput(key)}
@@ -324,39 +322,39 @@ function CalcModal({ item, onClose }) {
 
         {/* Condenser Water / Dry Bulb */}
         {item.chillerType === 'AIR COOL' ? (
-          <div className="bg-white rounded-2xl shadow-sm p-5">
+          <div className="bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-[#1C4D8D] flex items-center justify-center shrink-0">
                 <DropletIcon className="w-4 h-4 text-white" />
               </div>
-              <p className="text-base font-bold text-[#0F2854]">Dry Bulb</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">Dry Bulb</p>
             </div>
             <div className="flex flex-col gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[13px] font-bold text-[#0F2854]">Temp (°{fieldUnits.dryBulbTemp})</label>
+                  <label className="text-[13px] font-bold text-[#0F2854] dark:text-[#E7EEF7]">Temp (°{fieldUnits.dryBulbTemp})</label>
                   <TempToggle fieldKey="dryBulbTemp" fieldUnits={fieldUnits} onToggle={toggleFieldUnit} />
                 </div>
                 {tempInput('dryBulbTemp')}
               </div>
               <div>
-                <label className="text-[13px] font-bold text-[#0F2854] mb-1.5 block">%RH</label>
+                <label className="text-[13px] font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">%RH</label>
                 <input
                   type="number"
                   value={calcForm.dryBulbRH || ''}
                   onChange={(e) => setCalcForm((p) => ({ ...p, dryBulbRH: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 />
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm p-5">
+          <div className="bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-[#1C4D8D] flex items-center justify-center shrink-0">
                 <DropletIcon className="w-4 h-4 text-white" />
               </div>
-              <p className="text-base font-bold text-[#0F2854]">Condenser Water</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">Condenser Water</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {[
@@ -366,7 +364,7 @@ function CalcModal({ item, onClose }) {
               ].map(([label, key, span]) => (
                 <div key={key} className={span}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[13px] font-bold text-[#0F2854] whitespace-pre-line">{label} (°{fieldUnits[key]})</label>
+                    <label className="text-[13px] font-bold text-[#0F2854] dark:text-[#E7EEF7] whitespace-pre-line">{label} (°{fieldUnits[key]})</label>
                     <TempToggle fieldKey={key} fieldUnits={fieldUnits} onToggle={toggleFieldUnit} />
                   </div>
                   {tempInput(key)}
@@ -378,32 +376,32 @@ function CalcModal({ item, onClose }) {
         </>}
 
         {!isChiller && (
-          <div className="bg-white rounded-2xl shadow-sm p-5">
+          <div className="bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
                 <CalculatorIcon className="w-4 h-4 text-white" />
               </div>
-              <p className="text-base font-bold text-[#0F2854]">ข้อมูลนำเข้า</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">ข้อมูลนำเข้า</p>
             </div>
             {CALCULATORS[item.category] ? (
               <div className="grid grid-cols-2 gap-4">
                 {CALCULATORS[item.category].fields.map((f) => (
                   <div key={f.key}>
-                    <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">
+                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">
                       {f.label}
-                      {f.unit && <span className="text-xs font-normal text-gray-400"> ({f.unit})</span>}
+                      {f.unit && <span className="text-xs font-normal text-gray-400 dark:text-[#7E93AF]"> ({f.unit})</span>}
                     </label>
                     <input
                       type="number"
                       value={calcForm[f.key] ?? ''}
                       onChange={(e) => setCalcForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                     />
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400 text-center py-4">ยังไม่รองรับเครื่องคำนวณสำหรับหมวดหมู่นี้</p>
+              <p className="text-sm text-gray-400 dark:text-[#7E93AF] text-center py-4">ยังไม่รองรับเครื่องคำนวณสำหรับหมวดหมู่นี้</p>
             )}
           </div>
         )}
@@ -424,7 +422,7 @@ function CalcModal({ item, onClose }) {
         <button
           type="button"
           onClick={resetCalc}
-          className="w-full py-3.5 rounded-2xl bg-white border border-[#0F2854]/10 shadow-sm hover:bg-[#F4F7FC] text-[#0F2854] font-semibold flex items-center justify-center gap-2 transition-colors"
+          className="w-full py-3.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] font-semibold flex items-center justify-center gap-2 transition-colors"
         >
           <RefreshIcon className="w-4 h-4" />
           รีเซ็ต

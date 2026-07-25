@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDownIcon } from '../../components/icons';
+import { Combobox, Select } from '../../components/Dropdown.jsx';
 import { loadSettings } from '../../context/settingsStore.js';
 
 const GRADE_LABEL = { good: 'ดี', ok: 'ปานกลาง', poor: 'ต้องปรับปรุง' };
@@ -248,18 +248,18 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
   ];
 
   return (
-    <div ref={ref} className="flex flex-col gap-4 pt-4 border-t border-gray-100">
+    <div ref={ref} className="flex flex-col gap-4 pt-4 border-t border-gray-100 dark:border-white/8">
       {/* Section header */}
       <div className="flex items-center gap-2">
         <BoltIcon className="w-5 h-5 text-amber-400" />
-        <p className="text-sm font-bold text-[#0F2854]">ประเมินศักยภาพ</p>
+        <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ประเมินศักยภาพ</p>
       </div>
 
       {/* Eval inputs */}
       <div className="grid grid-cols-2 gap-3">
         {evalFields.map((f) => (
           <div key={f.key} className="flex flex-col gap-1">
-            <label className="text-[11px] font-medium text-gray-500 leading-tight">{f.label}</label>
+            <label className="text-[11px] font-medium text-gray-500 dark:text-[#7E93AF] leading-tight">{f.label}</label>
             <input
               type={f.type}
               inputMode="numeric"
@@ -267,7 +267,7 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
               value={evalData[f.key] ?? ''}
               placeholder={f.placeholder}
               onChange={(e) => onChange(f.key, e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent"
             />
           </div>
         ))}
@@ -301,25 +301,25 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
           </div>
 
           {/* Payback row */}
-          <div className="rounded-2xl bg-gray-50 border border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div className="rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8 px-4 py-3 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-gray-700">ระยะเวลาคืนทุนเฉลี่ย</p>
-              <p className="text-[11px] text-gray-400">ระยะเวลาคืนทุนจากการลงทุน</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-[#C3D2E5]">ระยะเวลาคืนทุนเฉลี่ย</p>
+              <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">ระยะเวลาคืนทุนจากการลงทุน</p>
             </div>
             <div className="text-right">
               {payback ? (
                 <>
-                  <p className="text-2xl font-extrabold text-[#0F2854]">{payback}</p>
-                  <p className="text-[11px] text-gray-400">ปี</p>
+                  <p className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{payback}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">ปี</p>
                 </>
               ) : (
-                <p className="text-2xl font-extrabold text-gray-300">-</p>
+                <p className="text-2xl font-extrabold text-gray-300 dark:text-white/20">-</p>
               )}
             </div>
           </div>
 
           {/* Formula reference */}
-          <p className="text-[11px] text-gray-400 px-1">
+          <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] px-1">
             อ้างอิง: {base.toFixed(2)} kW × {pct}% × {hours.toLocaleString('th-TH')} ชม./ปี × {rate} บาท/kWh
           </p>
         </div>
@@ -327,13 +327,13 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
 
       {/* หมายเหตุ */}
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-medium text-gray-500">หมายเหตุ</label>
+        <label className="text-[11px] font-medium text-gray-500 dark:text-[#7E93AF]">หมายเหตุ</label>
         <textarea
           value={evalData.note ?? ''}
           onChange={(e) => onChange('note', e.target.value)}
           placeholder="สมมติฐาน ข้อจำกัด . . ."
           rows={2}
-          className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent resize-none"
+          className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent resize-none"
         />
       </div>
 
@@ -386,27 +386,21 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
   };
 
   return (
-    <div ref={ref} className="flex flex-col bg-[#DDF1F3] max-h-[72dvh] overflow-y-auto">
+    <div ref={ref} className="flex flex-col bg-[#DDF1F3] dark:bg-[#0B1B33] max-h-[72dvh] overflow-y-auto">
       {/* Measure selector */}
       <div className="px-5 pt-5 pb-4 shrink-0">
-        <p className="text-xs font-bold text-[#0F2854]/50 uppercase tracking-wider mb-2">มาตรการ</p>
-        <div className="relative">
-          <select
-            value={activeMeasure}
-            onChange={(e) => onChangeMeasure(e.target.value)}
-            className="w-full appearance-none bg-white border border-gray-200 text-sm text-[#0F2854] font-semibold pl-3.5 pr-8 py-2.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4988C4] cursor-pointer"
-          >
-            {measures.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-          <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        </div>
+        <p className="text-xs font-bold text-[#0F2854]/50 dark:text-[#7E93AF] uppercase tracking-wider mb-2">มาตรการ</p>
+        <Select
+          value={activeMeasure}
+          onChange={onChangeMeasure}
+          options={measures}
+          triggerClassName="flex items-center w-full bg-white dark:bg-[#111F35] border border-gray-200 dark:border-white/10 text-sm text-[#0F2854] dark:text-[#E7EEF7] font-semibold pl-3.5 pr-3 py-2.5 rounded-2xl"
+        />
       </div>
 
       {/* Form fields + evaluation */}
-      <div className="bg-white rounded-t-3xl px-5 pt-5 pb-6 flex flex-col gap-4">
-        <p className="text-sm font-bold text-[#0F2854]">ฟอร์มเก็บข้อมูลมาตรการ</p>
+      <div className="bg-white dark:bg-[#111F35] rounded-t-3xl px-5 pt-5 pb-6 flex flex-col gap-4">
+        <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ฟอร์มเก็บข้อมูลมาตรการ</p>
 
         <div className="grid grid-cols-2 gap-x-3 gap-y-0">
           {fields.map((f) => {
@@ -414,29 +408,21 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
             return (
               <div key={f.key} className={`flex flex-col gap-1 ${f.span === 2 ? 'col-span-2' : ''}`}>
                 <div className="flex items-end gap-1.5 min-h-[2.2rem]">
-                  <label className="text-[11px] font-medium text-gray-500 leading-tight">{f.label}</label>
+                  <label className="text-[11px] font-medium text-gray-500 dark:text-[#7E93AF] leading-tight">{f.label}</label>
                   {isAuto && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 leading-none shrink-0 mt-0.5">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 leading-none shrink-0 mt-0.5">
                       auto
                     </span>
                   )}
                 </div>
                 {f.type === 'select' ? (
-                  <>
-                    <input
-                      type="text"
-                      list={`dl-${f.key}`}
-                      value={formData[f.key] ?? ''}
-                      onChange={(e) => onChange(f.key, e.target.value)}
-                      placeholder="เลือกหรือพิมพ์รุ่น..."
-                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent"
-                    />
-                    <datalist id={`dl-${f.key}`}>
-                      {(f.options || []).map((o) => (
-                        <option key={o} value={o} />
-                      ))}
-                    </datalist>
-                  </>
+                  <Combobox
+                    value={formData[f.key] ?? ''}
+                    onChange={(v) => onChange(f.key, v)}
+                    options={f.options || []}
+                    placeholder="เลือกหรือพิมพ์รุ่น..."
+                    inputClassName="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent"
+                  />
                 ) : (
                   <input
                     type={f.type}
@@ -445,10 +431,10 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
                     value={formData[f.key] ?? ''}
                     readOnly={isAuto}
                     onChange={(e) => !isAuto && onChange(f.key, e.target.value)}
-                    className={`w-full px-3 py-2.5 rounded-xl border text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent ${
+                    className={`w-full px-3 py-2.5 rounded-xl border text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent ${
                       isAuto
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 cursor-default'
-                        : 'bg-gray-50 border-gray-200'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 cursor-default'
+                        : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'
                     }`}
                   />
                 )}
@@ -462,7 +448,7 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
           <button
             type="button"
             onClick={() => setShowEval(true)}
-            className="w-full py-3.5 rounded-2xl border-2 border-[#0F2854] text-[#0F2854] font-bold text-sm hover:bg-[#0F2854] hover:text-white transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl border-2 border-[#0F2854] dark:border-white/25 text-[#0F2854] dark:text-[#E7EEF7] font-bold text-sm hover:bg-[#0F2854] hover:text-white transition-colors flex items-center justify-center gap-2"
           >
             <BoltIcon className="w-4 h-4 text-amber-400" />
             ประเมินศักยภาพ
@@ -590,16 +576,16 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
 
   const card = (
     <div className={inline
-      ? 'w-full h-full flex flex-col bg-white overflow-hidden'
-      : 'relative w-full bg-white rounded-3xl shadow-2xl overflow-hidden'
+      ? 'w-full h-full flex flex-col bg-white dark:bg-[#111F35] overflow-hidden'
+      : 'relative w-full bg-white dark:bg-[#111F35] rounded-3xl shadow-2xl overflow-hidden'
     }>
       {/* ── Header ── */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/8 shrink-0">
         {step === 'form' ? (
           <button
             type="button"
             onClick={handleBack}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors shrink-0"
+            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors shrink-0"
           >
             <BackIcon />
           </button>
@@ -609,17 +595,17 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="font-extrabold text-[#0F2854] text-base leading-tight">
+          <p className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] text-base leading-tight">
             {step === 'form' ? activeMeasure : 'เลือกมาตรการ'}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5 truncate">
+          <p className="text-xs text-gray-400 dark:text-[#7E93AF] mt-0.5 truncate">
             {item?.id} (ประสิทธิภาพปัจจุบัน: {grade})
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors shrink-0"
+          className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors shrink-0"
         >
           <XIcon />
         </button>
@@ -628,22 +614,17 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
       {/* ── Body ── */}
       {step === 'select' ? (
         <div className="px-5 pt-5 pb-6 flex flex-col gap-4">
-          <p className="text-sm font-bold text-[#0F2854]">เลือกมาตรการที่ต้องการ</p>
+          <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">เลือกมาตรการที่ต้องการ</p>
 
           <div className="flex gap-2">
-            <div className="relative flex-1">
-              <select
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-                className="w-full appearance-none bg-gray-50 border border-gray-200 text-sm text-gray-600 pl-3.5 pr-8 py-2.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4988C4] cursor-pointer"
-              >
-                <option value="">เลือกมาตรการที่ต้องการ</option>
-                {measures.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-              <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </div>
+            <Select
+              value={selected}
+              onChange={setSelected}
+              options={measures}
+              placeholder="เลือกมาตรการที่ต้องการ"
+              className="flex-1"
+              triggerClassName="flex items-center w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-600 dark:text-[#8CA3C0] pl-3.5 pr-3 py-2.5 rounded-2xl"
+            />
             <button
               type="button"
               onClick={handleAdd}
@@ -657,20 +638,20 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
           {/* Saved measures list */}
           {savedMeasures.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">มาตรการที่บันทึกแล้ว</p>
+              <p className="text-[11px] font-semibold text-gray-400 dark:text-[#7E93AF] uppercase tracking-wide">มาตรการที่บันทึกแล้ว</p>
 
               {savedMeasures.map((s) => (
-                <div key={s.id} className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-100 rounded-2xl px-3.5 py-2.5">
+                <div key={s.id} className="flex items-center gap-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl px-3.5 py-2.5">
                   <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
                     <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <p className="text-sm font-medium text-emerald-700 flex-1">{s.name}</p>
+                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 flex-1">{s.name}</p>
                   <button
                     type="button"
                     onClick={() => handleEditSaved(s)}
-                    className="w-7 h-7 rounded-full bg-white hover:bg-blue-50 flex items-center justify-center text-blue-400 hover:text-blue-600 transition-colors shrink-0"
+                    className="w-7 h-7 rounded-full bg-white dark:bg-white/10 hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center justify-center text-blue-400 dark:text-blue-400/70 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3.414a2 2 0 01.586-1.414z" />
@@ -679,7 +660,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
                   <button
                     type="button"
                     onClick={() => handleDeleteSaved(s.id)}
-                    className="w-7 h-7 rounded-full bg-white hover:bg-red-50 flex items-center justify-center text-red-300 hover:text-red-500 transition-colors shrink-0"
+                    className="w-7 h-7 rounded-full bg-white dark:bg-white/10 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center justify-center text-red-300 dark:text-red-500/50 hover:text-red-500 dark:hover:text-red-400 transition-colors shrink-0"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M3 7h18" />

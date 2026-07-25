@@ -199,11 +199,62 @@ export function CalculatorIcon({ className }) {
   );
 }
 
+export function SunIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8L6 18M18 6l1.8-1.8" />
+    </svg>
+  );
+}
+
+export function MoonIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 0010.5 10.5z" />
+    </svg>
+  );
+}
+
 export function PencilIcon({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-.96.54l-3.535.707.707-3.535a2 2 0 01.54-.96z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18" />
+    </svg>
+  );
+}
+
+export function FactoryIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21V11l5 3.5V11l5 3.5V11l5 3.5V21" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M5 11V8M18 8V5l-3 2V5l-3 2" />
+    </svg>
+  );
+}
+
+export function ArrowRightIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+export function ActivityIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4l2.5-7L13 19l2.5-7H21" />
+    </svg>
+  );
+}
+
+export function TrendDownIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7l7 7 4-4 7 7" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h6v-6" />
     </svg>
   );
 }

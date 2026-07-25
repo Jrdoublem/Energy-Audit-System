@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import companyLogo from '../../assets/Logo.png';
-import { useLang } from './translations.js';
+import { useLang } from '../../context/languageStore.js';
 import { LangToggle } from './LangToggle.jsx';
 
 const RESEND_SECONDS = 60;

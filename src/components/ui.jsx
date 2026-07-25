@@ -1,9 +1,11 @@
-import { ChevronDownIcon, SearchIcon } from './icons';
+import { Children } from 'react';
+import { SearchIcon } from './icons';
+import { Select } from './Dropdown';
 
 /* ── White content card — the base building block used on every page ── */
 export function Panel({ children, className = '', crosshair = false }) {
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border border-[#EEF3FB] relative overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#111F35] rounded-2xl shadow-sm border border-[#EEF3FB] dark:border-white/8 relative overflow-hidden ${className}`}>
       {crosshair && (
         <>
           <span className="absolute top-2.5 left-2.5 w-3 h-3 border-t border-l border-[#4988C4]/20 pointer-events-none" />
@@ -22,7 +24,7 @@ export function SectionHeader({ title, tag, right, live }) {
   return (
     <div className="flex items-center gap-2.5 mb-4">
       <span className="w-[3px] h-4 rounded-full bg-[#4988C4] shrink-0" />
-      <p className="text-sm font-bold text-[#0F2854]">{title}</p>
+      <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{title}</p>
       {tag && <span className="text-[9px] tracking-[0.2em] text-[#4988C4]/50 uppercase ml-1">{tag}</span>}
       {live && (
         <div className="flex items-center gap-1 ml-1">
@@ -44,10 +46,10 @@ export function PageHeader({ title, subtitle, tag, children, className = '' }) {
     <div className={`px-5 lg:px-10 pt-14 lg:pt-8 pb-5 ${className}`}>
       <div className="flex items-center gap-3">
         <span className="w-1.5 h-7 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
-        <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854]">{title}</h1>
+        <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{title}</h1>
         {tag && <span className="hidden lg:inline text-[10px] tracking-[0.2em] text-[#4988C4]/60 uppercase ml-1">{tag}</span>}
       </div>
-      {subtitle && <p className="text-sm font-medium text-[#0F2854]/60 pl-5 tracking-wide mt-1">{subtitle}</p>}
+      {subtitle && <p className="text-sm font-medium text-[#0F2854]/60 dark:text-[#7E93AF] pl-5 tracking-wide mt-1">{subtitle}</p>}
       {children && <div className="flex flex-wrap items-center gap-2 mt-4">{children}</div>}
     </div>
   );
@@ -63,24 +65,29 @@ export function GlassSearchInput({ value, onChange, placeholder, className = '' 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-10 pr-4 py-2.5 rounded-full bg-white border border-[#0F2854]/10 shadow-sm placeholder-gray-400 text-[#0F2854] text-sm focus:outline-none focus:ring-2 focus:ring-[#4988C4]/30 transition-colors"
+        className="w-full pl-10 pr-4 py-2.5 rounded-full bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-sm placeholder-gray-400 dark:placeholder-[#5C7291] text-[#0F2854] dark:text-[#E7EEF7] text-sm focus:outline-none focus:ring-2 focus:ring-[#4988C4]/30 transition-colors"
       />
     </div>
   );
 }
 
+// Takes <option> children exactly like a native <select> would (so existing
+// call sites don't need to change) but reads them as data and renders a
+// custom themed dropdown instead of delegating to the native popup.
 export function GlassSelect({ value, onChange, className = '', children }) {
+  const options = Children.toArray(children).map((child) => ({
+    value: child.props.value,
+    label: child.props.children,
+  }));
   return (
-    <div className={`relative shrink-0 ${className}`}>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-white hover:bg-[#F4F7FC] border border-[#0F2854]/10 shadow-sm text-[#0F2854] text-xs font-semibold pl-3.5 pr-8 py-2.5 rounded-full focus:outline-none cursor-pointer transition-colors"
-      >
-        {children}
-      </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#4988C4]" />
-    </div>
+    <Select
+      value={value}
+      onChange={onChange}
+      options={options}
+      className={`shrink-0 ${className}`}
+      triggerClassName="flex items-center gap-1.5 bg-white dark:bg-[#111F35] hover:bg-[#F4F7FC] dark:hover:bg-white/5 border border-[#0F2854]/10 dark:border-white/10 shadow-sm text-[#0F2854] dark:text-[#E7EEF7] text-xs font-semibold pl-3.5 pr-3 py-2.5 rounded-full transition-colors"
+      panelClassName="min-w-full whitespace-nowrap"
+    />
   );
 }
 
@@ -89,7 +96,7 @@ export function GlassButton({ children, onClick, className = '', type = 'button'
     <button
       type={type}
       onClick={onClick}
-      className={`shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-white hover:bg-[#F4F7FC] border border-[#0F2854]/10 shadow-sm text-[#0F2854] text-sm font-semibold transition-colors ${className}`}
+      className={`shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-white dark:bg-[#111F35] hover:bg-[#F4F7FC] dark:hover:bg-white/5 border border-[#0F2854]/10 dark:border-white/10 shadow-sm text-[#0F2854] dark:text-[#E7EEF7] text-sm font-semibold transition-colors ${className}`}
     >
       {children}
     </button>

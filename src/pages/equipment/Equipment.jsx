@@ -2,7 +2,9 @@ import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
+import { useLang } from '../../context/languageStore.js';
 import { GlassSearchInput, GlassSelect, ShellActionButton } from '../../components/ui';
+import { Combobox } from '../../components/Dropdown.jsx';
 import CalcModal from './CalcModal';
 import {
   ChevronDownIcon,
@@ -50,16 +52,20 @@ const INITIAL_EQUIPMENT = [
   { id: 'CH-01', category: 'chiller', brandModel: 'Daikin EWAD', building: 'อาคาร B', factory: 'โรงงาน A', owner: 'สมหญิง รักดี' },
 ];
 
-const FORM_FIELDS = [
-  { key: 'id',          label: 'รหัสอุปกรณ์',       placeholder: 'เช่น CH-01', required: true },
-  { key: 'factory',     label: 'ชื่อโรงงาน บริษัท', placeholder: '',            required: true },
-  { key: 'building',    label: 'แผนก/อาคาร',         placeholder: '' },
-  { key: 'brandModel',  label: 'ยี่ห้อ/รุ่น',        placeholder: 'พิมพ์หรือเลือก...', type: 'datalist' },
-  { key: 'installDate', label: 'วันที่ผลิตจากโรงงาน', placeholder: '', type: 'month' },
-  { key: 'owner',       label: 'ผู้รับผิดชอบ',        placeholder: '' },
-];
+function getFormFields(t) {
+  return [
+    { key: 'id',          label: t.equipment.fieldId,          placeholder: t.equipment.egId, required: true },
+    { key: 'factory',     label: t.equipment.fieldFactory,     placeholder: '',            required: true },
+    { key: 'building',    label: t.equipment.fieldBuilding,     placeholder: '' },
+    { key: 'brandModel',  label: t.equipment.fieldBrandModel,  placeholder: t.equipment.pickOrType, type: 'datalist' },
+    { key: 'installDate', label: t.equipment.fieldInstallDate, placeholder: '', type: 'month' },
+    { key: 'owner',       label: t.equipment.fieldOwner,        placeholder: '' },
+  ];
+}
 
 function Equipment() {
+  const { t } = useLang();
+  const formFields = getFormFields(t);
   const { selectedFactory, allowedFactories, refreshFactories } = useFactory();
   const [categories, setCategories] = useState(loadCategories);
   const [equipment, setEquipment] = useState(() => {
@@ -199,12 +205,12 @@ function Equipment() {
       <div className={`flex min-h-dvh lg:min-h-screen lg:gap-4 ${railOpen ? 'gap-3' : 'gap-0'}`}>
 
         {/* Rail */}
-        <div className={`flex flex-col gap-2.5 bg-white shadow-[4px_0_12px_rgba(15,40,84,0.06)] border-r border-[#EEF3FB] shrink-0 transition-[width,padding] duration-200 overflow-hidden lg:!w-auto lg:!p-3 ${railOpen ? 'p-3 w-[5.5rem]' : 'p-0 w-0'}`}>
+        <div className={`flex flex-col gap-2.5 bg-white dark:bg-[#111F35] shadow-[4px_0_12px_rgba(15,40,84,0.06)] border-r border-[#EEF3FB] dark:border-white/8 shrink-0 transition-[width,padding] duration-200 overflow-hidden lg:!w-auto lg:!p-3 ${railOpen ? 'p-3 w-[5.5rem]' : 'p-0 w-0'}`}>
           {/* Close button — mobile only */}
           <button
             type="button"
             onClick={() => setRailOpen(false)}
-            className="lg:hidden w-full h-8 rounded-xl flex items-center justify-center text-[#0F2854]/40 hover:text-[#0F2854] hover:bg-[#F4F7FC] transition-colors shrink-0"
+            className="lg:hidden w-full h-8 rounded-xl flex items-center justify-center text-[#0F2854]/40 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7] hover:bg-[#F4F7FC] dark:hover:bg-white/5 transition-colors shrink-0"
           >
             <ChevronDownIcon className="w-4 h-4 rotate-90" />
           </button>
@@ -218,7 +224,7 @@ function Equipment() {
                 title={label}
                 onClick={() => setCategory(key)}
                 className={`relative w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 transition-colors ${
-                  active ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854]'
+                  active ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 dark:text-[#7E93AF] hover:bg-[#F4F7FC] dark:hover:bg-white/5 hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
                 }`}
               >
                 <Icon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
@@ -226,15 +232,15 @@ function Equipment() {
               </button>
             );
           })}
-          <div className="h-px bg-gray-100 my-1.5"></div>
+          <div className="h-px bg-gray-100 dark:bg-white/5 my-1.5"></div>
           <button
             type="button"
-            title="เพิ่มหมวดหมู่อุปกรณ์"
+            title={t.equipment.addCategoryTooltip}
             onClick={() => { setForm({}); setModal('add-category'); }}
-            className="w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854] transition-colors"
+            className="w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
           >
             <PlusIcon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
-            <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">เพิ่ม</span>
+            <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">{t.common.add}</span>
           </button>
         </div>
 
@@ -245,14 +251,14 @@ function Equipment() {
             <button
               type="button"
               onClick={() => setRailOpen(true)}
-              className="lg:hidden absolute left-0 top-4 z-10 w-6 h-10 bg-white shadow-md border border-[#EEF3FB] rounded-r-xl flex items-center justify-center text-[#0F2854]/60 hover:text-[#0F2854] transition-colors"
+              className="lg:hidden absolute left-0 top-4 z-10 w-6 h-10 bg-white dark:bg-[#111F35] shadow-md border border-[#EEF3FB] dark:border-white/8 rounded-r-xl flex items-center justify-center text-[#0F2854]/60 hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
             >
               <ChevronDownIcon className="w-4 h-4 -rotate-90" />
             </button>
           )}
           <div className="flex items-center gap-2 mb-4">
-            <p className="text-xl font-bold text-[#0F2854]">ทะเบียนอุปกรณ์</p>
-            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-white border border-[#0F2854]/10 shadow-sm text-[#0F2854]">
+            <p className="text-xl font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.pageTitle}</p>
+            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-sm text-[#0F2854] dark:text-[#E7EEF7]">
               {activeCategory.label}
             </span>
           </div>
@@ -261,31 +267,31 @@ function Equipment() {
             <GlassSearchInput
               value={search}
               onChange={setSearch}
-              placeholder="ค้นหา เช่น รหัสอุปกรณ์ ..."
+              placeholder={t.equipment.searchPlaceholder}
             />
             <ShellActionButton onClick={openAddModal}>
               <PlusIcon className="w-4 h-4" />
-              เพิ่มทะเบียนอุปกรณ์
+              {t.equipment.addEquipment}
             </ShellActionButton>
           </div>
 
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-[#0F2854]/60">
-              {category === 'all' ? 'อุปกรณ์ทั้งหมด' : `รายการ ${activeCategory.label}`} ({filtered.length})
+            <p className="text-sm text-[#0F2854]/60 dark:text-[#7E93AF]">
+              {category === 'all' ? t.equipment.allEquipment : `${t.equipment.categoryList} ${activeCategory.label}`} ({filtered.length})
             </p>
             <GlassSelect value={sortOrder} onChange={setSortOrder}>
-              <option value="newest" className="text-gray-800">ล่าสุดก่อน</option>
+              <option value="newest" className="text-gray-800">{t.equipment.sortNewest}</option>
               <option value="az" className="text-gray-800">A-Z</option>
               <option value="za" className="text-gray-800">Z-A</option>
-              <option value="num" className="text-gray-800">เลขน้อยไปมาก</option>
-              <option value="numd" className="text-gray-800">เลขมากไปน้อย</option>
+              <option value="num" className="text-gray-800">{t.equipment.sortNumAsc}</option>
+              <option value="numd" className="text-gray-800">{t.equipment.sortNumDesc}</option>
             </GlassSelect>
           </div>
 
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <GearIcon className="w-10 h-10 mb-2 text-[#0F2854]/20" />
-              <p className="text-sm text-[#0F2854]/50">ไม่พบอุปกรณ์</p>
+              <GearIcon className="w-10 h-10 mb-2 text-[#0F2854]/20 dark:text-[#7E93AF]/30" />
+              <p className="text-sm text-[#0F2854]/50 dark:text-[#7E93AF]">{t.equipment.noEquipmentFound}</p>
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -294,17 +300,17 @@ function Equipment() {
                 return (
                   <div
                     key={item.id}
-                    className="w-full flex items-center justify-between gap-3 bg-white rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow"
+                    className="w-full flex items-center justify-between gap-3 bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-1.5 text-lg font-bold text-[#0F2854]">
+                      <p className="flex items-center gap-1.5 text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">
                         <ItemIcon className="w-5 h-5 text-[#4988C4] shrink-0" />
                         {item.id}
                       </p>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">
+                      <p className="text-xs text-gray-400 dark:text-[#7E93AF] truncate mt-0.5">
                         {item.brandModel}/{item.building}
                       </p>
-                      <p className="flex items-center gap-1 text-xs text-gray-400 min-w-0 mt-0.5">
+                      <p className="flex items-center gap-1 text-xs text-gray-400 dark:text-[#7E93AF] min-w-0 mt-0.5">
                         <MapPinIcon className="w-3 h-3 shrink-0" />
                         <span className="truncate">{item.factory}</span>
                         <UserIcon className="w-3 h-3 shrink-0 ml-1.5" />
@@ -317,16 +323,16 @@ function Equipment() {
                         <button
                           type="button"
                           onClick={() => openEditModal(item)}
-                          title="แก้ไข"
-                          className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 hover:bg-[#0F2854] hover:text-white text-[#4988C4] flex items-center justify-center transition-colors"
+                          title={t.common.edit}
+                          className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#0F2854] hover:text-white text-[#4988C4] flex items-center justify-center transition-colors"
                         >
                           <PencilIcon className="w-3 h-3 lg:w-4 lg:h-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(item.id)}
-                          title="ลบ"
-                          className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center transition-colors"
+                          title={t.common.delete}
+                          className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center transition-colors"
                         >
                           <TrashIcon className="w-3 h-3 lg:w-4 lg:h-4" />
                         </button>
@@ -338,7 +344,7 @@ function Equipment() {
                         style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
                       >
                         <CalculatorIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0" />
-                        คำนวณ
+                        {t.equipment.calculate}
                       </button>
                     </div>
                   </div>
@@ -354,7 +360,7 @@ function Equipment() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div
-            className="relative bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg flex flex-col"
+            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg flex flex-col"
             style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -364,22 +370,22 @@ function Equipment() {
                 <div className="w-9 h-9 rounded-xl bg-[#0F2854] flex items-center justify-center shrink-0">
                   {editingId ? <PencilIcon className="w-4 h-4 text-white" /> : <PlusIcon className="w-4 h-4 text-white" />}
                 </div>
-                <p className="text-lg font-bold text-[#0F2854]">{editingId ? 'แก้ไขทะเบียนอุปกรณ์' : 'เพิ่มทะเบียนอุปกรณ์'}</p>
+                <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{editingId ? t.equipment.editEquipment : t.equipment.addEquipment}</p>
               </div>
-              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors font-bold">✕</button>
+              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#8CA3C0] transition-colors font-bold">✕</button>
             </div>
 
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-2 flex flex-col gap-4">
               <div>
-                <label className="text-sm font-bold text-[#0F2854] mb-2 block">หมวดหมู่อุปกรณ์</label>
+                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-2 block">{t.equipment.equipmentCategory}</label>
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => catScrollRef.current?.scrollBy({ left: -160, behavior: 'smooth' })}
-                    className="hidden sm:flex absolute left-0 top-0 bottom-1 z-10 items-center pr-3 bg-gradient-to-r from-white via-white/90 to-transparent"
+                    className="hidden sm:flex absolute left-0 top-0 bottom-1 z-10 items-center pr-3 bg-gradient-to-r from-white dark:from-[#111F35] via-white/90 dark:via-[#111F35]/90 to-transparent"
                   >
-                    <ChevronDownIcon className="w-4 h-4 text-[#0F2854] rotate-90" />
+                    <ChevronDownIcon className="w-4 h-4 text-[#0F2854] dark:text-[#E7EEF7] rotate-90" />
                   </button>
                   <div ref={catScrollRef} className="flex gap-2 overflow-x-auto pb-1 scrollbar-none sm:px-5">
                     {categories.filter((c) => c.key !== 'all').map(({ key, label, iconKey }) => {
@@ -392,7 +398,7 @@ function Equipment() {
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-colors text-sm font-semibold shrink-0 ${
                             form.category === key
                               ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                              : 'border-gray-200 bg-gray-50 text-[#0F2854] hover:border-[#0F2854]/40'
+                              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
                           }`}
                         >
                           <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -404,18 +410,18 @@ function Equipment() {
                   <button
                     type="button"
                     onClick={() => catScrollRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}
-                    className="hidden sm:flex absolute right-0 top-0 bottom-1 z-10 items-center pl-3 bg-gradient-to-l from-white via-white/90 to-transparent"
+                    className="hidden sm:flex absolute right-0 top-0 bottom-1 z-10 items-center pl-3 bg-gradient-to-l from-white dark:from-[#111F35] via-white/90 dark:via-[#111F35]/90 to-transparent"
                   >
-                    <ChevronDownIcon className="w-4 h-4 text-[#0F2854] -rotate-90" />
+                    <ChevronDownIcon className="w-4 h-4 text-[#0F2854] dark:text-[#E7EEF7] -rotate-90" />
                   </button>
                 </div>
               </div>
 
               {form.category === 'chiller' && (
-                <div className="border-2 border-[#0F2854]/15 rounded-2xl p-4 flex flex-col gap-4">
+                <div className="border-2 border-[#0F2854]/15 dark:border-white/10 rounded-2xl p-4 flex flex-col gap-4">
                   {/* Chiller Type */}
                   <div>
-                    <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">Chiller Type</label>
+                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Chiller Type</label>
                     <div className="flex gap-2">
                       {['AIR COOL', 'WATER COOL'].map((type) => (
                         <button
@@ -425,7 +431,7 @@ function Equipment() {
                           className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${
                             form.chillerType === type
                               ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                              : 'border-gray-200 bg-gray-50 text-[#0F2854] hover:border-[#0F2854]/40'
+                              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
                           }`}
                         >
                           {type}
@@ -436,49 +442,49 @@ function Equipment() {
 
                   {/* Cooling Capacity */}
                   <div>
-                    <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">Cooling Capacity (RT)</label>
+                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Cooling Capacity (RT)</label>
                     <input
                       type="number"
                       value={form.coolingCapacity || ''}
                       onChange={(e) => setForm((p) => ({ ...p, coolingCapacity: e.target.value }))}
-                      placeholder="เช่น 200"
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                      placeholder={t.equipment.egCoolingCapacity}
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                     />
                   </div>
 
                   {/* Power & Efficiency */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">Power (kW)</label>
+                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Power (kW)</label>
                       <input
                         type="number"
                         value={form.chillerPower || ''}
                         onChange={(e) => setForm((p) => ({ ...p, chillerPower: e.target.value }))}
-                        placeholder="เช่น 646"
-                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                        placeholder={t.equipment.egPower}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">Efficiency (kW/RT)</label>
+                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Efficiency (kW/RT)</label>
                       <input
                         type="number"
                         value={form.chillerEfficiency || ''}
                         onChange={(e) => setForm((p) => ({ ...p, chillerEfficiency: e.target.value }))}
-                        placeholder="เช่น 0.65"
-                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                        placeholder={t.equipment.egEfficiency}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                       />
                     </div>
                   </div>
 
                   {/* Average Electricity Cost */}
                   <div>
-                    <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">Average Electricity Cost (บาท/kWh)</label>
+                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.avgElecCost}</label>
                     <input
                       type="number"
                       value={form.electricityCost || ''}
                       onChange={(e) => setForm((p) => ({ ...p, electricityCost: e.target.value }))}
-                      placeholder="เช่น 4.5"
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                      placeholder={t.equipment.egCost}
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                     />
                   </div>
                 </div>
@@ -486,7 +492,7 @@ function Equipment() {
 
               {form.category === 'compressor' && (
                 <div>
-                  <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">Compressor Type</label>
+                  <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Compressor Type</label>
                   <div className="grid grid-cols-2 gap-2">
                     {['Screw', 'Centrifugal', 'VSD', 'Magnetic'].map((type) => (
                       <button
@@ -496,7 +502,7 @@ function Equipment() {
                         className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${
                           form.compressorType === type
                             ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                            : 'border-gray-200 bg-gray-50 text-[#0F2854] hover:border-[#0F2854]/40'
+                            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
                         }`}
                       >
                         {type}
@@ -506,65 +512,60 @@ function Equipment() {
                 </div>
               )}
 
-              {FORM_FIELDS.map((f) => (
+              {formFields.map((f) => (
                 <div key={f.key}>
-                  <label className={`text-sm font-bold mb-1.5 flex items-center gap-1 ${formErrors[f.key] ? 'text-red-500' : 'text-[#0F2854]'}`}>
+                  <label className={`text-sm font-bold mb-1.5 flex items-center gap-1 ${formErrors[f.key] ? 'text-red-500' : 'text-[#0F2854] dark:text-[#E7EEF7]'}`}>
                     {f.label}
                     {f.required && <span className="text-red-500">*</span>}
                   </label>
                   {f.type === 'datalist' ? (
                     <div className="relative">
-                      <input
-                        list="brands-datalist"
+                      <Combobox
                         value={form[f.key] || ''}
-                        onChange={(e) => { setForm((p) => ({ ...p, [f.key]: e.target.value })); setFormErrors((p) => ({ ...p, [f.key]: false })); }}
+                        onChange={(v) => { setForm((p) => ({ ...p, [f.key]: v })); setFormErrors((p) => ({ ...p, [f.key]: false })); }}
+                        options={BRAND_OPTIONS[form.category] || Object.values(BRAND_OPTIONS).flat()}
                         placeholder={f.placeholder}
-                        className={`w-full px-4 py-2.5 pr-9 rounded-xl bg-gray-50 border text-base text-gray-700 focus:outline-none focus:ring-2 ${formErrors[f.key] ? 'border-red-400 focus:ring-red-300' : 'border-gray-200 focus:ring-[#4988C4]'}`}
+                        inputClassName={`w-full px-4 py-2.5 pr-9 rounded-xl bg-gray-50 dark:bg-white/5 border text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 ${formErrors[f.key] ? 'border-red-400 focus:ring-red-300' : 'border-gray-200 dark:border-white/10 focus:ring-[#4988C4]'}`}
                       />
                       {form[f.key] && (
                         <button
                           type="button"
                           onClick={() => setForm((p) => ({ ...p, [f.key]: '' }))}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-500 text-xs leading-none transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/15 flex items-center justify-center text-gray-500 dark:text-[#8CA3C0] text-xs leading-none transition-colors z-10"
                         >
                           ✕
                         </button>
                       )}
-                      <datalist id="brands-datalist">
-                        {(BRAND_OPTIONS[form.category] || Object.values(BRAND_OPTIONS).flat()).map((brand) => (
-                          <option key={brand} value={brand} />
-                        ))}
-                      </datalist>
                     </div>
                   ) : f.type === 'date' || f.type === 'month' ? (
                     <input
                       type={f.type}
                       value={form[f.key] || ''}
                       onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                     />
                   ) : (
                     <input
                       value={form[f.key] || ''}
                       onChange={(e) => { setForm((p) => ({ ...p, [f.key]: e.target.value })); setFormErrors((p) => ({ ...p, [f.key]: false })); }}
                       placeholder={f.placeholder}
-                      className={`w-full px-4 py-2.5 rounded-xl bg-gray-50 border text-base text-gray-700 focus:outline-none focus:ring-2 ${formErrors[f.key] ? 'border-red-400 focus:ring-red-300' : 'border-gray-200 focus:ring-[#4988C4]'}`}
+                      className={`w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 ${formErrors[f.key] ? 'border-red-400 focus:ring-red-300' : 'border-gray-200 dark:border-white/10 focus:ring-[#4988C4]'}`}
                     />
                   )}
-                  {formErrors[f.key] && <p className="text-xs text-red-500 mt-1">กรุณากรอก{f.label}</p>}
+                  {formErrors[f.key] && <p className="text-xs text-red-500 mt-1">{t.equipment.fieldRequired}{f.label}</p>}
                 </div>
               ))}
 
             </div>
 
             {/* Sticky footer */}
-            <div className="px-6 sm:px-7 py-4 border-t border-gray-100 shrink-0">
+            <div className="px-6 sm:px-7 py-4 border-t border-gray-100 dark:border-white/8 shrink-0">
               <button
                 type="button"
                 onClick={handleSave}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors"
               >
-                {editingId ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล'}
+                {editingId ? t.equipment.saveEdits : t.equipment.saveData}
               </button>
             </div>
           </div>
@@ -576,7 +577,7 @@ function Equipment() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div
-            className="relative bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-sm flex flex-col"
+            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-sm flex flex-col"
             style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -586,24 +587,24 @@ function Equipment() {
                 <div className="w-9 h-9 rounded-xl bg-[#0F2854] flex items-center justify-center shrink-0">
                   <PlusIcon className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-lg font-bold text-[#0F2854]">เพิ่มหมวดหมู่อุปกรณ์</p>
+                <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.addCategoryTitle}</p>
               </div>
-              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors font-bold">✕</button>
+              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#8CA3C0] transition-colors font-bold">✕</button>
             </div>
 
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-2 flex flex-col gap-4">
               <div>
-                <label className="text-sm font-bold text-[#0F2854] mb-1.5 block">ชื่อหมวดหมู่</label>
+                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.categoryNameLabel}</label>
                 <input
                   value={form.name || ''}
                   onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="เช่น Transformer"
-                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                  placeholder={t.equipment.categoryNamePlaceholder}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-[#0F2854] mb-2 block">เลือกไอคอน</label>
+                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-2 block">{t.equipment.chooseIcon}</label>
                 <div className="flex flex-wrap gap-2">
                   {ICON_OPTIONS.map(({ key, label, icon: Icon }) => (
                     <button
@@ -614,7 +615,7 @@ function Equipment() {
                       className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-colors ${
                         form.iconKey === key
                           ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                          : 'border-gray-200 bg-gray-50 text-[#0F2854] hover:border-[#0F2854]/40'
+                          : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
                       }`}
                     >
                       <Icon className="w-5 h-5" />
@@ -625,13 +626,13 @@ function Equipment() {
             </div>
 
             {/* Sticky footer */}
-            <div className="px-6 sm:px-7 py-4 border-t border-gray-100 shrink-0">
+            <div className="px-6 sm:px-7 py-4 border-t border-gray-100 dark:border-white/8 shrink-0">
               <button
                 type="button"
                 onClick={handleSaveCategory}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors"
               >
-                บันทึกหมวดหมู่
+                {t.equipment.saveCategory}
               </button>
             </div>
           </div>
@@ -646,28 +647,28 @@ function Equipment() {
       {confirmDeleteId !== null && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6 font-sans">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDeleteId(null)} />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
+          <div className="relative bg-white dark:bg-[#111F35] rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
             <div className="flex flex-col items-center gap-2 text-center">
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500">
                 <TrashIcon className="w-6 h-6" />
               </div>
-              <p className="text-base font-bold text-[#0F2854]">ลบอุปกรณ์นี้?</p>
-              <p className="text-sm text-gray-400">รายการที่ลบแล้วจะไม่สามารถกู้คืนได้</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.deleteEquipmentConfirm}</p>
+              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">{t.equipment.deleteEquipmentWarning}</p>
             </div>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmDeleteId(null)}
-                className="flex-1 py-3 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold text-sm transition-colors"
+                className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
               >
-                ยกเลิก
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={deleteEquipment}
                 className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors"
               >
-                ลบ
+                {t.common.delete}
               </button>
             </div>
           </div>
