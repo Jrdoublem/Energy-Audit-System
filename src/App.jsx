@@ -8,6 +8,7 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Equipment from './pages/equipment/Equipment';
+import Catalog from './pages/Catalog';
 import History from './pages/history/History';
 import Report from './pages/report/Report';
 import Factories from './pages/Factories';
@@ -28,6 +29,7 @@ function App() {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/home" element={<Dashboard />} />
               <Route path="/equipment" element={<Equipment />} />
+              <Route path="/catalog" element={<Catalog />} />
               <Route path="/history" element={<History />} />
               <Route path="/reports" element={<Report />} />
               <Route path="/factories" element={<Factories />} />

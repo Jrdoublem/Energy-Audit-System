@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
+import { useLang } from '../../context/languageStore.js';
 import { GlassSearchInput, GlassSelect, PageHeader } from '../../components/ui';
 import CalcResult from '../equipment/CalcResult';
 import MeasureSelect from './MeasureSelect';
@@ -9,9 +10,6 @@ import {
   SnowflakeIcon, DropletIcon, FlameIcon, LightningIcon,
   CoolingTowerIcon, CompressorIcon, TrashIcon,
 } from '../../components/icons';
-
-const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-  'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 
 const CATEGORY_ICON = {
   chiller: SnowflakeIcon, compressor: CompressorIcon, pump: DropletIcon,
@@ -23,25 +21,24 @@ const CATEGORY_COLOR = {
   cooling: 'bg-teal-100 dark:bg-teal-500/10 text-teal-600', electrical: 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-600',
 };
 const GRADE_COLOR  = { good: 'bg-green-100 dark:bg-green-500/10 text-green-600', ok: 'bg-orange-100 dark:bg-orange-500/10 text-orange-500', poor: 'bg-red-100 dark:bg-red-500/10 text-red-500' };
-const GRADE_LABEL  = { good: 'เกณฑ์ดี', ok: 'ปานกลาง', poor: 'ต้องปรับปรุง' };
 
-function formatThaiDateTime(iso) {
+function formatThaiDateTime(iso, months, timeSuffix) {
   const d = new Date(iso);
   const h = String(d.getHours()).padStart(2,'0');
   const m = String(d.getMinutes()).padStart(2,'0');
   return {
-    date: `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`,
-    time: `${h}:${m} น.`,
+    date: `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()+543}`,
+    time: `${h}:${m}${timeSuffix}`,
     monthIdx: d.getMonth(),
     year: d.getFullYear(),
   };
 }
 
-function groupByMonth(records) {
+function groupByMonth(records, months) {
   const groups = {};
   records.forEach((r) => {
     const d = new Date(r.savedAt);
-    const key = `${THAI_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`;
+    const key = `${months[d.getMonth()]} ${d.getFullYear()+543}`;
     if (!groups[key]) groups[key] = [];
     groups[key].push(r);
   });
@@ -49,6 +46,7 @@ function groupByMonth(records) {
 }
 
 function History() {
+  const { t } = useLang();
   const { selectedFactory, allowedFactories } = useFactory();
   const [viewing, setViewing]           = useState(null);
   const [viewingMeasure, setViewingMeasure] = useState(null);
@@ -107,22 +105,22 @@ function History() {
     return true;
   }), [records, selectedFactory, allowedFactories, filterMonth, filterYear, search]);
 
-  const groups    = useMemo(() => groupByMonth(filtered), [filtered]);
+  const groups    = useMemo(() => groupByMonth(filtered, t.history.months), [filtered, t]);
   const monthKeys = Object.keys(groups);
 
   return (
     <AppLayout hideHeader fullBleed>
       <div className="flex flex-col min-h-screen">
 
-        <PageHeader title="ประวัติการตรวจอุปกรณ์" subtitle="ค้นหาและกรองบันทึกการตรวจวัดทั้งหมด">
+        <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle}>
           <GlassSelect value={filterMonth} onChange={setFilterMonth}>
-            <option value="" className="text-gray-800">ทุกเดือน</option>
-            {THAI_MONTHS.map((m, i) => (
+            <option value="" className="text-gray-800">{t.history.allMonths}</option>
+            {t.history.months.map((m, i) => (
               <option key={i} value={i} className="text-gray-800">{m}</option>
             ))}
           </GlassSelect>
           <GlassSelect value={filterYear} onChange={setFilterYear}>
-            <option value="" className="text-gray-800">ทุกปี</option>
+            <option value="" className="text-gray-800">{t.history.allYears}</option>
             {availableYears.map((y) => (
               <option key={y} value={y} className="text-gray-800">{y + 543}</option>
             ))}
@@ -133,10 +131,10 @@ function History() {
               onClick={() => { setFilterMonth(''); setFilterYear(''); }}
               className="text-xs text-[#0F2854]/60 dark:text-[#7E93AF] hover:text-[#0F2854] dark:text-[#E7EEF7] underline underline-offset-2 transition-colors"
             >
-              รีเซ็ต
+              {t.common.reset}
             </button>
           )}
-          <GlassSearchInput value={search} onChange={setSearch} placeholder="ค้นหาอุปกรณ์..." className="w-full" />
+          <GlassSearchInput value={search} onChange={setSearch} placeholder={t.history.searchPlaceholder} className="w-full" />
         </PageHeader>
 
         {/* ── Content ── */}
@@ -146,7 +144,7 @@ function History() {
               <svg className="w-14 h-14" fill="none" stroke="currentColor" strokeWidth="1.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
               </svg>
-              <p className="text-sm">ยังไม่มีประวัติการตรวจวัด</p>
+              <p className="text-sm">{t.history.emptyState}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-7">
@@ -159,13 +157,13 @@ function History() {
                       const Icon      = CATEGORY_ICON[eq.category] || SnowflakeIcon;
                       const iconCls   = CATEGORY_COLOR[eq.category] || 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-[#8CA3C0]';
                       const gradeCls  = GRADE_COLOR[record.result.grade] || '';
-                      const gradeLabel = GRADE_LABEL[record.result.grade] || '';
+                      const gradeLabel = t.common.grade[record.result.grade] || '';
                       const metrics = record.result.metrics || [
                         { key: 'coolingLoad', label: 'Cooling Load', value: record.result.coolingLoad != null ? Number(record.result.coolingLoad).toFixed(1) : '-', unit: 'TR' },
                         { key: 'powerCF', label: 'Power (CF)', value: record.result.powerCF ?? '-', unit: 'kW' },
                         { key: 'efficiency', label: 'Efficiency', value: record.result.efficiency ?? '-', unit: 'kW/TR' },
                       ];
-                      const { date, time } = formatThaiDateTime(record.savedAt);
+                      const { date, time } = formatThaiDateTime(record.savedAt, t.history.months, t.history.timeSuffix);
                       return (
                         <div
                           key={record.id}
@@ -194,7 +192,7 @@ function History() {
                                   <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                   </svg>
-                                  เลือกมาตรการแล้ว
+                                  {t.history.measureSelected}
                                 </span>
                               )}
                             </div>
@@ -221,7 +219,7 @@ function History() {
                               className="w-full py-1 lg:py-1.5 rounded-full bg-red-100 dark:bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center gap-1.5 transition-colors"
                             >
                               <TrashIcon className="w-3 h-3 lg:w-3.5 lg:h-3.5 shrink-0" />
-                              <span className="text-[11px] lg:text-sm font-semibold">ลบ</span>
+                              <span className="text-[11px] lg:text-sm font-semibold">{t.common.delete}</span>
                             </button>
                           </div>
                         </div>
@@ -244,8 +242,8 @@ function History() {
               <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500">
                 <TrashIcon className="w-6 h-6" />
               </div>
-              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">ลบรายการนี้?</p>
-              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">รายการที่ลบแล้วจะไม่สามารถกู้คืนได้</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.history.deleteRecordConfirm}</p>
+              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">{t.history.deleteRecordWarning}</p>
             </div>
             <div className="flex gap-3">
               <button
@@ -253,14 +251,14 @@ function History() {
                 onClick={() => setConfirmId(null)}
                 className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
               >
-                ยกเลิก
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={deleteRecord}
                 className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors"
               >
-                ลบ
+                {t.common.delete}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDownIcon } from './icons';
+import { useLang } from '../context/languageStore.js';
 
 function normalizeOptions(options) {
   return options.map((o) => (typeof o === 'object' && o !== null ? o : { value: o, label: o }));
@@ -13,6 +14,7 @@ export function Select({
   value, onChange, options, placeholder = '', onOpen,
   className = '', triggerClassName = '', panelClassName = '',
 }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const ref = useRef(null);
@@ -58,7 +60,7 @@ export function Select({
       {open && (
         <div className={`absolute z-30 mt-1.5 rounded-xl bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-lg py-1 max-h-60 overflow-y-auto ${panelClassName || 'w-full'}`}>
           {opts.length === 0 && (
-            <p className="px-3.5 py-2 text-sm text-gray-400 dark:text-[#7E93AF]">ไม่มีตัวเลือก</p>
+            <p className="px-3.5 py-2 text-sm text-gray-400 dark:text-[#7E93AF]">{t.common.noOptions}</p>
           )}
           {opts.map((o, i) => (
             <button

@@ -1,30 +1,25 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel, SectionHeader } from '../components/ui';
-import { loadCategories } from './equipment/categories.js';
 import { loadSettings, saveSettings } from '../context/settingsStore.js';
-import { getSession, loadUsers, saveUsers } from '../context/authStore.js';
+import {
+  getSession, fetchAllUsers, createUserAccount, updateUserAccount, deleteUserAccount,
+} from '../context/authStore.js';
 import { readFactories } from '../context/factoryStore.js';
+import { fetchAllEquipment, fetchAllCategories } from '../context/equipmentStore.js';
+import { useLang } from '../context/languageStore.js';
 import {
   ClipboardIcon, DocumentIcon, GearIcon, PencilIcon, TrashIcon,
 } from '../components/icons';
 import { ICON_MAP } from '../components/iconMap.js';
 
-const ROLE_LABELS = { admin: 'ผู้ดูแลระบบ', engineer: 'ผู้ใช้งานทั่วไป (วิศวกร)' };
-const BACKUP_KEYS = ['equipment', 'history', 'measures', 'reports', 'categories', 'settings'];
+const BACKUP_KEYS = ['history', 'measures', 'reports', 'settings'];
 
 function initialsOf(name) {
   const parts = (name || '').trim().split(/\s+/);
   return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (name || '?').slice(0, 2).toUpperCase();
-}
-
-function loadEquipmentCounts() {
-  try {
-    const eq = JSON.parse(localStorage.getItem('equipment') || '[]');
-    return eq.reduce((acc, e) => { acc[e.category] = (acc[e.category] || 0) + 1; return acc; }, {});
-  } catch { return {}; }
 }
 
 function Field({ label, unit, value, onChange }) {
@@ -47,10 +42,11 @@ function Field({ label, unit, value, onChange }) {
 }
 
 function Settings() {
+  const { t } = useLang();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const session = getSession();
-  const roleLabel = ROLE_LABELS[session.role] || ROLE_LABELS.admin;
+  const roleLabel = session.role === 'admin' ? t.nav.roleAdmin : t.settings.roleEngineer;
   const isAdmin = session.role === 'admin';
 
   const [settings, setSettings] = useState(loadSettings);
@@ -58,16 +54,29 @@ function Settings() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [importMsg, setImportMsg] = useState('');
 
-  const [users, setUsers] = useState(loadUsers);
+  const [users, setUsers] = useState([]);
   const [userModal, setUserModal] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
   const [userForm, setUserForm] = useState({});
   const [userFormError, setUserFormError] = useState('');
+  const [savingUser, setSavingUser] = useState(false);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
-  const allFactories = useMemo(() => readFactories(), []);
+  const [deleteUserError, setDeleteUserError] = useState('');
+  const [equipment, setEquipment] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-  const categories = useMemo(() => loadCategories().filter((c) => c.key !== 'all'), []);
-  const equipCounts = useMemo(() => loadEquipmentCounts(), []);
+  useEffect(() => {
+    fetchAllUsers().then(setUsers).catch(() => setUsers([]));
+    fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
+    fetchAllCategories().then((cats) => setCategories(cats.filter((c) => c.key !== 'all'))).catch(() => setCategories([]));
+  }, []);
+
+  const allFactories = useMemo(() => readFactories(undefined, equipment), [equipment]);
+
+  const equipCounts = useMemo(
+    () => equipment.reduce((acc, e) => { acc[e.category] = (acc[e.category] || 0) + 1; return acc; }, {}),
+    [equipment]
+  );
 
   const handleSaveSettings = () => {
     saveSettings(settings);
@@ -100,10 +109,10 @@ function Settings() {
         BACKUP_KEYS.forEach((k) => {
           if (data[k] !== undefined) localStorage.setItem(k, JSON.stringify(data[k]));
         });
-        setImportMsg('นำเข้าข้อมูลสำเร็จ — รีเฟรชหน้าเพื่อดูข้อมูลล่าสุด');
+        setImportMsg(t.settings.importSuccess);
         setSettings(loadSettings());
       } catch {
-        setImportMsg('ไฟล์ไม่ถูกต้อง กรุณาตรวจสอบไฟล์สำรองข้อมูล');
+        setImportMsg(t.settings.importError);
       }
       setTimeout(() => setImportMsg(''), 4000);
     };
@@ -142,48 +151,65 @@ function Settings() {
     });
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (!userForm.name?.trim() || !userForm.email?.trim()) {
-      setUserFormError('กรุณากรอกชื่อและอีเมล');
+      setUserFormError(t.settings.errNameEmail);
       return;
     }
     if (!editingUserId && !userForm.password) {
-      setUserFormError('กรุณากำหนดรหัสผ่าน');
+      setUserFormError(t.settings.errPassword);
       return;
     }
     const emailTaken = users.some((u) => u.email === userForm.email && u.id !== editingUserId);
     if (emailTaken) {
-      setUserFormError('อีเมลนี้ถูกใช้งานแล้ว');
+      setUserFormError(t.settings.errEmailTaken);
       return;
     }
     const factories = userForm.role === 'engineer' ? (userForm.factories || []) : [];
-    let next;
-    if (editingUserId) {
-      next = users.map((u) => (u.id === editingUserId
-        ? { ...u, name: userForm.name, email: userForm.email, role: userForm.role, factories, password: userForm.password || u.password }
-        : u));
-    } else {
-      next = [...users, { id: `u_${Date.now()}`, name: userForm.name, email: userForm.email, password: userForm.password, role: userForm.role, factories }];
+    const profile = { name: userForm.name, email: userForm.email, role: userForm.role, factories };
+    setSavingUser(true);
+    setUserFormError('');
+    try {
+      if (editingUserId) {
+        await updateUserAccount({
+          uid: editingUserId,
+          email: userForm.email,
+          password: userForm.password || undefined,
+          name: userForm.name,
+          role: userForm.role,
+          factories,
+        });
+        setUsers((prev) => prev.map((u) => (u.id === editingUserId ? { ...u, ...profile } : u)));
+      } else {
+        const uid = await createUserAccount({ ...profile, password: userForm.password });
+        setUsers((prev) => [...prev, { id: uid, ...profile }]);
+      }
+      setUserModal(false);
+    } catch (e) {
+      setUserFormError(e.code === 'functions/already-exists' ? t.settings.errEmailTaken : t.settings.userSaveFailed);
+    } finally {
+      setSavingUser(false);
     }
-    saveUsers(next);
-    setUsers(next);
-    setUserModal(false);
   };
 
-  const handleDeleteUser = () => {
-    const next = users.filter((u) => u.id !== confirmDeleteUserId);
-    saveUsers(next);
-    setUsers(next);
-    setConfirmDeleteUserId(null);
+  const handleDeleteUser = async () => {
+    const id = confirmDeleteUserId;
+    try {
+      await deleteUserAccount(id);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setConfirmDeleteUserId(null);
+    } catch {
+      setDeleteUserError(t.settings.userDeleteFailed);
+    }
   };
 
   return (
-    <AppLayout title="ตั้งค่า">
-      <div className="flex flex-col gap-5 max-w-2xl">
+    <AppLayout title={t.nav.settings} hideFactorySelect>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-2xl lg:max-w-none lg:items-start">
 
         {/* โปรไฟล์ผู้ใช้งาน */}
         <Panel className="p-5">
-          <SectionHeader title="โปรไฟล์ผู้ใช้งาน" />
+          <SectionHeader title={t.settings.userProfile} />
           <div className="flex items-center gap-3">
             <span className="w-12 h-12 rounded-xl bg-[#1C4D8D] border border-[#38BDF8]/20 flex items-center justify-center text-white text-base font-bold shrink-0 font-mono">
               {initialsOf(session.name)}
@@ -193,25 +219,39 @@ function Settings() {
               <p className="text-xs text-[#4988C4] font-medium tracking-wide uppercase mt-0.5">{roleLabel}</p>
               {!isAdmin && (
                 <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] mt-1">
-                  โรงงานที่รับผิดชอบ: {(session.factories || []).length ? session.factories.join(', ') : 'ยังไม่ได้รับมอบหมาย'}
+                  {t.settings.responsibleFactories}: {(session.factories || []).length ? session.factories.join(', ') : t.settings.notAssignedYet}
                 </p>
               )}
             </div>
           </div>
         </Panel>
 
+        {/* เกี่ยวกับระบบ */}
+        <Panel className="p-5">
+          <SectionHeader title={t.settings.aboutSystem} />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
+              <GearIcon className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ENGINSPECT</p>
+              <p className="text-[10px] text-gray-400 dark:text-[#7E93AF] tracking-widest uppercase font-mono">v2.1.0 · Energy Audit System</p>
+            </div>
+          </div>
+        </Panel>
+
         {/* จัดการผู้ใช้งาน — เฉพาะ Admin */}
         {isAdmin && (
-          <Panel className="p-5">
+          <Panel className="p-5 lg:col-span-2">
             <SectionHeader
-              title="จัดการผู้ใช้งาน"
+              title={t.settings.manageUsers}
               right={
                 <button
                   type="button"
                   onClick={openAddUser}
                   className="text-xs font-semibold text-[#4988C4] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
                 >
-                  + เพิ่มผู้ใช้งาน
+                  + {t.settings.addUser}
                 </button>
               }
             />
@@ -233,19 +273,21 @@ function Settings() {
                       <div className="flex flex-wrap gap-1 mt-1">
                         {(u.factories || []).length ? u.factories.map((f) => (
                           <span key={f} className="text-[10px] bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-full px-2 py-0.5 text-gray-600 dark:text-[#8CA3C0]">{f}</span>
-                        )) : <span className="text-[10px] text-amber-500">ยังไม่ได้ assign โรงงาน</span>}
+                        )) : <span className="text-[10px] text-amber-500">{t.settings.notAssignedFactory}</span>}
                       </div>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <button type="button" onClick={() => openEditUser(u)} title="แก้ไข"
+                    <button type="button" onClick={() => openEditUser(u)} title={t.common.edit}
                       className="w-8 h-8 rounded-full bg-white dark:bg-white/10 hover:bg-[#0F2854] hover:text-white text-[#4988C4] flex items-center justify-center transition-colors">
                       <PencilIcon className="w-3.5 h-3.5" />
                     </button>
-                    <button type="button" onClick={() => setConfirmDeleteUserId(u.id)} title="ลบ"
-                      className="w-8 h-8 rounded-full bg-white dark:bg-white/10 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center transition-colors">
-                      <TrashIcon className="w-3.5 h-3.5" />
-                    </button>
+                    {u.id !== session.id && (
+                      <button type="button" onClick={() => { setDeleteUserError(''); setConfirmDeleteUserId(u.id); }} title={t.common.delete}
+                        className="w-8 h-8 rounded-full bg-white dark:bg-white/10 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center transition-colors">
+                        <TrashIcon className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -255,17 +297,17 @@ function Settings() {
 
         {/* ค่าเริ่มต้นการคำนวณ */}
         <Panel className="p-5">
-          <SectionHeader title="ค่าเริ่มต้นการคำนวณ" tag="ใช้เติมอัตโนมัติในฟอร์มประเมินศักยภาพ" />
+          <SectionHeader title={t.settings.calcDefaults} tag={t.settings.calcDefaultsTag} />
           <div className="grid grid-cols-2 gap-3 mb-4">
             <Field
-              label="ค่าไฟฟ้าเฉลี่ย"
-              unit="บาท/kWh"
+              label={t.settings.avgElecRate}
+              unit={t.measures.bahtPerKwh}
               value={settings.defaultElectricityRate}
               onChange={(v) => setSettings((p) => ({ ...p, defaultElectricityRate: v }))}
             />
             <Field
-              label="ชั่วโมงทำงาน/ปี"
-              unit="ชม."
+              label={t.measures.operatingHoursPerYear}
+              unit={t.settings.hoursUnit}
               value={settings.defaultOperatingHours}
               onChange={(v) => setSettings((p) => ({ ...p, defaultOperatingHours: v }))}
             />
@@ -276,10 +318,10 @@ function Settings() {
               onClick={handleSaveSettings}
               className="px-5 py-2.5 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-semibold transition-colors"
             >
-              บันทึกค่าเริ่มต้น
+              {t.settings.saveDefaults}
             </button>
             {savedFlash && (
-              <span className="text-xs font-semibold text-emerald-600">✓ บันทึกแล้ว</span>
+              <span className="text-xs font-semibold text-emerald-600">{t.settings.savedFlash}</span>
             )}
           </div>
         </Panel>
@@ -287,14 +329,14 @@ function Settings() {
         {/* หมวดหมู่อุปกรณ์ */}
         <Panel className="p-5">
           <SectionHeader
-            title="หมวดหมู่อุปกรณ์"
+            title={t.equipment.equipmentCategory}
             right={
               <button
                 type="button"
                 onClick={() => navigate('/equipment')}
                 className="text-xs font-semibold text-[#4988C4] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
               >
-                จัดการที่หน้าอุปกรณ์ →
+                {t.settings.manageAtEquipmentPage}
               </button>
             }
           />
@@ -308,7 +350,7 @@ function Settings() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] truncate">{c.label}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-[#7E93AF]">{equipCounts[c.key] || 0} อุปกรณ์</p>
+                    <p className="text-[10px] text-gray-400 dark:text-[#7E93AF]">{equipCounts[c.key] || 0} {t.settings.equipmentCountSuffix}</p>
                   </div>
                 </div>
               );
@@ -317,10 +359,10 @@ function Settings() {
         </Panel>
 
         {/* สำรองข้อมูล */}
-        <Panel className="p-5">
-          <SectionHeader title="ข้อมูลระบบ / สำรองข้อมูล" />
+        <Panel className="p-5 lg:col-span-2">
+          <SectionHeader title={t.settings.systemDataBackup} />
           <p className="text-xs text-gray-500 dark:text-[#7E93AF] mb-4 leading-relaxed">
-            ข้อมูลทั้งหมดของระบบถูกเก็บไว้ในเบราว์เซอร์นี้เท่านั้น (localStorage) — สำรองข้อมูลเป็นไฟล์เพื่อย้ายเครื่องหรือกู้คืนภายหลัง
+            {t.settings.backupDesc}
           </p>
           <div className="flex flex-wrap gap-2.5 mb-2">
             <button
@@ -329,14 +371,14 @@ function Settings() {
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-semibold transition-colors"
             >
               <DocumentIcon className="w-4 h-4" />
-              ส่งออกข้อมูล (Export)
+              {t.settings.exportData}
             </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-[#4988C4] text-[#0F2854] dark:text-[#E7EEF7] text-sm font-semibold transition-colors"
             >
-              นำเข้าข้อมูล (Import)
+              {t.settings.importData}
             </button>
             <input ref={fileInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
             <button
@@ -345,24 +387,10 @@ function Settings() {
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-500/20 hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 dark:text-red-400 text-sm font-semibold transition-colors ml-auto"
             >
               <TrashIcon className="w-4 h-4" />
-              ล้างข้อมูลทั้งหมด
+              {t.settings.clearAllData}
             </button>
           </div>
           {importMsg && <p className="text-xs font-medium text-[#4988C4] mt-2">{importMsg}</p>}
-        </Panel>
-
-        {/* เกี่ยวกับระบบ */}
-        <Panel className="p-5">
-          <SectionHeader title="เกี่ยวกับระบบ" />
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
-              <GearIcon className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ENGINSPECT</p>
-              <p className="text-[10px] text-gray-400 dark:text-[#7E93AF] tracking-widest uppercase font-mono">v2.1.0 · Energy Audit System</p>
-            </div>
-          </div>
         </Panel>
       </div>
 
@@ -375,8 +403,8 @@ function Settings() {
               <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500">
                 <TrashIcon className="w-6 h-6" />
               </div>
-              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">ล้างข้อมูลทั้งหมด?</p>
-              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">อุปกรณ์ ประวัติ มาตรการ และรายงานทั้งหมดจะถูกลบ และไม่สามารถกู้คืนได้ (แนะนำให้ Export ก่อน)</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.settings.clearAllConfirm}</p>
+              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">{t.settings.clearAllWarning}</p>
             </div>
             <div className="flex gap-3">
               <button
@@ -384,14 +412,14 @@ function Settings() {
                 onClick={() => setConfirmClear(false)}
                 className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
               >
-                ยกเลิก
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleClearAll}
                 className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors"
               >
-                ล้างข้อมูล
+                {t.settings.clearData}
               </button>
             </div>
           </div>
@@ -409,22 +437,22 @@ function Settings() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 sm:px-7 pt-6 pb-4 shrink-0">
-              <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{editingUserId ? 'แก้ไขผู้ใช้งาน' : 'เพิ่มผู้ใช้งาน'}</p>
+              <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{editingUserId ? t.settings.editUser : t.settings.addUser}</p>
               <button type="button" onClick={closeUserModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors font-bold">✕</button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-2 flex flex-col gap-4">
               <div>
-                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">ชื่อ-นามสกุล</label>
+                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.settings.fullName}</label>
                 <input
                   value={userForm.name || ''}
                   onChange={(e) => setUserForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="เช่น สมชาย ใจดี"
+                  placeholder={t.settings.egFullName}
                   className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">อีเมล</label>
+                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.settings.email}</label>
                 <input
                   type="email"
                   value={userForm.email || ''}
@@ -434,17 +462,17 @@ function Settings() {
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">รหัสผ่าน</label>
+                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.settings.password}</label>
                 <input
                   type="text"
                   value={userForm.password || ''}
                   onChange={(e) => setUserForm((p) => ({ ...p, password: e.target.value }))}
-                  placeholder={editingUserId ? 'เว้นว่างไว้หากไม่เปลี่ยนรหัสผ่าน' : ''}
+                  placeholder={editingUserId ? t.settings.leaveBlankPassword : ''}
                   className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">บทบาท</label>
+                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.settings.role}</label>
                 <div className="flex gap-2">
                   {['admin', 'engineer'].map((r) => (
                     <button
@@ -462,7 +490,7 @@ function Settings() {
               </div>
               {userForm.role === 'engineer' && (
                 <div>
-                  <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">โรงงานที่รับผิดชอบ (เลือกได้หลายโรงงาน)</label>
+                  <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.settings.responsibleFactoriesMulti}</label>
                   {allFactories.length ? (
                     <div className="flex flex-wrap gap-2">
                       {allFactories.map((f) => {
@@ -482,7 +510,7 @@ function Settings() {
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400 dark:text-[#7E93AF]">ยังไม่มีชื่อโรงงานในระบบ — เพิ่มอุปกรณ์พร้อมชื่อโรงงานที่หน้าอุปกรณ์ก่อน</p>
+                    <p className="text-xs text-gray-400 dark:text-[#7E93AF]">{t.settings.noFactoriesYet}</p>
                   )}
                 </div>
               )}
@@ -493,9 +521,10 @@ function Settings() {
               <button
                 type="button"
                 onClick={handleSaveUser}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors"
+                disabled={savingUser}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
-                {editingUserId ? 'บันทึกการแก้ไข' : 'เพิ่มผู้ใช้งาน'}
+                {savingUser ? '...' : (editingUserId ? t.equipment.saveEdits : t.settings.addUser)}
               </button>
             </div>
           </div>
@@ -512,8 +541,9 @@ function Settings() {
               <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500">
                 <TrashIcon className="w-6 h-6" />
               </div>
-              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">ลบผู้ใช้งานนี้?</p>
-              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">ผู้ใช้งานจะไม่สามารถเข้าสู่ระบบได้อีก</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.settings.deleteUserConfirm}</p>
+              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">{t.settings.deleteUserWarning}</p>
+              {deleteUserError && <p className="text-xs text-red-500">{deleteUserError}</p>}
             </div>
             <div className="flex gap-3">
               <button
@@ -521,14 +551,14 @@ function Settings() {
                 onClick={() => setConfirmDeleteUserId(null)}
                 className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
               >
-                ยกเลิก
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleDeleteUser}
                 className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors"
               >
-                ลบ
+                {t.common.delete}
               </button>
             </div>
           </div>

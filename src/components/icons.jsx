@@ -259,6 +259,15 @@ export function TrendDownIcon({ className }) {
   );
 }
 
+export function BoxIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9-4 9 4-9 4-9-4z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8v8l9 4 9-4V8M12 12v8" />
+    </svg>
+  );
+}
+
 export function CompressorIcon({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

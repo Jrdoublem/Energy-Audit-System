@@ -1,0 +1,29 @@
+// LOCAL TESTING COPY ONLY — not wired into firebase.json for deploy.
+// Mirrors what's asked to be pasted into the real rules in Firebase Console.
+// Used to let the Firestore emulator actually enforce admin-only writes
+// while testing the equipment/categories migration.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /categories/{categoryId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /equipment/{equipmentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

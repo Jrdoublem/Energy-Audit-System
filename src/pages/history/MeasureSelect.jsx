@@ -3,8 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Combobox, Select } from '../../components/Dropdown.jsx';
 import { loadSettings } from '../../context/settingsStore.js';
-
-const GRADE_LABEL = { good: 'ดี', ok: 'ปานกลาง', poor: 'ต้องปรับปรุง' };
+import { useLang } from '../../context/languageStore.js';
 
 function nextMeasureId() {
   return Date.now();
@@ -214,6 +213,7 @@ function BoltIcon({ className }) {
 
 /* ── Evaluation section ── */
 function EvalSection({ basePower, evalData, onChange, onSave }) {
+  const { t } = useLang();
   const ref = useRef(null);
 
   useEffect(() => {
@@ -241,10 +241,10 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
   const hasResult   = base > 0 && pct > 0 && hours > 0 && rate > 0;
 
   const evalFields = [
-    { key: 'percentReduction', label: '% ลดการใช้พลังงาน',  type: 'number', placeholder: 'เช่น 10' },
-    { key: 'operatingHours',   label: 'ชั่วโมงทำงาน/ปี',    type: 'number', placeholder: 'เช่น 8000' },
-    { key: 'electricityRate',  label: 'ค่าไฟ (บาท/kWh)',     type: 'number', placeholder: 'เช่น 4.50' },
-    { key: 'investmentCost',   label: 'ค่าลงทุน (บาท)',      type: 'number', placeholder: 'เช่น 500000' },
+    { key: 'percentReduction', label: t.measures.pctReduction,       type: 'number', placeholder: t.measures.egPct },
+    { key: 'operatingHours',   label: t.measures.operatingHoursPerYear, type: 'number', placeholder: t.measures.egHours },
+    { key: 'electricityRate',  label: t.measures.elecRateUnit,       type: 'number', placeholder: t.measures.egRate },
+    { key: 'investmentCost',   label: t.measures.investmentCost,     type: 'number', placeholder: t.measures.egInvestment },
   ];
 
   return (
@@ -252,7 +252,7 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
       {/* Section header */}
       <div className="flex items-center gap-2">
         <BoltIcon className="w-5 h-5 text-amber-400" />
-        <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ประเมินศักยภาพ</p>
+        <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.measures.evalPotential}</p>
       </div>
 
       {/* Eval inputs */}
@@ -281,36 +281,36 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
             {/* Energy saved */}
             <div className="rounded-2xl bg-[#0F2854] px-4 py-4 flex flex-col items-center gap-1">
               <BoltIcon className="w-6 h-6 text-amber-400 mb-1" />
-              <p className="text-[11px] text-white/70 text-center leading-tight">พลังงานที่ลดได้</p>
+              <p className="text-[11px] text-white/70 text-center leading-tight">{t.measures.energySaved}</p>
               <p className="text-xl font-extrabold text-white leading-tight">
                 {energySaved.toLocaleString('th-TH', { maximumFractionDigits: 0 })}
               </p>
-              <p className="text-[11px] text-white/60">kWh / ปี</p>
+              <p className="text-[11px] text-white/60">{t.measures.kwhPerYear}</p>
             </div>
             {/* Cost saved */}
             <div className="rounded-2xl bg-[#16A34A] px-4 py-4 flex flex-col items-center gap-1">
               <svg className="w-6 h-6 text-white mb-1" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.93V18h-2v-1.07C9.39 16.57 8 15.4 8 14c0-.55.45-1 1-1s1 .45 1 1c0 .55.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-1.66 0-3-1.34-3-3 0-1.4 1.39-2.57 3-2.93V6h2v1.07c1.61.36 3 1.53 3 2.93 0 .55-.45 1-1 1s-1-.45-1-1c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1h2c1.66 0 3 1.34 3 3 0 1.4-1.39 2.57-3 2.93z"/>
               </svg>
-              <p className="text-[11px] text-white/70 text-center leading-tight">ประหยัดค่าใช้จ่าย</p>
+              <p className="text-[11px] text-white/70 text-center leading-tight">{t.measures.costSaved}</p>
               <p className="text-xl font-extrabold text-white leading-tight">
                 {costSaved.toLocaleString('th-TH', { maximumFractionDigits: 0 })}
               </p>
-              <p className="text-[11px] text-white/60">บาท / ปี</p>
+              <p className="text-[11px] text-white/60">{t.measures.bahtPerYear}</p>
             </div>
           </div>
 
           {/* Payback row */}
           <div className="rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8 px-4 py-3 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-gray-700 dark:text-[#C3D2E5]">ระยะเวลาคืนทุนเฉลี่ย</p>
-              <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">ระยะเวลาคืนทุนจากการลงทุน</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-[#C3D2E5]">{t.measures.avgPaybackPeriod}</p>
+              <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">{t.measures.paybackFromInvestment}</p>
             </div>
             <div className="text-right">
               {payback ? (
                 <>
                   <p className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{payback}</p>
-                  <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">ปี</p>
+                  <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">{t.measures.years}</p>
                 </>
               ) : (
                 <p className="text-2xl font-extrabold text-gray-300 dark:text-white/20">-</p>
@@ -320,18 +320,18 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
 
           {/* Formula reference */}
           <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] px-1">
-            อ้างอิง: {base.toFixed(2)} kW × {pct}% × {hours.toLocaleString('th-TH')} ชม./ปี × {rate} บาท/kWh
+            {t.measures.formulaRef}: {base.toFixed(2)} kW × {pct}% × {hours.toLocaleString('th-TH')} {t.measures.hoursPerYearShort} × {rate} {t.measures.bahtPerKwh}
           </p>
         </div>
       )}
 
       {/* หมายเหตุ */}
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-medium text-gray-500 dark:text-[#7E93AF]">หมายเหตุ</label>
+        <label className="text-[11px] font-medium text-gray-500 dark:text-[#7E93AF]">{t.measures.note}</label>
         <textarea
           value={evalData.note ?? ''}
           onChange={(e) => onChange('note', e.target.value)}
-          placeholder="สมมติฐาน ข้อจำกัด . . ."
+          placeholder={t.measures.notePlaceholder}
           rows={2}
           className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent resize-none"
         />
@@ -343,7 +343,7 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
         onClick={onSave}
         className="w-full py-3.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-bold text-sm transition-colors shadow-md"
       >
-        บันทึกข้อมูล
+        {t.equipment.saveData}
       </button>
     </div>
   );
@@ -351,6 +351,7 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
 
 /* ── Form panel — slides in from right on mount ── */
 function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData, onChange, onSave, initialEvalData }) {
+  const { t } = useLang();
   const ref = useRef(null);
   const [showEval, setShowEval]   = useState(!!initialEvalData?.percentReduction);
   const appDefaults = loadSettings();
@@ -389,18 +390,18 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
     <div ref={ref} className="flex flex-col bg-[#DDF1F3] dark:bg-[#0B1B33] max-h-[72dvh] overflow-y-auto">
       {/* Measure selector */}
       <div className="px-5 pt-5 pb-4 shrink-0">
-        <p className="text-xs font-bold text-[#0F2854]/50 dark:text-[#7E93AF] uppercase tracking-wider mb-2">มาตรการ</p>
+        <p className="text-xs font-bold text-[#0F2854]/50 dark:text-[#7E93AF] uppercase tracking-wider mb-2">{t.measures.selectMeasureTitle}</p>
         <Select
           value={activeMeasure}
           onChange={onChangeMeasure}
-          options={measures}
+          options={measures.map((m) => ({ value: m, label: t.measures.names[m] || m }))}
           triggerClassName="flex items-center w-full bg-white dark:bg-[#111F35] border border-gray-200 dark:border-white/10 text-sm text-[#0F2854] dark:text-[#E7EEF7] font-semibold pl-3.5 pr-3 py-2.5 rounded-2xl"
         />
       </div>
 
       {/* Form fields + evaluation */}
       <div className="bg-white dark:bg-[#111F35] rounded-t-3xl px-5 pt-5 pb-6 flex flex-col gap-4">
-        <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ฟอร์มเก็บข้อมูลมาตรการ</p>
+        <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.measures.measureForm}</p>
 
         <div className="grid grid-cols-2 gap-x-3 gap-y-0">
           {fields.map((f) => {
@@ -408,10 +409,10 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
             return (
               <div key={f.key} className={`flex flex-col gap-1 ${f.span === 2 ? 'col-span-2' : ''}`}>
                 <div className="flex items-end gap-1.5 min-h-[2.2rem]">
-                  <label className="text-[11px] font-medium text-gray-500 dark:text-[#7E93AF] leading-tight">{f.label}</label>
+                  <label className="text-[11px] font-medium text-gray-500 dark:text-[#7E93AF] leading-tight">{t.measures.fieldLabels[f.label] || f.label}</label>
                   {isAuto && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 leading-none shrink-0 mt-0.5">
-                      auto
+                      {t.measures.auto}
                     </span>
                   )}
                 </div>
@@ -420,7 +421,7 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
                     value={formData[f.key] ?? ''}
                     onChange={(v) => onChange(f.key, v)}
                     options={f.options || []}
-                    placeholder="เลือกหรือพิมพ์รุ่น..."
+                    placeholder={t.measures.pickOrTypeModel}
                     inputClassName="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4] focus:border-transparent"
                   />
                 ) : (
@@ -451,7 +452,7 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
             className="w-full py-3.5 rounded-2xl border-2 border-[#0F2854] dark:border-white/25 text-[#0F2854] dark:text-[#E7EEF7] font-bold text-sm hover:bg-[#0F2854] hover:text-white transition-colors flex items-center justify-center gap-2"
           >
             <BoltIcon className="w-4 h-4 text-amber-400" />
-            ประเมินศักยภาพ
+            {t.measures.evalPotential}
           </button>
         )}
 
@@ -471,6 +472,7 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
 
 /* ── Main component ── */
 function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeasures }) {
+  const { t } = useLang();
   const navigate = useNavigate();
   const [selected, setSelected]           = useState('');
   const [step, setStep]                   = useState('select');
@@ -479,7 +481,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
   const [savedMeasures, setSavedMeasures] = useState(initialSavedMeasures || []);
   const activeMeasureId = useRef(null);
 
-  const grade    = GRADE_LABEL[result?.grade] || '-';
+  const grade    = t.common.grade[result?.grade] || '-';
   const measures = MEASURES[item?.category] || ALL_MEASURES;
 
   const FIELD_DEFAULTS = {
@@ -596,10 +598,10 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
         )}
         <div className="min-w-0 flex-1">
           <p className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] text-base leading-tight">
-            {step === 'form' ? activeMeasure : 'เลือกมาตรการ'}
+            {step === 'form' ? (t.measures.names[activeMeasure] || activeMeasure) : t.measures.selectMeasureTitle}
           </p>
           <p className="text-xs text-gray-400 dark:text-[#7E93AF] mt-0.5 truncate">
-            {item?.id} (ประสิทธิภาพปัจจุบัน: {grade})
+            {item?.id} ({t.measures.currentEfficiency}: {grade})
           </p>
         </div>
         <button
@@ -614,14 +616,14 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
       {/* ── Body ── */}
       {step === 'select' ? (
         <div className="px-5 pt-5 pb-6 flex flex-col gap-4">
-          <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">เลือกมาตรการที่ต้องการ</p>
+          <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.measures.selectDesiredMeasure}</p>
 
           <div className="flex gap-2">
             <Select
               value={selected}
               onChange={setSelected}
-              options={measures}
-              placeholder="เลือกมาตรการที่ต้องการ"
+              options={measures.map((m) => ({ value: m, label: t.measures.names[m] || m }))}
+              placeholder={t.measures.selectDesiredMeasure}
               className="flex-1"
               triggerClassName="flex items-center w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-600 dark:text-[#8CA3C0] pl-3.5 pr-3 py-2.5 rounded-2xl"
             />
@@ -631,14 +633,14 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
               disabled={!selected}
               className="shrink-0 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] disabled:opacity-40 text-white text-sm font-bold transition-colors"
             >
-              + เพิ่ม
+              + {t.common.add}
             </button>
           </div>
 
           {/* Saved measures list */}
           {savedMeasures.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <p className="text-[11px] font-semibold text-gray-400 dark:text-[#7E93AF] uppercase tracking-wide">มาตรการที่บันทึกแล้ว</p>
+              <p className="text-[11px] font-semibold text-gray-400 dark:text-[#7E93AF] uppercase tracking-wide">{t.measures.savedMeasures}</p>
 
               {savedMeasures.map((s) => (
                 <div key={s.id} className="flex items-center gap-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl px-3.5 py-2.5">
@@ -647,7 +649,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 flex-1">{s.name}</p>
+                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 flex-1">{t.measures.names[s.name] || s.name}</p>
                   <button
                     type="button"
                     onClick={() => handleEditSaved(s)}
@@ -682,7 +684,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
                 </svg>
-                สร้างรายงานผลการอนุรักษ์พลังงาน
+                {t.measures.generateReport}
               </button>
             </div>
           )}

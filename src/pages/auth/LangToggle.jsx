@@ -1,19 +1,24 @@
+// Same outer footprint as ThemeToggle (h-6, rounded-full, border-white/20)
+// so the two switches read as a matched pair wherever they sit side by side.
 export function LangToggle({ lang, setLang }) {
   return (
-    <div className="flex items-center rounded-full overflow-hidden border border-white/20"
-      style={{ fontFamily: "'Courier New', monospace" }}>
+    <div
+      className="flex items-center h-6 rounded-full border border-white/20 overflow-hidden shrink-0"
+      style={{ fontFamily: "'Courier New', monospace" }}
+    >
       <button
+        type="button"
         onClick={() => setLang('th')}
-        className={`px-2.5 py-0.5 text-[10px] font-bold tracking-widest transition-all ${
+        className={`h-full px-2.5 text-[10px] font-bold tracking-widest transition-colors ${
           lang === 'th' ? 'bg-[#38BDF8] text-[#0F2854]' : 'text-white/40 hover:text-white/70'
         }`}
       >
         TH
       </button>
-      <span className="text-white/20 text-[10px]">|</span>
       <button
+        type="button"
         onClick={() => setLang('en')}
-        className={`px-2.5 py-0.5 text-[10px] font-bold tracking-widest transition-all ${
+        className={`h-full px-2.5 text-[10px] font-bold tracking-widest transition-colors ${
           lang === 'en' ? 'bg-[#38BDF8] text-[#0F2854]' : 'text-white/40 hover:text-white/70'
         }`}
       >

@@ -1,8 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { useLang } from '../../context/languageStore.js';
+import { getSession } from '../../context/authStore.js';
+import {
+  fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem,
+} from '../../context/equipmentStore.js';
 import { GlassSearchInput, GlassSelect, ShellActionButton } from '../../components/ui';
 import { Combobox } from '../../components/Dropdown.jsx';
 import CalcModal from './CalcModal';
@@ -24,7 +28,6 @@ import {
   UserIcon,
 } from '../../components/icons';
 import { ICON_MAP } from '../../components/iconMap.js';
-import { loadCategories } from './categories.js';
 
 const ICON_OPTIONS = [
   { key: 'GearIcon', label: 'Gear', icon: GearIcon },
@@ -46,12 +49,6 @@ const BRAND_OPTIONS = {
   electrical: ['ABB ACS', 'ABB ACH', 'Siemens SINAMICS', 'Schneider ATV', 'Eaton PowerXL', 'GE AF-650', 'Legrand'],
 };
 
-const INITIAL_EQUIPMENT = [
-  { id: 'CH-03', category: 'chiller', brandModel: 'Carrier 30XA', building: 'อาคาร A', factory: 'โรงงาน A', owner: 'สมชาย ใจดี' },
-  { id: 'CH-02', category: 'chiller', brandModel: 'Trane CVHF', building: 'อาคาร A', factory: 'โรงงาน A', owner: 'สมชาย ใจดี' },
-  { id: 'CH-01', category: 'chiller', brandModel: 'Daikin EWAD', building: 'อาคาร B', factory: 'โรงงาน A', owner: 'สมหญิง รักดี' },
-];
-
 function getFormFields(t) {
   return [
     { key: 'id',          label: t.equipment.fieldId,          placeholder: t.equipment.egId, required: true },
@@ -67,15 +64,10 @@ function Equipment() {
   const { t } = useLang();
   const formFields = getFormFields(t);
   const { selectedFactory, allowedFactories, refreshFactories } = useFactory();
-  const [categories, setCategories] = useState(loadCategories);
-  const [equipment, setEquipment] = useState(() => {
-    try {
-      const saved = localStorage.getItem('equipment');
-      return saved ? JSON.parse(saved) : INITIAL_EQUIPMENT;
-    } catch {
-      return INITIAL_EQUIPMENT;
-    }
-  });
+  const session = getSession();
+  const isAdmin = session.role === 'admin';
+  const [categories, setCategories] = useState([]);
+  const [equipment, setEquipment] = useState([]);
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null); // null | 'add' | 'add-category'
@@ -86,7 +78,13 @@ function Equipment() {
   const [calcItem, setCalcItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [sortOrder, setSortOrder] = useState('newest');
+  const [saving, setSaving] = useState(false);
   const catScrollRef = useRef(null);
+
+  useEffect(() => {
+    fetchAllCategories().then(setCategories).catch(() => setCategories([]));
+    fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
+  }, []);
 
   const activeCategory = categories.find((c) => c.key === category);
 
@@ -151,26 +149,30 @@ function Equipment() {
     setModal(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errors = {};
     if (!form.id) errors.id = true;
     if (!form.factory) errors.factory = true;
     if (!form.category) errors.category = true;
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
-    const saveEquipment = (updater) => {
+    setSaving(true);
+    try {
+      await saveEquipmentItem(form);
+      // Editing can change the id itself — since the id IS the Firestore doc
+      // key, that leaves the old doc behind as an orphan unless removed.
+      if (editingId && form.id !== editingId) {
+        await deleteEquipmentItem(editingId);
+      }
       setEquipment((prev) => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        localStorage.setItem('equipment', JSON.stringify(next));
-        return next;
+        if (!editingId) return [{ ...form }, ...prev];
+        if (form.id !== editingId) return [{ ...form }, ...prev.filter((e) => e.id !== editingId)];
+        return prev.map((e) => (e.id === editingId ? { ...form } : e));
       });
-    };
-    if (editingId) {
-      saveEquipment((prev) => prev.map((e) => (e.id === editingId ? { ...form } : e)));
-    } else {
-      saveEquipment((prev) => [{ ...form }, ...prev]);
+      await refreshFactories();
+      closeModal();
+    } finally {
+      setSaving(false);
     }
-    refreshFactories();
-    closeModal();
   };
 
   const openCalcModal = (item) => {
@@ -178,26 +180,27 @@ function Equipment() {
     setModal('calc');
   };
 
-  const deleteEquipment = () => {
-    setEquipment((prev) => {
-      const next = prev.filter((e) => e.id !== confirmDeleteId);
-      localStorage.setItem('equipment', JSON.stringify(next));
-      return next;
-    });
-    refreshFactories();
+  const deleteEquipment = async () => {
+    const id = confirmDeleteId;
     setConfirmDeleteId(null);
+    await deleteEquipmentItem(id);
+    setEquipment((prev) => prev.filter((e) => e.id !== id));
+    await refreshFactories();
   };
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (!form.name) return;
     const rawKey = form.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const newKey = rawKey || `cat-${categories.length}`;
-    setCategories((prev) => {
-      const next = [...prev, { key: newKey, label: form.name, iconKey: form.iconKey || 'GearIcon' }];
-      localStorage.setItem('categories', JSON.stringify(next));
-      return next;
-    });
-    closeModal();
+    const newCategory = { key: newKey, label: form.name, iconKey: form.iconKey || 'GearIcon' };
+    setSaving(true);
+    try {
+      await saveCategoryItem(newCategory);
+      setCategories((prev) => [...prev, newCategory]);
+      closeModal();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -232,16 +235,20 @@ function Equipment() {
               </button>
             );
           })}
-          <div className="h-px bg-gray-100 dark:bg-white/5 my-1.5"></div>
-          <button
-            type="button"
-            title={t.equipment.addCategoryTooltip}
-            onClick={() => { setForm({}); setModal('add-category'); }}
-            className="w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
-          >
-            <PlusIcon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
-            <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">{t.common.add}</span>
-          </button>
+          {isAdmin && (
+            <>
+              <div className="h-px bg-gray-100 dark:bg-white/5 my-1.5"></div>
+              <button
+                type="button"
+                title={t.equipment.addCategoryTooltip}
+                onClick={() => { setForm({}); setModal('add-category'); }}
+                className="w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
+              >
+                <PlusIcon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
+                <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">{t.common.add}</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Content */}
@@ -259,7 +266,7 @@ function Equipment() {
           <div className="flex items-center gap-2 mb-4">
             <p className="text-xl font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.pageTitle}</p>
             <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-sm text-[#0F2854] dark:text-[#E7EEF7]">
-              {activeCategory.label}
+              {activeCategory?.label}
             </span>
           </div>
 
@@ -269,15 +276,17 @@ function Equipment() {
               onChange={setSearch}
               placeholder={t.equipment.searchPlaceholder}
             />
-            <ShellActionButton onClick={openAddModal}>
-              <PlusIcon className="w-4 h-4" />
-              {t.equipment.addEquipment}
-            </ShellActionButton>
+            {isAdmin && (
+              <ShellActionButton onClick={openAddModal}>
+                <PlusIcon className="w-4 h-4" />
+                {t.equipment.addEquipment}
+              </ShellActionButton>
+            )}
           </div>
 
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm text-[#0F2854]/60 dark:text-[#7E93AF]">
-              {category === 'all' ? t.equipment.allEquipment : `${t.equipment.categoryList} ${activeCategory.label}`} ({filtered.length})
+              {category === 'all' ? t.equipment.allEquipment : `${t.equipment.categoryList} ${activeCategory?.label}`} ({filtered.length})
             </p>
             <GlassSelect value={sortOrder} onChange={setSortOrder}>
               <option value="newest" className="text-gray-800">{t.equipment.sortNewest}</option>
@@ -319,24 +328,26 @@ function Equipment() {
                     </div>
                     {/* Mobile: edit+delete row / calc below — Desktop: all in a row */}
                     <div className="flex flex-col items-end gap-1.5 shrink-0 lg:flex-row lg:items-center lg:gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(item)}
-                          title={t.common.edit}
-                          className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#0F2854] hover:text-white text-[#4988C4] flex items-center justify-center transition-colors"
-                        >
-                          <PencilIcon className="w-3 h-3 lg:w-4 lg:h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(item.id)}
-                          title={t.common.delete}
-                          className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center transition-colors"
-                        >
-                          <TrashIcon className="w-3 h-3 lg:w-4 lg:h-4" />
-                        </button>
-                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(item)}
+                            title={t.common.edit}
+                            className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#0F2854] hover:text-white text-[#4988C4] flex items-center justify-center transition-colors"
+                          >
+                            <PencilIcon className="w-3 h-3 lg:w-4 lg:h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(item.id)}
+                            title={t.common.delete}
+                            className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center transition-colors"
+                          >
+                            <TrashIcon className="w-3 h-3 lg:w-4 lg:h-4" />
+                          </button>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => openCalcModal(item)}
@@ -563,9 +574,10 @@ function Equipment() {
               <button
                 type="button"
                 onClick={handleSave}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors"
+                disabled={saving}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
-                {editingId ? t.equipment.saveEdits : t.equipment.saveData}
+                {saving ? '...' : (editingId ? t.equipment.saveEdits : t.equipment.saveData)}
               </button>
             </div>
           </div>
@@ -630,9 +642,10 @@ function Equipment() {
               <button
                 type="button"
                 onClick={handleSaveCategory}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors"
+                disabled={saving}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
-                {t.equipment.saveCategory}
+                {saving ? '...' : t.equipment.saveCategory}
               </button>
             </div>
           </div>

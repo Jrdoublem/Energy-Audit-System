@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDownIcon } from '../../components/icons';
 import { useTheme } from '../../context/themeStore.js';
+import { useLang } from '../../context/languageStore.js';
 import MeasureSelect from '../history/MeasureSelect';
 
-const GRADE_CONFIG = {
+function getGradeConfig(t) {
+  return {
   good: {
-    label: 'ประสิทธิภาพอยู่ในเกณฑ์ดี',
-    desc: (id) => `อุปกรณ์ (${id}) ทำงานได้ตามมาตรฐาน ไม่จำเป็นต้องดำเนินมาตรการปรับปรุงในขณะนี้`,
+    label: t.calcResult.gradeGoodLabel,
+    desc: t.calcResult.gradeGoodDesc,
     bgStyle: { background: 'linear-gradient(to bottom, #86EFAC 0%, #DCFCE7 40%, #F0FBF4 100%)' },
     bgStyleDark: { background: 'linear-gradient(to bottom, #14532D 0%, #0F2E1D 40%, #0B1B33 100%)' },
     iconGradient: 'linear-gradient(135deg, #4ADE80 0%, #16A34A 100%)',
@@ -26,8 +28,8 @@ const GRADE_CONFIG = {
     ),
   },
   ok: {
-    label: 'ประสิทธิภาพอยู่ในเกณฑ์ปานกลาง',
-    desc: (id) => `อุปกรณ์ (${id}) มีประสิทธิภาพอยู่ในระดับพอใช้ ควรพิจารณามาตรการปรับปรุง`,
+    label: t.calcResult.gradeOkLabel,
+    desc: t.calcResult.gradeOkDesc,
     bgStyle: { background: 'linear-gradient(to bottom, #FDBA74 0%, #FFEDD5 40%, #FFF8F0 100%)' },
     bgStyleDark: { background: 'linear-gradient(to bottom, #4A2E0F 0%, #2E2013 40%, #0B1B33 100%)' },
     iconGradient: 'linear-gradient(135deg, #FB923C 0%, #EA580C 100%)',
@@ -47,8 +49,8 @@ const GRADE_CONFIG = {
     ),
   },
   poor: {
-    label: 'ประสิทธิภาพต่ำกว่าเกณฑ์',
-    desc: (id) => `อุปกรณ์ (${id}) มีประสิทธิภาพต่ำกว่ามาตรฐาน ควรดำเนินมาตรการปรับปรุงโดยเร็ว`,
+    label: t.calcResult.gradePoorLabel,
+    desc: t.calcResult.gradePoorDesc,
     bgStyle: { background: 'linear-gradient(to bottom, #FCA5A5 0%, #FFE2E2 40%, #FFF5F5 100%)' },
     bgStyleDark: { background: 'linear-gradient(to bottom, #4A1616 0%, #2E1414 40%, #0B1B33 100%)' },
     iconGradient: 'linear-gradient(135deg, #F87171 0%, #DC2626 100%)',
@@ -66,18 +68,21 @@ const GRADE_CONFIG = {
       </svg>
     ),
   },
-};
+  };
+}
 
 function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
   const [note, setNote] = useState('');
   const [showMeasure, setShowMeasure] = useState(false);
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { t } = useLang();
   const isDark = theme === 'dark';
 
   const handleMeasureClick = () => {
     if (onMeasure) { onMeasure(); } else { setShowMeasure(true); }
   };
+  const GRADE_CONFIG = getGradeConfig(t);
   const cfg = GRADE_CONFIG[result.grade] || GRADE_CONFIG.ok;
   const bgStyle = isDark ? cfg.bgStyleDark : cfg.bgStyle;
   const cardBorder = isDark ? cfg.cardBorderDark : cfg.cardBorder;
@@ -154,11 +159,11 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
           <div
             className="relative w-full rounded-3xl p-5 flex flex-col gap-4 bg-white dark:bg-[#111F35] shadow-[0_2px_12px_rgba(0,0,0,0.07)]"
           >
-            <p className="text-sm text-gray-600 dark:text-[#8CA3C0] leading-relaxed text-center">{cfg.desc(item.id || item.brandModel || 'อุปกรณ์')}</p>
+            <p className="text-sm text-gray-600 dark:text-[#8CA3C0] leading-relaxed text-center">{cfg.desc(item.id || item.brandModel || t.calcResult.defaultEquipmentName)}</p>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="บันทึกหมายเหตุ..."
+              placeholder={t.calcResult.notePlaceholder}
               rows={2}
               className={`w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-600 dark:text-[#8CA3C0] focus:outline-none focus:ring-2 resize-none ${cfg.focusRing}`}
             />
@@ -172,7 +177,7 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
             onClick={handleSave}
             className="w-full py-4 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-bold text-base transition-colors shadow-md"
           >
-            บันทึกข้อมูล
+            {t.equipment.saveData}
           </button>
         )}
 
@@ -185,18 +190,18 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
               className="w-full py-4 rounded-2xl text-white font-bold text-base shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
               style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
             >
-              เลือกมาตรการแก้ไข
+              {t.calcResult.selectCorrectiveMeasure}
             </button>
           ) : (
             <div className="flex items-center justify-between gap-3 bg-white dark:bg-[#111F35] rounded-full px-5 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.10)]">
-              <p className="text-sm font-medium text-gray-500 dark:text-[#7E93AF]">ต้องการประหยัดพลังงานเพิ่ม?</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-[#7E93AF]">{t.calcResult.wantMoreSavings}</p>
               <button
                 type="button"
                 onClick={handleMeasureClick}
                 className="shrink-0 px-5 py-2.5 rounded-full text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
                 style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
               >
-                เลือกมาตรการ
+                {t.calcResult.selectMeasure}
               </button>
             </div>
           )}

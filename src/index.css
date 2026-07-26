@@ -67,12 +67,25 @@ body {
    ตั้งใจแยกจาก sidebar สีเข้ม (#0A1B3D) ให้เห็นชั้นชัดเจน แทนที่จะไล่เฉด
    เข้มต่อเนื่องกันจนดูกลืนเป็นก้อนเดียว --- */
 .bg-shell-gradient {
-  background: linear-gradient(160deg, #FFFFFF 0%, #BDE8F5 100%);
+  background: linear-gradient(160deg, #FFFFFF 0%, #EDF5FB 100%);
 }
 .dark .bg-shell-gradient {
   /* Muted/less saturated than the old pre-light-mode shell — easier on the
      eyes at night than the punchier version this replaced. */
-  background: linear-gradient(160deg, #0B1B33 0%, #142C4E 100%);
+  background: linear-gradient(160deg, #0B1B33 0%, #101F38 100%);
+}
+
+/* Plain CSS rather than a Tailwind lg: max-w-* utility — Tailwind's Vite
+   plugin wasn't emitting a fresh lg: max-width variant for this exact class
+   on this page even after a full cache clear, so this sidesteps whatever
+   that gap is. */
+.catalog-modal-panel {
+  max-width: 24rem;
+}
+@media (min-width: 1024px) {
+  .catalog-modal-panel {
+    max-width: 48rem;
+  }
 }
 
 .scrollbar-none {

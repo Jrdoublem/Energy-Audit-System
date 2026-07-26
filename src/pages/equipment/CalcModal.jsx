@@ -11,6 +11,7 @@ import {
 import CalcResult from './CalcResult';
 import { CALCULATORS, defaultFormFor } from './calculators.js';
 import { Select } from '../../components/Dropdown.jsx';
+import { useLang } from '../../context/languageStore.js';
 
 const INITIAL_CALC_FORM = {
   pInput: '646', load: '70', refrigerant: '',
@@ -50,6 +51,7 @@ function TempToggle({ fieldKey, fieldUnits, onToggle }) {
 }
 
 function CalcModal({ item, onClose }) {
+  const { t } = useLang();
   const isChiller = item.category === 'chiller';
   const [calcForm, setCalcForm] = useState(() => (isChiller ? INITIAL_CALC_FORM : defaultFormFor(item.category)));
   const [calcResult, setCalcResult] = useState(null);
@@ -69,26 +71,71 @@ function CalcModal({ item, onClose }) {
 
   const handleCalc = () => {
     if (isChiller) {
-      const { pInput, load } = calcForm;
-      if (!pInput) return;
-      const capacity = parseFloat(item.coolingCapacity) || 1000;
-      const loadPct = parseFloat(load) || 0;
-      const power = parseFloat(pInput);
-      const coolingLoad = capacity > 0 && loadPct > 0 ? capacity * (loadPct / 100) : null;
-      const powerCF = power * 1.02;
-      const efficiency = coolingLoad ? powerCF / coolingLoad : null;
-      const grade = efficiency === null ? null : efficiency < 0.8 ? 'good' : efficiency <= 1.0 ? 'ok' : 'poor';
+      const P_in_raw = parseFloat(calcForm.pInput);
+      if (!P_in_raw) return;
+      const P_in = P_in_raw * 1.02; // instrument reading correction factor
+
+      const toFahrenheit = (v, unit) => (unit === 'C' ? (v * 9) / 5 + 32 : v);
+      const readF = (key) => {
+        const v = parseFloat(calcForm[key]);
+        return Number.isNaN(v) ? null : toFahrenheit(v, fieldUnits[key]);
+      };
+      const flowVal = parseFloat(calcForm.ultraflowSonic);
+      const flowGPM = Number.isNaN(flowVal) ? null : (flowUnit === 'm³/h' ? flowVal * 4.4029 : flowVal);
+
+      const T_CHWR_F = readF('chillTempIn'); // return water, warmer
+      const T_CHWS_F = readF('chillTempOut'); // supply water, cooler
+
+      let TR = null, Q_cool_kW = null, kWperTR = null, COP = null, EER = null;
+      if (flowGPM && T_CHWR_F != null && T_CHWS_F != null && T_CHWR_F > T_CHWS_F) {
+        TR = (flowGPM * (T_CHWR_F - T_CHWS_F)) / 24;
+        Q_cool_kW = TR * 3.517;
+        kWperTR = P_in / TR;
+        COP = Q_cool_kW / P_in;
+        EER = COP * 3.412;
+      }
+
+      // Simple energy balance — valid for both water- and air-cooled condensers
+      const Q_rej_kW = Q_cool_kW != null ? Q_cool_kW + P_in : null;
+
+      // Theoretical (Carnot) efficiency from saturated evap/cond temps;
+      // air-cooled condensers approximate saturated cond temp as dry bulb + 15°F approach
+      const T_evap_F = readF('saturatedEvapTemp');
+      let T_cond_F = null;
+      if (item.chillerType === 'AIR COOL') {
+        const T_db_F = readF('dryBulbTemp');
+        if (T_db_F != null) T_cond_F = T_db_F + 15;
+      } else {
+        T_cond_F = readF('saturatedCondTemp');
+      }
+
+      let etaCarnot = null;
+      if (COP != null && T_evap_F != null && T_cond_F != null) {
+        const T_evap_K = ((T_evap_F - 32) * 5) / 9 + 273.15;
+        const T_cond_K = ((T_cond_F - 32) * 5) / 9 + 273.15;
+        if (T_cond_K > T_evap_K) {
+          const COP_carnot = T_evap_K / (T_cond_K - T_evap_K);
+          etaCarnot = (COP / COP_carnot) * 100;
+        }
+      }
+
+      const grade = kWperTR == null ? null : kWperTR < 0.8 ? 'good' : kWperTR <= 1.0 ? 'ok' : 'poor';
+      const fmt = (v, d = 2) => (v == null ? '-' : v.toFixed(d));
+
       setCalcResult({
         category: 'chiller',
         metrics: [
-          { key: 'coolingLoad', label: 'Cooling Load', value: coolingLoad != null ? coolingLoad.toFixed(2) : '-', unit: 'TR' },
-          { key: 'powerCF', label: 'Power (CF)', value: powerCF.toFixed(2), unit: 'kW' },
-          { key: 'efficiency', label: 'Efficiency', value: efficiency ? efficiency.toFixed(2) : '-', unit: 'kW/TR' },
+          { key: 'cop', label: 'COP', value: fmt(COP, 3), unit: 'kW/kW' },
+          { key: 'efficiency', label: 'Efficiency', value: fmt(kWperTR, 3), unit: 'kW/TR' },
+          { key: 'eer', label: 'EER', value: fmt(EER), unit: 'BTU/W' },
+          { key: 'coolingLoad', label: 'Cooling Load', value: fmt(TR), unit: 'TR' },
+          { key: 'qCool', label: 'Q Cool', value: fmt(Q_cool_kW), unit: 'kW' },
+          { key: 'qRej', label: 'Heat Rejection', value: fmt(Q_rej_kW), unit: 'kW' },
+          { key: 'etaCarnot', label: 'η Carnot', value: fmt(etaCarnot, 1), unit: '%' },
         ],
-        // legacy top-level fields kept for the read-only CalcResult path used
-        // by History.jsx before it's re-opened (metrics is the canonical shape)
-        coolingLoad, efficiency: efficiency ? efficiency.toFixed(2) : null,
-        grade, powerCF: powerCF.toFixed(2), powerBaseline: powerCF,
+        // legacy top-level fields kept for MeasureSelect.jsx autofill (autoFrom: 'powerCF' / 'coolingLoad')
+        coolingLoad: TR, efficiency: kWperTR != null ? kWperTR.toFixed(2) : null,
+        grade, powerCF: P_in.toFixed(2), powerBaseline: P_in,
       });
       return;
     }
@@ -169,9 +216,9 @@ function CalcModal({ item, onClose }) {
       <div className="relative z-10 flex items-center gap-3 px-5 pt-12 lg:pt-6 pb-4 shrink-0">
         <button type="button" onClick={onClose} className="flex items-center gap-1.5 text-[#0F2854]/60 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7] transition-colors">
           <ChevronDownIcon className="w-5 h-5 rotate-90 shrink-0" />
-          <span className="text-sm font-medium">กลับ</span>
+          <span className="text-sm font-medium">{t.calculator.back}</span>
         </button>
-        <h1 className="flex-1 text-center text-xl font-bold text-[#0F2854] dark:text-[#E7EEF7]">คำนวณประสิทธิภาพ</h1>
+        <h1 className="flex-1 text-center text-xl font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.calculator.calcEfficiency}</h1>
         <button type="button" onClick={onClose} className="hidden lg:flex w-8 h-8 rounded-full bg-white dark:bg-[#111F35] shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 items-center justify-center text-[#0F2854] dark:text-[#E7EEF7] font-bold transition-colors">✕</button>
       </div>
 
@@ -184,19 +231,19 @@ function CalcModal({ item, onClose }) {
             <div className="w-8 h-8 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
               <ClipboardIcon className="w-4 h-4 text-white" />
             </div>
-            <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">ข้อมูลอุปกรณ์</p>
+            <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.calculator.equipmentInfo}</p>
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
             {[
-              ['รหัสอุปกรณ์', item.id],
-              ['โรงงาน / บริษัท', item.factory],
-              ['ยี่ห้อ / รุ่น', item.brandModel],
-              ['แผนก / อาคาร', item.building],
+              [t.calculator.calcId, item.id],
+              [t.calculator.calcFactory, item.factory],
+              [t.calculator.calcBrandModel, item.brandModel],
+              [t.calculator.calcBuilding, item.building],
               ...(item.chillerType ? [['Chiller Type', item.chillerType]] : []),
               ...(item.coolingCapacity ? [['Cooling Capacity', `${item.coolingCapacity} RT`]] : []),
               ...(item.chillerPower ? [['Power', `${item.chillerPower} kW`]] : []),
               ...(item.chillerEfficiency ? [['Efficiency', `${item.chillerEfficiency} kW/RT`]] : []),
-              ...(item.electricityCost ? [['Electricity Cost', `${item.electricityCost} บาท/kWh`]] : []),
+              ...(item.electricityCost ? [['Electricity Cost', `${item.electricityCost} ${t.calculator.elecCostUnit}`]] : []),
             ].map(([label, val]) => (
               <div key={label}>
                 <p className="text-xs text-gray-400 dark:text-[#7E93AF] mb-0.5">{label}</p>
@@ -216,7 +263,7 @@ function CalcModal({ item, onClose }) {
             <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">Electric Power</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {[['Power (kW)', 'pInput'], ['โหลด (%)', 'load']].map(([label, key]) => (
+            {[['Power (kW)', 'pInput'], [t.calculator.load, 'load']].map(([label, key]) => (
               <div key={key}>
                 <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{label}</label>
                 <input
@@ -228,11 +275,11 @@ function CalcModal({ item, onClose }) {
               </div>
             ))}
             <div className="col-span-2">
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">สารทำความเย็น</label>
+              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.calculator.refrigerant}</label>
               <Select
                 value={calcForm.refrigerant || ''}
                 onChange={(v) => setCalcForm((p) => ({ ...p, refrigerant: v }))}
-                placeholder="เลือก..."
+                placeholder={t.calculator.selectPlaceholder}
                 options={['R-11', 'R-12', 'R-22', 'R-123', 'R-134a', 'R-407C', 'R-410A', 'R-717']}
                 triggerClassName="flex items-center w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5]"
               />
@@ -275,7 +322,7 @@ function CalcModal({ item, onClose }) {
 
         {/* Global temperature unit toggle */}
         <div className="flex items-center justify-between px-1">
-          <p className="text-sm font-semibold text-[#0F2854]/70 dark:text-[#7E93AF]">เปลี่ยนหน่วยอุณหภูมิทั้งหมด</p>
+          <p className="text-sm font-semibold text-[#0F2854]/70 dark:text-[#7E93AF]">{t.calculator.changeAllTempUnits}</p>
           <div className="flex bg-[#0F2854]/8 dark:bg-white/5 rounded-xl p-1 gap-1">
             {['F', 'C'].map((u) => {
               const allSame = Object.values(fieldUnits).every((v) => v === u);
@@ -381,14 +428,14 @@ function CalcModal({ item, onClose }) {
               <div className="w-8 h-8 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
                 <CalculatorIcon className="w-4 h-4 text-white" />
               </div>
-              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">ข้อมูลนำเข้า</p>
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.calculator.inputData}</p>
             </div>
             {CALCULATORS[item.category] ? (
               <div className="grid grid-cols-2 gap-4">
                 {CALCULATORS[item.category].fields.map((f) => (
                   <div key={f.key}>
                     <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">
-                      {f.label}
+                      {t.calculator.fieldLabels[f.label] || f.label}
                       {f.unit && <span className="text-xs font-normal text-gray-400 dark:text-[#7E93AF]"> ({f.unit})</span>}
                     </label>
                     <input
@@ -401,7 +448,7 @@ function CalcModal({ item, onClose }) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400 dark:text-[#7E93AF] text-center py-4">ยังไม่รองรับเครื่องคำนวณสำหรับหมวดหมู่นี้</p>
+              <p className="text-sm text-gray-400 dark:text-[#7E93AF] text-center py-4">{t.calculator.calcNotSupported}</p>
             )}
           </div>
         )}
@@ -417,7 +464,7 @@ function CalcModal({ item, onClose }) {
           style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
         >
           <CalculatorIcon className="w-5 h-5 shrink-0" />
-          คำนวณ
+          {t.equipment.calculate}
         </button>
         <button
           type="button"
@@ -425,7 +472,7 @@ function CalcModal({ item, onClose }) {
           className="w-full py-3.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] font-semibold flex items-center justify-center gap-2 transition-colors"
         >
           <RefreshIcon className="w-4 h-4" />
-          รีเซ็ต
+          {t.calculator.reset}
         </button>
       </div>
       </div>

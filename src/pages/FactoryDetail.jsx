@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel } from '../components/ui';
 import { computeFactoryStats, getFactoryMeta, setFactoryMeta } from '../context/factoryStore.js';
-import { loadCategories } from './equipment/categories.js';
+import { fetchAllCategories, fetchAllEquipment } from '../context/equipmentStore.js';
 import { ICON_MAP } from '../components/iconMap.js';
 import {
   ActivityIcon, ChevronDownIcon, ClipboardIcon, FactoryIcon, LightningIcon,
@@ -13,24 +13,27 @@ import {
 import { fileToResizedDataUrl } from '../utils/image.js';
 import { THAI_PROVINCES } from '../utils/thaiProvinces.js';
 import { Combobox } from '../components/Dropdown.jsx';
-
-function loadEquipment() {
-  try { return JSON.parse(localStorage.getItem('equipment') || '[]'); } catch { return []; }
-}
+import { useLang } from '../context/languageStore.js';
 
 function fmt(n) {
   return Math.round(n || 0).toLocaleString('th-TH');
 }
 
 function FactoryDetail() {
+  const { t } = useLang();
   const { name: encodedName } = useParams();
   const name = decodeURIComponent(encodedName || '');
   const navigate = useNavigate();
 
-  const categories = useMemo(() => loadCategories(), []);
-  const equipment = useMemo(() => loadEquipment().filter((e) => e.factory === name), [name]);
+  const [categories, setCategories] = useState([]);
+  const [allEquipment, setAllEquipment] = useState([]);
+  useEffect(() => {
+    fetchAllCategories().then(setCategories).catch(() => setCategories([]));
+    fetchAllEquipment().then(setAllEquipment).catch(() => setAllEquipment([]));
+  }, []);
+  const equipment = useMemo(() => allEquipment.filter((e) => e.factory === name), [allEquipment, name]);
   const [meta, setMeta] = useState(() => getFactoryMeta(name));
-  const stats = useMemo(() => computeFactoryStats(name), [name]);
+  const stats = useMemo(() => computeFactoryStats(name, allEquipment), [name, allEquipment]);
 
   const [editModal, setEditModal] = useState(false);
   const [form, setForm] = useState({ description: '', province: '', image: '' });
@@ -51,7 +54,7 @@ function FactoryDetail() {
       const dataUrl = await fileToResizedDataUrl(file);
       setForm((p) => ({ ...p, image: dataUrl }));
     } catch {
-      setImageError('อัปโหลดรูปไม่สำเร็จ');
+      setImageError(t.factories.uploadFailed);
     }
   };
 
@@ -86,7 +89,7 @@ function FactoryDetail() {
               <button
                 type="button"
                 onClick={openEdit}
-                title="แก้ไขข้อมูลโรงงาน"
+                title={t.factories.editFactoryTooltip}
                 className="w-7 h-7 rounded-full bg-white dark:bg-[#111F35] shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 text-[#4988C4] flex items-center justify-center transition-colors shrink-0"
               >
                 <PencilIcon className="w-3.5 h-3.5" />
@@ -99,7 +102,7 @@ function FactoryDetail() {
               </p>
             )}
             <p className="text-sm text-[#0F2854]/60 dark:text-[#7E93AF] mt-1">
-              {meta.description || 'ยังไม่มีคำอธิบายโรงงาน'}
+              {meta.description || t.factories.noDescriptionYet}
             </p>
           </div>
         </div>
@@ -110,30 +113,30 @@ function FactoryDetail() {
             <Panel className="p-4">
               <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-[#7E93AF] mb-1">
                 <ActivityIcon className="w-3.5 h-3.5 text-[#4988C4]" />
-                Equipments
+                {t.factories.equipments}
               </div>
               <p className="text-xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{stats.equipCount}</p>
             </Panel>
             <Panel className="p-4">
               <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-[#7E93AF] mb-1">
                 <LightningIcon className="w-3.5 h-3.5 text-amber-400" />
-                Energy (kWh)
+                {t.factories.energyKwh}
               </div>
               <p className="text-xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{fmt(stats.energyKWhYear)}</p>
             </Panel>
             <Panel className="p-4">
               <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-[#7E93AF] mb-1">
                 <TrendDownIcon className="w-3.5 h-3.5 text-emerald-500" />
-                Savings/yr
+                {t.factories.savingsPerYear}
               </div>
               <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">฿{fmt(stats.potentialSavings)}</p>
             </Panel>
           </div>
 
           <Panel className="p-5">
-            <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-3">อุปกรณ์ในโรงงานนี้ ({equipment.length})</p>
+            <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-3">{t.factories.equipmentInFactory} ({equipment.length})</p>
             {equipment.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-[#7E93AF] text-center py-8">ยังไม่มีอุปกรณ์ในโรงงานนี้</p>
+              <p className="text-sm text-gray-400 dark:text-[#7E93AF] text-center py-8">{t.factories.noEquipmentInFactory}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {equipment.map((item) => {
@@ -172,9 +175,9 @@ function FactoryDetail() {
             className="relative bg-white dark:bg-[#111F35] rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">แก้ไขข้อมูลโรงงาน</p>
+            <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.factories.editFactoryTitle}</p>
             <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">รูปโรงงาน (ไม่บังคับ)</label>
+              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.factories.factoryImageOptional}</label>
               <div className="flex items-center gap-3">
                 {form.image ? (
                   <img src={form.image} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
@@ -184,29 +187,29 @@ function FactoryDetail() {
                   </div>
                 )}
                 <label className="flex-1 flex items-center justify-center py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs font-semibold text-gray-500 dark:text-[#8CA3C0] hover:border-[#4988C4] hover:text-[#4988C4] transition-colors cursor-pointer">
-                  {form.image ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
+                  {form.image ? t.factories.changeImage : t.factories.uploadImage}
                   <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 </label>
               </div>
               {imageError && <p className="text-xs text-red-500 mt-1.5">{imageError}</p>}
             </div>
             <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">จังหวัด</label>
+              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.factories.province}</label>
               <Combobox
                 value={form.province}
                 onChange={(v) => setForm((p) => ({ ...p, province: v }))}
                 options={THAI_PROVINCES}
-                placeholder="เช่น อยุธยา"
+                placeholder={t.factories.egProvince}
                 autoFocus
                 inputClassName="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
               />
             </div>
             <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">คำอธิบาย</label>
+              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.factories.description}</label>
               <textarea
                 value={form.description}
                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                placeholder="เช่น โรงงานผลิตชิ้นส่วนอิเล็กทรอนิกส์"
+                placeholder={t.factories.egDescription}
                 rows={2}
                 className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4] resize-none"
               />
@@ -217,14 +220,14 @@ function FactoryDetail() {
                 onClick={() => setEditModal(false)}
                 className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
               >
-                ยกเลิก
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleSave}
                 className="flex-1 py-3 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-semibold text-sm transition-colors"
               >
-                บันทึก
+                {t.common.save}
               </button>
             </div>
           </div>

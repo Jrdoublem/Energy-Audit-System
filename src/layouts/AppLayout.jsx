@@ -9,6 +9,7 @@ import { LangToggle } from '../pages/auth/LangToggle.jsx';
 import { ThemeToggle } from '../components/ThemeToggle.jsx';
 import { Select } from '../components/Dropdown.jsx';
 import {
+  BoxIcon,
   ChevronDownIcon,
   ClipboardIcon,
   ClockIcon,
@@ -59,6 +60,7 @@ function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, 
 const navItems = [
   { to: '/home', labelKey: 'home', icon: HomeIcon },
   { to: '/equipment', labelKey: 'equipment', icon: ClipboardIcon },
+  { to: '/catalog', labelKey: 'catalog', icon: BoxIcon },
   { to: '/history', labelKey: 'history', icon: ClockIcon },
   { to: '/reports', labelKey: 'reports', icon: DocumentIcon },
   { to: '/factories', labelKey: 'factories', icon: MapPinIcon, adminOnly: true },
@@ -70,7 +72,7 @@ function initialsOf(name) {
   return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (name || '?').slice(0, 2).toUpperCase();
 }
 
-function AppLayout({ title, actions, children, hideHeader = false, fullBleed = false }) {
+function AppLayout({ title, actions, children, hideHeader = false, fullBleed = false, hideFactorySelect = false }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
@@ -116,7 +118,7 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
         </button>
 
         {/* Logo */}
-        <div className={`flex items-center gap-3 mb-6 ${collapsed ? 'justify-center px-0' : 'px-1'}`}>
+        <div className={`flex items-center gap-3 mb-5 ${collapsed ? 'justify-center px-0' : 'px-1'}`}>
           <div className="relative shrink-0">
             <img src={companyLogo} alt="Logo" className="w-9 h-9 object-contain drop-shadow" />
           </div>
@@ -130,6 +132,57 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
                 Energy Audit System
               </div>
             </div>
+          )}
+        </div>
+
+        {/* User account card */}
+        <div className="relative mb-5">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            title={collapsed ? session.name : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] hover:from-white/10 hover:to-white/[0.04] border border-white/10 shadow-sm transition-colors text-left ${
+              collapsed ? 'justify-center' : ''
+            }`}
+          >
+            <span className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-sm font-bold shrink-0 font-mono shadow-md ring-1 ring-white/10">
+              {initialsOf(session.name)}
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0A1B3D]" />
+            </span>
+            {!collapsed && (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold truncate tracking-wide leading-tight">{session.name}</p>
+                  <span className="inline-block mt-1 text-[9px] font-bold text-[#38BDF8] tracking-widest font-mono uppercase bg-[#38BDF8]/10 px-1.5 py-0.5 rounded-full leading-none">
+                    {roleLabel}
+                  </span>
+                </div>
+                <ChevronDownIcon className={`w-3.5 h-3.5 text-white/30 shrink-0 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+              </>
+            )}
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+              <div className="absolute left-0 top-full mt-2 w-48 bg-[#0A1B3D] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-40 text-sm">
+                <div className="px-3 py-2 border-b border-white/8">
+                  <p className="text-[9px] font-mono text-white/30 tracking-widest uppercase">{t.nav.userMenu}</p>
+                </div>
+                <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }}
+                  className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                  {t.nav.profile}
+                </button>
+                <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }}
+                  className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                  {t.nav.settings}
+                </button>
+                <div className="h-px bg-white/8" />
+                <button type="button" onClick={handleLogout}
+                  className="w-full text-left px-4 py-2.5 text-red-400 hover:bg-white/5 transition-colors">
+                  {t.nav.logout}
+                </button>
+              </div>
+            </>
           )}
         </div>
 
@@ -190,57 +243,10 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
 
         <div className="flex-1" />
 
-
         <div className="h-px bg-white/8 mb-4" />
 
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left ${
-              collapsed ? 'justify-center' : ''
-            }`}
-          >
-            <span className="w-8 h-8 rounded-lg bg-[#1C4D8D] border border-[#38BDF8]/20 flex items-center justify-center text-sm font-bold shrink-0 font-mono">
-              {initialsOf(session.name)}
-            </span>
-            {!collapsed && (
-              <>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate tracking-wide">{session.name}</p>
-                  <p className="text-[9px] text-[#38BDF8]/50 truncate tracking-widest font-mono uppercase">{roleLabel}</p>
-                </div>
-                <ChevronDownIcon className="w-3.5 h-3.5 text-white/20 shrink-0" />
-              </>
-            )}
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-              <div className="absolute left-0 bottom-full mb-2 w-48 bg-[#0A1B3D] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-40 text-sm">
-                <div className="px-3 py-2 border-b border-white/8">
-                  <p className="text-[9px] font-mono text-white/30 tracking-widest uppercase">{t.nav.userMenu}</p>
-                </div>
-                <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }}
-                  className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                  {t.nav.profile}
-                </button>
-                <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }}
-                  className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                  {t.nav.settings}
-                </button>
-                <div className="h-px bg-white/8" />
-                <button type="button" onClick={handleLogout}
-                  className="w-full text-left px-4 py-2.5 text-red-400 hover:bg-white/5 transition-colors">
-                  {t.nav.logout}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
         {!collapsed && (
-          <div className="mt-4 flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <LangToggle lang={lang} setLang={setLang} />
             <ThemeToggle />
           </div>
@@ -253,16 +259,18 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
         }`}
       >
         {/* Persistent role badge + factory selector — mobile: every page; desktop: only pages without a header row (it merges into the title row otherwise) */}
-        <div className={`${hideHeader ? 'flex' : 'flex lg:hidden'} w-full max-w-md lg:max-w-none items-center gap-2 px-6 lg:px-10 pt-4 lg:pt-6`}>
+        <div className={`${hideHeader ? 'flex lg:absolute lg:z-20 lg:top-6 lg:right-10 lg:w-auto lg:max-w-none' : 'flex lg:hidden'} w-full max-w-md items-center gap-2 px-6 pt-4`}>
           <RoleBadge role={roleLabel} />
-          <FactorySelect
-            selectedFactory={selectedFactory}
-            setSelectedFactory={setSelectedFactory}
-            refreshFactories={refreshFactories}
-            factories={factories}
-            t={t}
-            role={session.role}
-          />
+          {!hideFactorySelect && (
+            <FactorySelect
+              selectedFactory={selectedFactory}
+              setSelectedFactory={setSelectedFactory}
+              refreshFactories={refreshFactories}
+              factories={factories}
+              t={t}
+              role={session.role}
+            />
+          )}
         </div>
 
         <div
@@ -273,14 +281,16 @@ function AppLayout({ title, actions, children, hideHeader = false, fullBleed = f
           {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] shrink-0">{title}</h1>}
           <div className="hidden lg:flex flex-1 items-center justify-end gap-3">
             <RoleBadge role={roleLabel} />
-            <FactorySelect
-              selectedFactory={selectedFactory}
-              setSelectedFactory={setSelectedFactory}
-              refreshFactories={refreshFactories}
-              factories={factories}
-              role={session.role}
-              t={t}
-            />
+            {!hideFactorySelect && (
+              <FactorySelect
+                selectedFactory={selectedFactory}
+                setSelectedFactory={setSelectedFactory}
+                refreshFactories={refreshFactories}
+                factories={factories}
+                role={session.role}
+                t={t}
+              />
+            )}
             {actions}
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-auto">

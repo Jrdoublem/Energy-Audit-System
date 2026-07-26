@@ -56,25 +56,24 @@ export function setFactoryMeta(name, meta) {
 
 // allowedFactories is null for admin (unrestricted) or an engineer's
 // assigned-factory list — pass it to scope the option list to what
-// that engineer is actually allowed to see.
-export function readFactories(allowedFactories) {
-  try {
-    const eq = JSON.parse(localStorage.getItem('equipment') || '[]');
-    const fromEquipment = eq.map((e) => e.factory).filter(Boolean);
-    const all = [...new Set([...fromEquipment, ...loadManualFactories()])];
-    if (!allowedFactories) return all;
-    return all.filter((f) => allowedFactories.includes(f));
-  } catch { return []; }
+// that engineer is actually allowed to see. `equipmentList` is fetched by
+// the caller (equipment now lives in Firestore, not localStorage).
+export function readFactories(allowedFactories, equipmentList = []) {
+  const fromEquipment = equipmentList.map((e) => e.factory).filter(Boolean);
+  const all = [...new Set([...fromEquipment, ...loadManualFactories()])];
+  if (!allowedFactories) return all;
+  return all.filter((f) => allowedFactories.includes(f));
 }
 
-// Aggregate stats for one factory, derived entirely from data already saved
-// elsewhere (equipment list, saved calculation results, saved measures) —
-// there is no separate "factory energy" figure stored anywhere.
-export function computeFactoryStats(factoryName) {
-  let equipment = [];
+// Aggregate stats for one factory, derived from data already saved elsewhere
+// (equipment list, saved calculation results, saved measures) — there is no
+// separate "factory energy" figure stored anywhere. `equipmentList` is
+// fetched by the caller (equipment now lives in Firestore); history/measures
+// still live in localStorage for now.
+export function computeFactoryStats(factoryName, equipmentList = []) {
+  const equipment = equipmentList;
   let history = [];
   let measures = [];
-  try { equipment = JSON.parse(localStorage.getItem('equipment') || '[]'); } catch { /* ignore */ }
   try { history = JSON.parse(localStorage.getItem('history') || '[]'); } catch { /* ignore */ }
   try { measures = JSON.parse(localStorage.getItem('measures') || '[]'); } catch { /* ignore */ }
 

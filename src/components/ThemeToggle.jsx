@@ -1,32 +1,39 @@
 import { useTheme } from '../context/themeStore.js';
+import { useLang } from '../context/languageStore.js';
 import { MoonIcon, SunIcon } from './icons';
 
-// A real sliding switch (not a button whose label could be misread as
-// "current state" vs. "action to take") — the knob's position is the only
-// thing that communicates state, same convention as any OS dark-mode switch.
-// Lives on the sidebar's permanently-dark background, so no dark: variants.
+// Deliberately the same structural pattern as LangToggle (h-6 rounded-full
+// pill, two h-full px-2.5 segments, active segment gets the same accent fill)
+// — the two controls sit side by side in the sidebar, so any difference in
+// shape/height between them (the previous sliding-knob switch vs. this
+// segmented pill) read as visually mismatched rather than a matched pair.
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const { t } = useLang();
   const isDark = theme === 'dark';
 
   return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      role="switch"
-      aria-checked={isDark}
-      title={isDark ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด'}
-      className="relative w-12 h-6 rounded-full border border-white/20 shrink-0 transition-colors duration-200"
-      style={{ background: isDark ? '#1C4D8D' : 'rgba(255,255,255,0.08)' }}
-    >
-      <SunIcon className="absolute left-[5px] top-1/2 -translate-y-1/2 w-3 h-3 text-white/30 pointer-events-none" />
-      <MoonIcon className="absolute right-[5px] top-1/2 -translate-y-1/2 w-3 h-3 text-white/50 pointer-events-none" />
-      <span
-        className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm flex items-center justify-center text-[#0F2854] transition-transform duration-200"
-        style={{ transform: isDark ? 'translateX(24px)' : 'translateX(0)' }}
+    <div className="flex items-center h-6 rounded-full border border-white/20 overflow-hidden shrink-0">
+      <button
+        type="button"
+        onClick={() => setTheme('light')}
+        title={t.nav.switchToLight}
+        className={`h-full px-2.5 flex items-center justify-center transition-colors ${
+          !isDark ? 'bg-[#38BDF8] text-[#0F2854]' : 'text-white/40 hover:text-white/70'
+        }`}
       >
-        {isDark ? <MoonIcon className="w-3 h-3" /> : <SunIcon className="w-3 h-3" />}
-      </span>
-    </button>
+        <SunIcon className="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => setTheme('dark')}
+        title={t.nav.switchToDark}
+        className={`h-full px-2.5 flex items-center justify-center transition-colors ${
+          isDark ? 'bg-[#38BDF8] text-[#0F2854]' : 'text-white/40 hover:text-white/70'
+        }`}
+      >
+        <MoonIcon className="w-3.5 h-3.5" />
+      </button>
+    </div>
   );
 }
