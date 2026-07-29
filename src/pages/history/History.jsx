@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
+import { fetchAllMeasures } from '../../context/measuresStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { GlassSearchInput, GlassSelect, PageHeader } from '../../components/ui';
 import CalcResult from '../equipment/CalcResult';
@@ -60,10 +61,8 @@ function History() {
     catch { return []; }
   });
 
-  const allMeasures = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('measures') || '[]'); }
-    catch { return []; }
-  }, []);
+  const [allMeasures, setAllMeasures] = useState([]);
+  useEffect(() => { fetchAllMeasures().then(setAllMeasures).catch(() => setAllMeasures([])); }, []);
 
   const getMeasuresForEquipment = (equipmentId) =>
     allMeasures

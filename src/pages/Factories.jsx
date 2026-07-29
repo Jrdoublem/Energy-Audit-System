@@ -9,11 +9,13 @@ import {
 } from '../context/factoryStore.js';
 import { getSession, fetchAllUsers } from '../context/authStore.js';
 import { fetchAllEquipment } from '../context/equipmentStore.js';
+import { fetchAllMeasures } from '../context/measuresStore.js';
 import {
   ActivityIcon, ArrowRightIcon, FactoryIcon, LightningIcon,
   MapPinIcon, PencilIcon, PlusIcon, TrashIcon, TrendDownIcon,
 } from '../components/icons';
 import { fileToResizedDataUrl } from '../utils/image.js';
+import { uploadImage, deleteImage } from '../context/storageStore.js';
 import { THAI_PROVINCES } from '../utils/thaiProvinces.js';
 import { Combobox } from '../components/Dropdown.jsx';
 import { useLang } from '../context/languageStore.js';
@@ -125,6 +127,8 @@ function Factories() {
 
   const [equipment, setEquipment] = useState([]);
   useEffect(() => { fetchAllEquipment().then(setEquipment).catch(() => setEquipment([])); }, []);
+  const [measures, setMeasures] = useState([]);
+  useEffect(() => { fetchAllMeasures().then(setMeasures).catch(() => setMeasures([])); }, []);
   const [users, setUsers] = useState([]);
   useEffect(() => { fetchAllUsers().then(setUsers).catch(() => setUsers([])); }, []);
   const [manualFactories, setManualFactories] = useState(() => loadManualFactories());
@@ -139,13 +143,14 @@ function Factories() {
   const [form, setForm] = useState({ name: '', description: '', province: '', image: '' });
   const [formError, setFormError] = useState('');
   const [imageError, setImageError] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
 
   // Not memoized: getFactoryMeta/computeFactoryStats read storage fresh on
   // every call, and forceUpdate() re-renders after the modal writes meta.
   const rows = factories.map((f) => ({
     name: f,
     meta: getFactoryMeta(f),
-    stats: computeFactoryStats(f, equipment),
+    stats: computeFactoryStats(f, equipment, measures),
   }));
 
   const assignedEngineerCount = users.filter((u) => u.role === 'engineer' && (u.factories || []).length > 0).length;
@@ -174,11 +179,16 @@ function Factories() {
     e.target.value = '';
     if (!file) return;
     setImageError('');
+    setImageUploading(true);
     try {
       const dataUrl = await fileToResizedDataUrl(file);
-      setForm((p) => ({ ...p, image: dataUrl }));
-    } catch {
+      const url = await uploadImage(dataUrl, 'factories');
+      setForm((p) => ({ ...p, image: url }));
+    } catch (err) {
+      console.error('Factory image upload failed:', err);
       setImageError(t.factories.uploadFailed);
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -199,13 +209,15 @@ function Factories() {
   };
 
   const handleRemoveFactory = (name) => {
+    const meta = getFactoryMeta(name);
     removeManualFactory(name);
     setManualFactories(loadManualFactories());
+    if (meta.image) deleteImage(meta.image);
   };
 
   if (!isAdmin) {
     return (
-      <AppLayout title={t.factories.pageTitle} hideFactorySelect>
+      <AppLayout title={t.factories.pageTitle} hideFactorySelect factoryRowBelowTitle>
         <Panel className="p-8 text-center text-sm text-gray-400 dark:text-[#7E93AF]">
           {t.factories.adminOnly}
         </Panel>
@@ -214,7 +226,7 @@ function Factories() {
   }
 
   return (
-    <AppLayout title={t.factories.pageTitle} hideFactorySelect>
+    <AppLayout title={t.factories.pageTitle} hideFactorySelect factoryRowBelowTitle>
       <div className="flex flex-col gap-5 max-w-3xl lg:max-w-none">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-4">
           <StatCard label={t.factories.totalFactories} value={factories.length} />
@@ -293,9 +305,11 @@ function Factories() {
                     <FactoryIcon className="w-6 h-6" />
                   </div>
                 )}
-                <label className="flex-1 flex items-center justify-center py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs font-semibold text-gray-500 dark:text-[#8CA3C0] hover:border-[#4988C4] hover:text-[#4988C4] transition-colors cursor-pointer">
-                  {form.image ? t.factories.changeImage : t.factories.uploadImage}
-                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                <label className={`flex-1 flex items-center justify-center py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs font-semibold text-gray-500 dark:text-[#8CA3C0] transition-colors ${
+                  imageUploading ? 'opacity-60 pointer-events-none' : 'hover:border-[#4988C4] hover:text-[#4988C4] cursor-pointer'
+                }`}>
+                  {imageUploading ? '...' : (form.image ? t.factories.changeImage : t.factories.uploadImage)}
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" disabled={imageUploading} />
                 </label>
               </div>
               {imageError && <p className="text-xs text-red-500 mt-1.5">{imageError}</p>}
@@ -336,7 +350,8 @@ function Factories() {
               <button
                 type="button"
                 onClick={handleSaveFactory}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-semibold text-sm transition-colors"
+                disabled={imageUploading}
+                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-semibold text-sm transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
                 {modalMode === 'add' ? <PlusIcon className="w-4 h-4" /> : null}
                 {modalMode === 'add' ? t.common.add : t.common.save}

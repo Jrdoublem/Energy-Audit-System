@@ -5,12 +5,14 @@ import AppLayout from '../layouts/AppLayout';
 import { Panel } from '../components/ui';
 import { computeFactoryStats, getFactoryMeta, setFactoryMeta } from '../context/factoryStore.js';
 import { fetchAllCategories, fetchAllEquipment } from '../context/equipmentStore.js';
+import { fetchAllMeasures } from '../context/measuresStore.js';
 import { ICON_MAP } from '../components/iconMap.js';
 import {
   ActivityIcon, ChevronDownIcon, ClipboardIcon, FactoryIcon, LightningIcon,
   MapPinIcon, PencilIcon, TrendDownIcon, UserIcon,
 } from '../components/icons';
 import { fileToResizedDataUrl } from '../utils/image.js';
+import { uploadImage } from '../context/storageStore.js';
 import { THAI_PROVINCES } from '../utils/thaiProvinces.js';
 import { Combobox } from '../components/Dropdown.jsx';
 import { useLang } from '../context/languageStore.js';
@@ -27,17 +29,20 @@ function FactoryDetail() {
 
   const [categories, setCategories] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
+  const [measures, setMeasures] = useState([]);
   useEffect(() => {
     fetchAllCategories().then(setCategories).catch(() => setCategories([]));
     fetchAllEquipment().then(setAllEquipment).catch(() => setAllEquipment([]));
+    fetchAllMeasures().then(setMeasures).catch(() => setMeasures([]));
   }, []);
   const equipment = useMemo(() => allEquipment.filter((e) => e.factory === name), [allEquipment, name]);
   const [meta, setMeta] = useState(() => getFactoryMeta(name));
-  const stats = useMemo(() => computeFactoryStats(name, allEquipment), [name, allEquipment]);
+  const stats = useMemo(() => computeFactoryStats(name, allEquipment, measures), [name, allEquipment, measures]);
 
   const [editModal, setEditModal] = useState(false);
   const [form, setForm] = useState({ description: '', province: '', image: '' });
   const [imageError, setImageError] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
 
   const openEdit = () => {
     setForm({ description: meta.description || '', province: meta.province || '', image: meta.image || '' });
@@ -50,11 +55,16 @@ function FactoryDetail() {
     e.target.value = '';
     if (!file) return;
     setImageError('');
+    setImageUploading(true);
     try {
       const dataUrl = await fileToResizedDataUrl(file);
-      setForm((p) => ({ ...p, image: dataUrl }));
-    } catch {
+      const url = await uploadImage(dataUrl, 'factories');
+      setForm((p) => ({ ...p, image: url }));
+    } catch (err) {
+      console.error('Factory image upload failed:', err);
       setImageError(t.factories.uploadFailed);
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -186,9 +196,11 @@ function FactoryDetail() {
                     <FactoryIcon className="w-6 h-6" />
                   </div>
                 )}
-                <label className="flex-1 flex items-center justify-center py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs font-semibold text-gray-500 dark:text-[#8CA3C0] hover:border-[#4988C4] hover:text-[#4988C4] transition-colors cursor-pointer">
-                  {form.image ? t.factories.changeImage : t.factories.uploadImage}
-                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                <label className={`flex-1 flex items-center justify-center py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs font-semibold text-gray-500 dark:text-[#8CA3C0] transition-colors ${
+                  imageUploading ? 'opacity-60 pointer-events-none' : 'hover:border-[#4988C4] hover:text-[#4988C4] cursor-pointer'
+                }`}>
+                  {imageUploading ? '...' : (form.image ? t.factories.changeImage : t.factories.uploadImage)}
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" disabled={imageUploading} />
                 </label>
               </div>
               {imageError && <p className="text-xs text-red-500 mt-1.5">{imageError}</p>}
@@ -225,7 +237,8 @@ function FactoryDetail() {
               <button
                 type="button"
                 onClick={handleSave}
-                className="flex-1 py-3 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-semibold text-sm transition-colors"
+                disabled={imageUploading}
+                className="flex-1 py-3 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-semibold text-sm transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
                 {t.common.save}
               </button>

@@ -11,11 +11,11 @@ import { readFactories } from '../context/factoryStore.js';
 import { fetchAllEquipment, fetchAllCategories } from '../context/equipmentStore.js';
 import { useLang } from '../context/languageStore.js';
 import {
-  ClipboardIcon, DocumentIcon, GearIcon, PencilIcon, TrashIcon,
+  ArrowRightIcon, ClipboardIcon, DocumentIcon, FactoryIcon, GearIcon, PencilIcon, TrashIcon,
 } from '../components/icons';
 import { ICON_MAP } from '../components/iconMap.js';
 
-const BACKUP_KEYS = ['history', 'measures', 'reports', 'settings'];
+const BACKUP_KEYS = ['history', 'reports', 'settings'];
 
 function initialsOf(name) {
   const parts = (name || '').trim().split(/\s+/);
@@ -42,7 +42,7 @@ function Field({ label, unit, value, onChange }) {
 }
 
 function Settings() {
-  const { t } = useLang();
+  const { t, lang, setLang } = useLang();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const session = getSession();
@@ -204,7 +204,7 @@ function Settings() {
   };
 
   return (
-    <AppLayout title={t.nav.settings} hideFactorySelect>
+    <AppLayout title={t.nav.settings} hideFactorySelect factoryRowBelowTitle>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-2xl lg:max-w-none lg:items-start">
 
         {/* โปรไฟล์ผู้ใช้งาน */}
@@ -239,6 +239,55 @@ function Settings() {
             </div>
           </div>
         </Panel>
+
+        {/* การตั้งค่าทั่วไป */}
+        <Panel className="p-5 lg:col-span-2">
+          <SectionHeader title={t.settings.preferences} />
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-[#0F2854] dark:text-[#E7EEF7]">{t.settings.language}</p>
+            <div className="flex items-center h-8 rounded-full border border-gray-200 dark:border-white/10 overflow-hidden shrink-0 bg-gray-50 dark:bg-white/5">
+              <button
+                type="button"
+                onClick={() => setLang('th')}
+                className={`h-full px-4 text-xs font-bold tracking-wide transition-colors ${
+                  lang === 'th' ? 'bg-[#0F2854] text-white' : 'text-gray-400 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
+                }`}
+              >
+                TH
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={`h-full px-4 text-xs font-bold tracking-wide transition-colors ${
+                  lang === 'en' ? 'bg-[#0F2854] text-white' : 'text-gray-400 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
+                }`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
+        </Panel>
+
+        {/* จัดการโรงงาน — เฉพาะ Admin; ทางเข้าหลักบนมือถือ (ไม่มีในแถบล่างแล้ว) */}
+        {isAdmin && (
+          <Panel className="p-5">
+            <SectionHeader title={t.settings.manageFactories} />
+            <button
+              type="button"
+              onClick={() => navigate('/factories')}
+              className="w-full flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+            >
+              <div className="w-9 h-9 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
+                <FactoryIcon className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.settings.manageFactories}</p>
+                <p className="text-xs text-gray-400 dark:text-[#7E93AF]">{t.settings.manageFactoriesDesc}</p>
+              </div>
+              <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0" />
+            </button>
+          </Panel>
+        )}
 
         {/* จัดการผู้ใช้งาน — เฉพาะ Admin */}
         {isAdmin && (

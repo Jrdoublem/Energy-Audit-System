@@ -1,0 +1,34 @@
+// LOCAL TESTING COPY ONLY — not wired into firebase.json for deploy.
+// Mirrors what's asked to be pasted into the real rules in Firebase Console.
+// Firebase Storage rules can call firestore.get() to reuse the same
+// role check as the Firestore rules (users/{uid}.role == 'admin').
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Factory photos — only admins manage factories, so only admins upload.
+    match /factories/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // Catalog photos — any signed-in user can add catalog items today.
+    match /catalog/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidImage();
+      allow delete: if isSignedIn();
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Combobox, Select } from '../../components/Dropdown.jsx';
 import { loadSettings } from '../../context/settingsStore.js';
 import { useLang } from '../../context/languageStore.js';
+import { saveMeasureItem, deleteMeasureItem } from '../../context/measuresStore.js';
 
 function nextMeasureId() {
   return Date.now();
@@ -211,8 +212,15 @@ function BoltIcon({ className }) {
   );
 }
 
+// Emission factors used to convert energy saved into an estimated GHG
+// reduction. Boiler measures represent fuel/thermal kWh (combustion —
+// approximated with a fuel-oil factor); everything else represents
+// electrical kWh (Thailand grid mix factor, same one SavingsCalculator uses).
+const GRID_GHG_FACTOR_KG_PER_KWH = 0.5561;
+const FUEL_GHG_FACTOR_KG_PER_KWH = 0.2664;
+
 /* ── Evaluation section ── */
-function EvalSection({ basePower, evalData, onChange, onSave }) {
+function EvalSection({ basePower, category, evalData, onChange, onSave }) {
   const { t } = useLang();
   const ref = useRef(null);
 
@@ -237,6 +245,8 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
 
   const energySaved = base * (pct / 100) * hours;
   const costSaved   = energySaved * rate;
+  const ghgFactor   = category === 'boiler' ? FUEL_GHG_FACTOR_KG_PER_KWH : GRID_GHG_FACTOR_KG_PER_KWH;
+  const ghgSaved    = (energySaved * ghgFactor) / 1000; // tonnes CO2e
   const payback     = invest > 0 && costSaved > 0 ? (invest / costSaved).toFixed(1) : null;
   const hasResult   = base > 0 && pct > 0 && hours > 0 && rate > 0;
 
@@ -300,6 +310,19 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
             </div>
           </div>
 
+          {/* GHG row */}
+          <div className="rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8 px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-700 dark:text-[#C3D2E5]">{t.measures.ghgReduced}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-extrabold text-emerald-500">
+                {ghgSaved.toLocaleString('th-TH', { maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">{t.measures.tco2ePerYear}</p>
+            </div>
+          </div>
+
           {/* Payback row */}
           <div className="rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8 px-4 py-3 flex items-center justify-between">
             <div>
@@ -340,7 +363,7 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
       {/* Save */}
       <button
         type="button"
-        onClick={onSave}
+        onClick={() => onSave({ energySaved, costSaved, ghgSaved, payback })}
         className="w-full py-3.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-bold text-sm transition-colors shadow-md"
       >
         {t.equipment.saveData}
@@ -350,7 +373,7 @@ function EvalSection({ basePower, evalData, onChange, onSave }) {
 }
 
 /* ── Form panel — slides in from right on mount ── */
-function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData, onChange, onSave, initialEvalData }) {
+function FormPanel({ activeMeasure, onChangeMeasure, measures, item, result, formData, onChange, onSave, initialEvalData }) {
   const { t } = useLang();
   const ref = useRef(null);
   const [showEval, setShowEval]   = useState(!!initialEvalData?.percentReduction);
@@ -382,8 +405,8 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
 
   const handleEvalChange = (key, value) => setEvalData((p) => ({ ...p, [key]: value }));
 
-  const handleSave = () => {
-    onSave({ formData, evalData });
+  const handleSave = (derived) => {
+    onSave({ formData, evalData: { ...evalData, ...derived } });
   };
 
   return (
@@ -460,6 +483,7 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, result, formData,
         {showEval && (
           <EvalSection
             basePower={basePower}
+            category={item?.category}
             evalData={evalData}
             onChange={handleEvalChange}
             onSave={handleSave}
@@ -518,34 +542,20 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
 
   const handleFormChange = (key, value) => setFormData((p) => ({ ...p, [key]: value }));
 
-  const handleSave = ({ formData: fd, evalData }) => {
-    const existing  = JSON.parse(localStorage.getItem('measures') || '[]');
+  const handleSave = async ({ formData: fd, evalData }) => {
     const editingId = activeMeasureId.current;
-
-    let newId;
-    let updated;
-    if (editingId) {
-      newId   = editingId;
-      updated = existing.map((r) => r.id === editingId
-        ? { ...r, measure: activeMeasure, formData: fd, evalData, savedAt: new Date().toISOString() }
-        : r
-      );
-    } else {
-      newId   = nextMeasureId();
-      updated = [{
-        id:          newId,
-        savedAt:     new Date().toISOString(),
-        equipmentId: item?.id,
-        category:    item?.category,
-        factory:     item?.factory,
-        grade:       result?.grade,
-        measure:     activeMeasure,
-        formData:    fd,
-        evalData,
-      }, ...existing];
-    }
-
-    localStorage.setItem('measures', JSON.stringify(updated));
+    const newId = editingId || nextMeasureId();
+    await saveMeasureItem({
+      id:          newId,
+      savedAt:     new Date().toISOString(),
+      equipmentId: item?.id,
+      category:    item?.category,
+      factory:     item?.factory,
+      grade:       result?.grade,
+      measure:     activeMeasure,
+      formData:    fd,
+      evalData,
+    });
 
     setSavedMeasures((prev) => {
       const idx = prev.findIndex((s) => s.id === editingId);
@@ -572,8 +582,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
 
   const handleDeleteSaved = (id) => {
     setSavedMeasures((prev) => prev.filter((s) => s.id !== id));
-    const existing = JSON.parse(localStorage.getItem('measures') || '[]');
-    localStorage.setItem('measures', JSON.stringify(existing.filter((r) => r.id !== id)));
+    deleteMeasureItem(id);
   };
 
   const card = (

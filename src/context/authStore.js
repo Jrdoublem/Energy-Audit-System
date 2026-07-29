@@ -55,7 +55,7 @@ export function getSession() {
     const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
     if (saved && typeof saved === 'object') return saved;
   } catch { /* ignore corrupt data */ }
-  return { id: null, name: 'Admin', role: 'admin', factories: [] };
+  return { id: null, name: '', role: null, factories: [] };
 }
 
 // ---- Admin user directory (Settings page) ----

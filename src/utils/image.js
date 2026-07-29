@@ -1,8 +1,9 @@
-// Reads an uploaded image file and re-encodes it as a small JPEG data URL —
-// everything in this app lives in localStorage, so an unresized photo (a few
-// MB from a phone camera) would eat the storage quota fast; capping the
-// longest side keeps each factory image down to a few KB.
-export function fileToResizedDataUrl(file, maxSize = 160, quality = 0.82) {
+// Reads an uploaded image file and re-encodes it as a JPEG data URL, capping
+// the longest side so a multi-MB phone photo doesn't turn into a multi-MB
+// upload — the result is handed to uploadImage() (src/context/storageStore.js)
+// rather than stored inline, so this only needs to keep uploads reasonably
+// sized, not localStorage-tiny like before.
+export function fileToResizedDataUrl(file, maxSize = 1000, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(reader.error);
@@ -17,7 +18,12 @@ export function fileToResizedDataUrl(file, maxSize = 160, quality = 0.82) {
         canvas.width = w;
         canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        // PNGs may carry transparency (logos, icons) — re-encoding those as
+        // JPEG would flatten the transparent areas to black, since JPEG has
+        // no alpha channel. Keep PNG output for PNG input; everything else
+        // (camera photos etc.) goes to JPEG to keep upload size down.
+        const keepPng = file.type === 'image/png';
+        resolve(keepPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', quality));
       };
       img.src = reader.result;
     };

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { useLang } from '../../context/languageStore.js';
@@ -11,6 +12,7 @@ import { GlassSearchInput, GlassSelect, ShellActionButton } from '../../componen
 import { Combobox } from '../../components/Dropdown.jsx';
 import CalcModal from './CalcModal';
 import {
+  BoxIcon,
   ChevronDownIcon,
   ClipboardIcon,
   CompressorIcon,
@@ -62,6 +64,7 @@ function getFormFields(t) {
 
 function Equipment() {
   const { t } = useLang();
+  const navigate = useNavigate();
   const formFields = getFormFields(t);
   const { selectedFactory, allowedFactories, refreshFactories } = useFactory();
   const session = getSession();
@@ -74,11 +77,11 @@ function Equipment() {
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
-  const [railOpen, setRailOpen] = useState(true);
   const [calcItem, setCalcItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [sortOrder, setSortOrder] = useState('newest');
   const [saving, setSaving] = useState(false);
+  const [railCollapsed, setRailCollapsed] = useState(false);
   const catScrollRef = useRef(null);
 
   useEffect(() => {
@@ -203,20 +206,38 @@ function Equipment() {
     }
   };
 
-  return (
-    <AppLayout hideHeader fullBleed>
-      <div className={`flex min-h-dvh lg:min-h-screen lg:gap-4 ${railOpen ? 'gap-3' : 'gap-0'}`}>
+  const mobileTabSwitcher = (
+    <div className="lg:hidden w-full max-w-md px-6 pt-3">
+      <div className="flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/5 p-1">
+        <button
+          type="button"
+          className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap bg-white dark:bg-[#111F35] text-[#0F2854] dark:text-[#E7EEF7] shadow-sm"
+        >
+          <ClipboardIcon className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">{t.equipment.pageTitle}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/catalog')}
+          className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap text-gray-500 dark:text-[#7E93AF]"
+        >
+          <BoxIcon className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">{t.catalog.pageTitle}</span>
+        </button>
+      </div>
+    </div>
+  );
 
-        {/* Rail */}
-        <div className={`flex flex-col gap-2.5 bg-white dark:bg-[#111F35] shadow-[4px_0_12px_rgba(15,40,84,0.06)] border-r border-[#EEF3FB] dark:border-white/8 shrink-0 transition-[width,padding] duration-200 overflow-hidden lg:!w-auto lg:!p-3 ${railOpen ? 'p-3 w-[5.5rem]' : 'p-0 w-0'}`}>
-          {/* Close button — mobile only */}
-          <button
-            type="button"
-            onClick={() => setRailOpen(false)}
-            className="lg:hidden w-full h-8 rounded-xl flex items-center justify-center text-[#0F2854]/40 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7] hover:bg-[#F4F7FC] dark:hover:bg-white/5 transition-colors shrink-0"
-          >
-            <ChevronDownIcon className="w-4 h-4 rotate-90" />
-          </button>
+  return (
+    <AppLayout hideHeader fullBleed mobileHeaderRight mobileRailOffset={!railCollapsed} topSlot={mobileTabSwitcher}>
+      <div className="flex min-h-dvh lg:min-h-screen lg:gap-4">
+
+        {/* Rail — pinned full-height on the left on mobile (edge flush with the
+            top of the screen); reverts to a normal in-flow sidebar on desktop.
+            On mobile it can be slid off-screen via railCollapsed + the handle below. */}
+        <div className={`fixed left-0 top-0 bottom-0 z-30 lg:static lg:z-auto lg:translate-x-0 flex flex-col gap-2.5 overflow-y-auto bg-white dark:bg-[#111F35] shadow-[4px_0_12px_rgba(15,40,84,0.06)] border-r border-[#EEF3FB] dark:border-white/8 shrink-0 w-20 lg:w-auto p-2.5 lg:p-3 transition-transform duration-300 ${
+          railCollapsed ? '-translate-x-full' : 'translate-x-0'
+        }`}>
           {categories.map(({ key, label, iconKey }) => {
             const Icon = ICON_MAP[iconKey] || ClipboardIcon;
             const active = category === key;
@@ -226,12 +247,12 @@ function Equipment() {
                 type="button"
                 title={label}
                 onClick={() => setCategory(key)}
-                className={`relative w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 transition-colors ${
+                className={`relative w-full h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 transition-colors ${
                   active ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 dark:text-[#7E93AF] hover:bg-[#F4F7FC] dark:hover:bg-white/5 hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
                 }`}
               >
-                <Icon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
-                <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">{label}</span>
+                <Icon className="w-7 h-7 shrink-0" />
+                <span className="text-[11px] font-semibold leading-tight text-center">{label}</span>
               </button>
             );
           })}
@@ -242,27 +263,30 @@ function Equipment() {
                 type="button"
                 title={t.equipment.addCategoryTooltip}
                 onClick={() => { setForm({}); setModal('add-category'); }}
-                className="w-16 lg:w-20 h-16 lg:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
+                className="w-full h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
               >
-                <PlusIcon className="w-6 h-6 lg:w-7 lg:h-7 shrink-0" />
-                <span className="text-[10px] lg:text-[11px] font-semibold leading-tight text-center">{t.common.add}</span>
+                <PlusIcon className="w-7 h-7 shrink-0" />
+                <span className="text-[11px] font-semibold leading-tight text-center">{t.common.add}</span>
               </button>
             </>
           )}
         </div>
 
+        {/* Mobile-only handle to slide the category rail off-screen / back — stays
+            put (doesn't move with the rail) so it's always reachable to reopen. */}
+        <button
+          type="button"
+          onClick={() => setRailCollapsed((v) => !v)}
+          title={railCollapsed ? t.common.expand : t.common.collapse}
+          className={`lg:hidden fixed top-1/2 -translate-y-1/2 z-30 w-6 h-11 rounded-r-xl bg-white dark:bg-[#111F35] border border-l-0 border-[#EEF3FB] dark:border-white/8 shadow-[4px_0_12px_rgba(15,40,84,0.06)] flex items-center justify-center text-[#0F2854]/50 dark:text-[#7E93AF] transition-[left] duration-300 ${
+            railCollapsed ? 'left-0' : 'left-20'
+          }`}
+        >
+          <ChevronDownIcon className={`w-4 h-4 shrink-0 transition-transform ${railCollapsed ? '-rotate-90' : 'rotate-90'}`} />
+        </button>
+
         {/* Content */}
-        <div className="flex-1 p-4 lg:p-6 pt-14 lg:pt-20 pb-28 lg:pb-6 pr-5 lg:pr-10 min-w-0 relative">
-          {/* Open rail button — mobile only, shown when rail is closed */}
-          {!railOpen && (
-            <button
-              type="button"
-              onClick={() => setRailOpen(true)}
-              className="lg:hidden absolute left-0 top-4 z-10 w-6 h-10 bg-white dark:bg-[#111F35] shadow-md border border-[#EEF3FB] dark:border-white/8 rounded-r-xl flex items-center justify-center text-[#0F2854]/60 hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
-            >
-              <ChevronDownIcon className="w-4 h-4 -rotate-90" />
-            </button>
-          )}
+        <div className="flex-1 p-4 lg:p-6 lg:pt-20 pb-28 lg:pb-6 pr-5 lg:pr-10 min-w-0 relative">
           <div className="flex items-center gap-2 mb-4">
             <p className="text-xl font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.pageTitle}</p>
             <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-sm text-[#0F2854] dark:text-[#E7EEF7]">

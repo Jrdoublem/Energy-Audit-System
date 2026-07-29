@@ -67,15 +67,14 @@ export function readFactories(allowedFactories, equipmentList = []) {
 
 // Aggregate stats for one factory, derived from data already saved elsewhere
 // (equipment list, saved calculation results, saved measures) — there is no
-// separate "factory energy" figure stored anywhere. `equipmentList` is
-// fetched by the caller (equipment now lives in Firestore); history/measures
-// still live in localStorage for now.
-export function computeFactoryStats(factoryName, equipmentList = []) {
+// separate "factory energy" figure stored anywhere. `equipmentList` and
+// `measuresList` are fetched by the caller (both now live in Firestore);
+// history still lives in localStorage for now.
+export function computeFactoryStats(factoryName, equipmentList = [], measuresList = []) {
   const equipment = equipmentList;
   let history = [];
-  let measures = [];
   try { history = JSON.parse(localStorage.getItem('history') || '[]'); } catch { /* ignore */ }
-  try { measures = JSON.parse(localStorage.getItem('measures') || '[]'); } catch { /* ignore */ }
+  const measures = measuresList;
 
   const equipCount = equipment.filter((e) => e.factory === factoryName).length;
 

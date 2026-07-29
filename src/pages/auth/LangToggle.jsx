@@ -1,5 +1,5 @@
-// Same outer footprint as ThemeToggle (h-6, rounded-full, border-white/20)
-// so the two switches read as a matched pair wherever they sit side by side.
+// h-6, rounded-full, border-white/20 — matches the footprint of other small
+// pill controls placed alongside it in the auth pages.
 export function LangToggle({ lang, setLang }) {
   return (
     <div

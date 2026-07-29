@@ -1,38 +1,44 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
-import { matchesFactory, useFactory } from '../context/factoryStore.js';
+import { matchesFactory, useFactory, computeFactoryStats } from '../context/factoryStore.js';
+import { fetchAllEquipment } from '../context/equipmentStore.js';
+import { fetchAllMeasures } from '../context/measuresStore.js';
+import { getSession } from '../context/authStore.js';
 import { useTheme } from '../context/themeStore.js';
 import { useLang } from '../context/languageStore.js';
 import { Panel, SectionHeader } from '../components/ui';
 import {
+  ArrowRightIcon,
   ChevronDownIcon,
   ClipboardIcon,
   ClockIcon,
   CompressorIcon,
   EyeIcon,
+  FactoryIcon,
   FlameIcon,
   LightningIcon,
   SnowflakeIcon,
 } from '../components/icons';
 
 /* ── Stat card ── */
-function StatCard({ label, value, onClick, trend, accentColor, vsLabel }) {
+function StatCard({ label, value, unit, onClick, trend, accentColor, vsLabel }) {
   const trendUp = trend && trend > 0;
   const trendDown = trend && trend < 0;
   return (
     <button
       type="button"
       onClick={onClick}
-      className="relative bg-white dark:bg-[#111F35] rounded-2xl p-5 text-left hover:shadow-md hover:-translate-y-0.5 transition-all border border-[#EEF3FB] dark:border-white/8 flex flex-col gap-1.5 overflow-hidden"
+      className="relative bg-white dark:bg-[#111F35] rounded-2xl p-5 text-left shadow-[0_2px_10px_rgba(15,40,84,0.07)] hover:shadow-[0_10px_28px_rgba(15,40,84,0.14)] hover:-translate-y-0.5 transition-all border border-[#E4EBF6] dark:border-white/8 flex flex-col gap-2 overflow-hidden"
     >
       {accentColor && <span className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl" style={{ background: accentColor }} />}
       <p className="text-sm text-gray-600 dark:text-[#8CA3C0] font-medium leading-tight">{label}</p>
-      <p className="text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] leading-none" style={{ fontFamily: "'Courier New', monospace" }}>
+      <p className="text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] leading-none tracking-tight whitespace-nowrap">
         {value}
+        {unit && <span className="text-sm font-semibold text-gray-400 dark:text-[#7E93AF] ml-1.5 tracking-normal">{unit}</span>}
       </p>
       {trend !== undefined && (
-        <div className={`flex items-center gap-1 text-sm font-semibold mt-0.5 ${
+        <div className={`flex items-center gap-1 text-[11px] sm:text-sm font-semibold mt-0.5 ${
           trendUp ? 'text-emerald-500' : trendDown ? 'text-red-400' : 'text-gray-400 dark:text-[#7E93AF]'
         }`}>
           {trendUp ? (
@@ -48,7 +54,7 @@ function StatCard({ label, value, onClick, trend, accentColor, vsLabel }) {
           ) : (
             <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14"/></svg>
           )}
-          <span>{trendUp ? '+' : ''}{trend.toFixed(1)}% {vsLabel}</span>
+          <span className="whitespace-nowrap">{trendUp ? '+' : ''}{trend.toFixed(1)}% {vsLabel}</span>
         </div>
       )}
     </button>
@@ -56,7 +62,7 @@ function StatCard({ label, value, onClick, trend, accentColor, vsLabel }) {
 }
 
 /* ── Quick stat row ── */
-function QuickStat({ icon, label, sublabel, value, onClick, border }) {
+function QuickStat({ icon, label, sublabel, value, unit, onClick, border }) {
   return (
     <button
       type="button"
@@ -67,8 +73,9 @@ function QuickStat({ icon, label, sublabel, value, onClick, border }) {
       <div className="min-w-0">
         <p className="text-xs tracking-[0.12em] text-[#4988C4] font-semibold uppercase leading-tight">{label}</p>
         {sublabel && <p className="text-[10px] tracking-[0.08em] text-gray-400 dark:text-[#7E93AF] uppercase leading-tight mb-1">{sublabel}</p>}
-        <p className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] leading-tight mt-1" style={{ fontFamily: "'Courier New', monospace" }}>
+        <p className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] leading-tight mt-1 tracking-tight whitespace-nowrap">
           {value}
+          {unit && <span className="text-xs font-semibold text-gray-400 dark:text-[#7E93AF] ml-1 tracking-normal">{unit}</span>}
         </p>
       </div>
     </button>
@@ -76,23 +83,33 @@ function QuickStat({ icon, label, sublabel, value, onClick, border }) {
 }
 
 /* ── Cumulative savings chart (Energy + Carbon) ── */
-// Mock cumulative series shaped like real 'measures' data would look once
-// aggregated — swap for a real per-month rollup of localStorage('measures')
-// (or a backend endpoint) when that aggregation exists.
-const SAVINGS_SERIES = [
-  { energy: 110000, carbon: 60000 },
-  { energy: 230000, carbon: 140000 },
-  { energy: 520000, carbon: 340000 },
-  { energy: 860000, carbon: 640000 },
-  { energy: 890000, carbon: 600000 },
-  { energy: 1180000, carbon: 780000 },
-];
-const ENERGY_Y_MAX = 1200000;
-const ENERGY_Y_TICKS = [0, 300000, 600000, 900000, 1200000];
-const CARBON_Y_MAX = 800000;
-const CARBON_Y_TICKS = [0, 200000, 400000, 600000, 800000];
 const ENERGY_COLOR = '#4988C4';
 const CARBON_COLOR = '#0EA672';
+
+// Round a max value up to a "nice" number so axis ticks land on clean steps.
+function niceMax(value) {
+  if (value <= 0) return 4;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  const normalized = value / magnitude;
+  const step = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return step * magnitude;
+}
+function niceTicks(max) {
+  return [0, max * 0.25, max * 0.5, max * 0.75, max];
+}
+
+// The chart's SVG viewBox is sized in near-1:1 units-to-pixels for whichever
+// breakpoint it's rendered at — reusing the desktop's wide 740-unit viewBox
+// on a narrow phone screen squashed all the axis/tooltip text down to ~5px.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isMobile;
+}
 
 function smoothPath(pts) {
   let d = `M ${pts[0].x},${pts[0].y}`;
@@ -110,26 +127,35 @@ function smoothPath(pts) {
   return d;
 }
 
-function SavingsTrendChart({ months }) {
+function SavingsTrendChart({ series }) {
   const [grown, setGrown] = useState(false);
   const [hoveredIdx, setHoveredIdx] = useState(null);
   const { theme } = useTheme();
+  const isMobile = useIsMobile();
   const isDark = theme === 'dark';
   const gridColor = isDark ? '#28405F' : '#C8D8EE';
   const tooltipBg = isDark ? '#1C4D8D' : '#0F2854';
   useEffect(() => { const t = setTimeout(() => setGrown(true), 150); return () => clearTimeout(t); }, []);
 
-  const W = 740; const H = 240;
-  const padL = 70; const padR = 70; const padT = 18; const padB = 8;
+  const months = series.map((s) => s.label);
+  const ENERGY_Y_MAX = niceMax(Math.max(...series.map((s) => s.energy)));
+  const CARBON_Y_MAX = niceMax(Math.max(...series.map((s) => s.carbon)));
+  const ENERGY_Y_TICKS = niceTicks(ENERGY_Y_MAX);
+  const CARBON_Y_TICKS = niceTicks(CARBON_Y_MAX);
+
+  const W = isMobile ? 320 : 740; const H = isMobile ? 190 : 240;
+  const padL = isMobile ? 34 : 70; const padR = isMobile ? 34 : 70;
+  const padT = isMobile ? 14 : 18; const padB = isMobile ? 6 : 8;
+  const axisFontSize = isMobile ? 10 : 11;
   const cW = W - padL - padR; const cH = H - padT - padB;
 
-  const energyPts = SAVINGS_SERIES.map((d, i) => ({
-    x: padL + (i / (SAVINGS_SERIES.length - 1)) * cW,
+  const energyPts = series.map((d, i) => ({
+    x: padL + (i / (series.length - 1)) * cW,
     y: padT + (1 - d.energy / ENERGY_Y_MAX) * cH,
     value: d.energy,
   }));
-  const carbonPts = SAVINGS_SERIES.map((d, i) => ({
-    x: padL + (i / (SAVINGS_SERIES.length - 1)) * cW,
+  const carbonPts = series.map((d, i) => ({
+    x: padL + (i / (series.length - 1)) * cW,
     y: padT + (1 - d.carbon / CARBON_Y_MAX) * cH,
     value: d.carbon,
   }));
@@ -140,11 +166,11 @@ function SavingsTrendChart({ months }) {
   const carbonArea = `${carbonLine} L ${carbonPts[carbonPts.length - 1].x},${padT + cH} L ${carbonPts[0].x},${padT + cH} Z`;
 
   const fmtK = (v) => `${(v / 1000).toFixed(0)}K`;
-  const fmtAxis = (v) => v === 0 ? '0' : v >= 1000000 ? `${v / 1000000}M` : `${v / 1000}K`;
+  const fmtAxis = (v) => v === 0 ? '0' : v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : `${(v / 1000).toFixed(0)}K`;
 
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible" style={{ height: 260 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible" style={{ height: isMobile ? 190 : 260 }}>
         <defs>
           <linearGradient id="energyGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={ENERGY_COLOR} stopOpacity="0.22" />
@@ -167,12 +193,12 @@ function SavingsTrendChart({ months }) {
               <line x1={padL} y1={y} x2={W - padR} y2={y}
                 stroke={gridColor} strokeWidth="1" strokeDasharray="4,4" />
               <text x={padL - 8} y={y} textAnchor="end" dominantBaseline="middle"
-                fontSize="11" fill={ENERGY_COLOR}
+                fontSize={axisFontSize} fill={ENERGY_COLOR}
                 fontFamily="'Courier New', monospace">
                 {fmtAxis(tick)}
               </text>
               <text x={W - padR + 8} y={y} textAnchor="start" dominantBaseline="middle"
-                fontSize="11" fill={CARBON_COLOR}
+                fontSize={axisFontSize} fill={CARBON_COLOR}
                 fontFamily="'Courier New', monospace">
                 {fmtAxis(CARBON_Y_TICKS[i])}
               </text>
@@ -190,7 +216,7 @@ function SavingsTrendChart({ months }) {
 
         {/* Hover regions + indicators */}
         {energyPts.map((pt, i) => {
-          const slotW = cW / SAVINGS_SERIES.length;
+          const slotW = cW / series.length;
           const cPt = carbonPts[i];
           const topY = Math.min(pt.y, cPt.y);
           return (
@@ -223,10 +249,13 @@ function SavingsTrendChart({ months }) {
         })}
       </svg>
 
-      {/* X labels */}
+      {/* X labels — mobile drops the Buddhist-year suffix (just the month
+          abbreviation) since 6 full labels don't fit a phone-width row */}
       <div className="flex justify-between mt-1.5" style={{ paddingLeft: `${(padL / W * 100).toFixed(2)}%`, paddingRight: `${(padR / W * 100).toFixed(2)}%` }}>
         {months.map((label) => (
-          <span key={label} className="text-[11px] text-[#1C4D8D] dark:text-[#8CA3C0] font-mono">{label}</span>
+          <span key={label} className="text-[9px] lg:text-[11px] text-[#1C4D8D] dark:text-[#8CA3C0] font-mono">
+            {isMobile ? label.split(' ')[0] : label}
+          </span>
         ))}
       </div>
     </div>
@@ -234,20 +263,16 @@ function SavingsTrendChart({ months }) {
 }
 
 /* ── Donut chart ── */
-const DONUT_SEGMENTS = [
-  { percent: 45, color: '#0F2854' },
-  { percent: 35, color: '#4988C4' },
-  { percent: 20, color: '#BDE8F5' },
-];
+const DONUT_COLORS = ['#0F2854', '#4988C4', '#BDE8F5', '#8CA3C0'];
 
-function DonutChart({ labels, measuresLabel }) {
+function DonutChart({ segments: rawSegments, totalCount, measuresLabel }) {
   const [grown, setGrown] = useState(false);
   const { theme } = useTheme();
   const trackColor = theme === 'dark' ? '#28405F' : '#EEF3FB';
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   useEffect(() => { const timer = setTimeout(() => setGrown(true), 150); return () => clearTimeout(timer); }, []);
-  const segments = DONUT_SEGMENTS.map((seg, i) => ({ ...seg, label: labels[i] })).reduce((acc, seg) => {
+  const segments = rawSegments.reduce((acc, seg) => {
     const cumulative = acc.length ? acc[acc.length - 1].cumulative + acc[acc.length - 1].percent : 0;
     acc.push({ ...seg, cumulative });
     return acc;
@@ -270,18 +295,18 @@ function DonutChart({ labels, measuresLabel }) {
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]" style={{ fontFamily: "'Courier New', monospace" }}>
-            {DONUT_SEGMENTS.length}
+          <span className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] tracking-tight">
+            {totalCount}
           </span>
           <span className="text-[10px] text-[#4988C4]/60 tracking-widest uppercase">{measuresLabel}</span>
         </div>
       </div>
       <div className="flex flex-col gap-3.5 lg:gap-4 w-full max-w-sm">
-        {DONUT_SEGMENTS.map((seg, i) => (
+        {segments.map((seg, i) => (
           <div key={i} className="flex items-center gap-2.5 text-sm">
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
             <span className="text-gray-600 dark:text-[#8CA3C0] min-w-0 break-words text-sm">{seg.label}</span>
-            <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] ml-auto shrink-0 text-sm" style={{ fontFamily: "'Courier New', monospace" }}>
+            <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] ml-auto shrink-0 text-sm">
               {seg.percent}%
             </span>
           </div>
@@ -292,11 +317,11 @@ function DonutChart({ labels, measuresLabel }) {
 }
 
 /* ── Measure list ── */
-const MOCK_MEASURES = [
-  { labelKey: 'measure1', status: 'done' },
-  { labelKey: 'measure2', status: 'in-progress' },
-  { labelKey: 'measure3', status: 'pending' },
-];
+// A saved measure has no dedicated workflow-status field, so the status pill
+// is derived from the equipment's grade at the time the measure was recorded
+// (grade3() in calculators.js): 'poor' equipment still needs the fix, 'ok'
+// is underway, 'good' means the measure already brought it up to standard.
+const GRADE_TO_MEASURE_STATUS = { poor: 'pending', ok: 'in-progress', good: 'done' };
 const MEASURE_STATUS = {
   'done':        { labelKey: 'statusDone',       dot: 'bg-emerald-400', cls: 'text-emerald-600' },
   'in-progress': { labelKey: 'statusInProgress', dot: 'bg-[#4988C4]',   cls: 'text-[#4988C4]' },
@@ -304,10 +329,9 @@ const MEASURE_STATUS = {
 };
 
 /* ── Equipment alerts ── */
-const EQUIPMENT_ALERTS = [
-  { name: 'CH-01', issueKey: 'alertLowEfficiency', status: 'danger' },
-  { name: 'CH-02', issueKey: 'alertCheckSoon', status: 'warning' },
-];
+// Surfaced from each equipment item's most recent measure grade: 'poor' is
+// still below standard (critical), 'ok' is worth a follow-up check soon.
+const GRADE_TO_ALERT_STATUS = { poor: 'danger', ok: 'warning' };
 const ALERT_STYLE = {
   danger:  { bar: 'bg-red-500',   badge: 'bg-red-50 text-red-500 border border-red-100',   dot: 'bg-red-500',   label: 'CRITICAL' },
   warning: { bar: 'bg-amber-400', badge: 'bg-amber-50 text-amber-600 border border-amber-100', dot: 'bg-amber-400', label: 'WARNING'  },
@@ -329,12 +353,222 @@ function formatShortDate(iso) {
 }
 const GRADE_COLOR = { good: 'bg-emerald-50 text-emerald-600 border border-emerald-100', ok: 'bg-amber-50 text-amber-600 border border-amber-100', poor: 'bg-red-50 text-red-500 border border-red-100' };
 
+/* ── Factory overview card (shown on Dashboard when "all factories" is selected) ── */
+function FactoryOverviewCard({ row, onClick, t }) {
+  const shownCats = row.categories.slice(0, 3);
+  const extra = row.categories.length - shownCats.length;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="bg-white dark:bg-[#111F35] rounded-2xl p-5 text-left shadow-[0_2px_10px_rgba(15,40,84,0.07)] hover:shadow-[0_10px_28px_rgba(15,40,84,0.14)] hover:-translate-y-0.5 transition-all border border-[#E4EBF6] dark:border-white/8"
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-[#EAF4FC] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
+          <FactoryIcon className="w-5 h-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] truncate">{row.name}</p>
+          <p className="text-xs text-gray-400 dark:text-[#7E93AF]">{row.equipCount} {t.dashboard.equipmentTotalSuffix}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="rounded-xl bg-[#F4F7FC] dark:bg-white/5 px-2 py-2.5 text-center">
+          <p className="text-[10px] text-gray-400 dark:text-[#7E93AF] mb-1 truncate">{t.dashboard.measuredCount}</p>
+          <p className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{row.measuredCount}</p>
+        </div>
+        <div className="rounded-xl bg-[#F4F7FC] dark:bg-white/5 px-2 py-2.5 text-center">
+          <p className="text-[10px] text-gray-400 dark:text-[#7E93AF] mb-1 truncate">{t.dashboard.totalMeasures}</p>
+          <p className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{row.totalMeasures}</p>
+        </div>
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-2 py-2.5 text-center">
+          <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 mb-1 truncate">{t.dashboard.savingsMwh}</p>
+          <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{Math.round(row.savingsMwh)}</p>
+        </div>
+      </div>
+
+      {row.categories.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {shownCats.map((catKey) => {
+            const cat = CATEGORY_STYLE[catKey];
+            if (!cat) return null;
+            const Icon = cat.icon;
+            return (
+              <span key={catKey} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${cat.badge}`}>
+                <Icon className="w-3 h-3" />
+                {cat.label}
+              </span>
+            );
+          })}
+          {extra > 0 && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-[#8CA3C0]">
+              +{extra}
+            </span>
+          )}
+        </div>
+      )}
+    </button>
+  );
+}
+
 /* ── Dashboard ── */
 function Dashboard() {
   const navigate = useNavigate();
   const { t } = useLang();
+  const isAdmin = getSession().role === 'admin';
 
-  const { selectedFactory, allowedFactories } = useFactory();
+  const { factories, selectedFactory, allowedFactories } = useFactory();
+
+  const [equipment, setEquipment] = useState([]);
+  useEffect(() => { fetchAllEquipment().then(setEquipment).catch(() => setEquipment([])); }, []);
+
+  const [measures, setMeasures] = useState([]);
+  useEffect(() => { fetchAllMeasures().then(setMeasures).catch(() => setMeasures([])); }, []);
+
+  const factoryOverviewRows = useMemo(() => {
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem('history') || '[]'); } catch { /* ignore */ }
+    return factories.map((name) => {
+      const stats = computeFactoryStats(name, equipment, measures);
+      const measuredIds = new Set(
+        history
+          .filter((h) => (h.item || h.equipment || {}).factory === name)
+          .map((h) => (h.item || h.equipment || {}).id)
+          .filter(Boolean)
+      );
+      const categories = [...new Set(equipment.filter((e) => e.factory === name).map((e) => e.category))];
+      return {
+        name,
+        equipCount: stats.equipCount,
+        measuredCount: measuredIds.size,
+        totalMeasures: measures.filter((m) => m.factory === name).length,
+        savingsMwh: stats.energyKWhYear / 1000,
+        categories,
+      };
+    });
+  }, [factories, equipment, measures]);
+
+  // Headline dashboard numbers, aggregated from every saved measure's
+  // evalData (kept generic across categories: boiler measures represent
+  // thermal/fuel kWh — everything else represents electrical kWh).
+  const dashboardStats = useMemo(() => {
+    const scoped = measures.filter((m) => matchesFactory(m.factory, selectedFactory, allowedFactories));
+
+    const sumFor = (list) => list.reduce((acc, m) => {
+      const energySaved = parseFloat(m.evalData?.energySaved || 0);
+      const costSaved = parseFloat(m.evalData?.costSaved || 0);
+      const ghgSaved = parseFloat(m.evalData?.ghgSaved || 0);
+      if (m.category === 'boiler') acc.heatKwh += energySaved;
+      else acc.electricityKwh += energySaved;
+      acc.costBaht += costSaved;
+      acc.ghgTonnes += ghgSaved;
+      return acc;
+    }, { electricityKwh: 0, heatKwh: 0, ghgTonnes: 0, costBaht: 0 });
+
+    const now = new Date();
+    const inMonth = (list, year, month) => list.filter((m) => {
+      const d = new Date(m.savedAt);
+      return d.getFullYear() === year && d.getMonth() === month;
+    });
+    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    const totals = sumFor(scoped);
+    const thisMonthTotals = sumFor(inMonth(scoped, now.getFullYear(), now.getMonth()));
+    const lastMonthTotals = sumFor(inMonth(scoped, lastMonthDate.getFullYear(), lastMonthDate.getMonth()));
+
+    const pctChange = (curr, prev) => {
+      if (prev > 0) return ((curr - prev) / prev) * 100;
+      return curr > 0 ? 100 : 0;
+    };
+
+    return {
+      electricityMwh: totals.electricityKwh / 1000,
+      heatGj: totals.heatKwh * 0.0036,
+      ghgTonnes: totals.ghgTonnes,
+      costMillionBaht: totals.costBaht / 1_000_000,
+      trendElectricity: pctChange(thisMonthTotals.electricityKwh, lastMonthTotals.electricityKwh),
+      trendHeat: pctChange(thisMonthTotals.heatKwh, lastMonthTotals.heatKwh),
+      trendGhg: pctChange(thisMonthTotals.ghgTonnes, lastMonthTotals.ghgTonnes),
+      trendCost: pctChange(thisMonthTotals.costBaht, lastMonthTotals.costBaht),
+    };
+  }, [measures, selectedFactory, allowedFactories]);
+
+  const scopedMeasures = useMemo(
+    () => measures.filter((m) => matchesFactory(m.factory, selectedFactory, allowedFactories)),
+    [measures, selectedFactory, allowedFactories],
+  );
+
+  // Cumulative energy (kWh) + carbon (kgCO2e) saved, running total over the
+  // last 6 calendar months — same energySaved/ghgSaved fields as dashboardStats.
+  const savingsSeries = useMemo(() => {
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      months.push(new Date(now.getFullYear(), now.getMonth() - i, 1));
+    }
+    let cumEnergy = 0;
+    let cumCarbon = 0;
+    return months.map((d) => {
+      const inMonth = scopedMeasures.filter((m) => {
+        const md = new Date(m.savedAt);
+        return md.getFullYear() === d.getFullYear() && md.getMonth() === d.getMonth();
+      });
+      cumEnergy += inMonth.reduce((s, m) => s + parseFloat(m.evalData?.energySaved || 0), 0);
+      cumCarbon += inMonth.reduce((s, m) => s + parseFloat(m.evalData?.ghgSaved || 0) * 1000, 0);
+      const buddhistYear = String(d.getFullYear() + 543).slice(-2);
+      return { label: `${THAI_MONTHS_SHORT[d.getMonth()]} ${buddhistYear}`, energy: cumEnergy, carbon: cumCarbon };
+    });
+  }, [scopedMeasures]);
+
+  // Donut: share of total GHG reduction per measure type, top 3 + "other" bucket.
+  const donutData = useMemo(() => {
+    const totals = new Map();
+    scopedMeasures.forEach((m) => {
+      const key = m.measure || '-';
+      totals.set(key, (totals.get(key) || 0) + parseFloat(m.evalData?.ghgSaved || 0));
+    });
+    const grandTotal = [...totals.values()].reduce((a, b) => a + b, 0);
+    const sorted = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 3);
+    const restTotal = sorted.slice(3).reduce((sum, [, v]) => sum + v, 0);
+    const rows = restTotal > 0 ? [...top, [t.dashboard.otherMeasures, restTotal]] : top;
+    const segments = rows.map(([name, v], i) => ({
+      label: t.measures.names[name] || name,
+      percent: grandTotal > 0 ? Math.round((v / grandTotal) * 100) : 0,
+      color: DONUT_COLORS[Math.min(i, DONUT_COLORS.length - 1)],
+    }));
+    return { segments, totalCount: scopedMeasures.length };
+  }, [scopedMeasures, t]);
+
+  const avgPaybackYears = useMemo(() => {
+    const paybacks = scopedMeasures
+      .map((m) => parseFloat(m.evalData?.payback))
+      .filter((v) => Number.isFinite(v) && v > 0);
+    if (paybacks.length === 0) return 0;
+    return paybacks.reduce((a, b) => a + b, 0) / paybacks.length;
+  }, [scopedMeasures]);
+
+  const recentMeasures = useMemo(() => (
+    [...scopedMeasures].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).slice(0, 5)
+  ), [scopedMeasures]);
+
+  // One alert per equipment, from its most recently saved measure's grade.
+  const equipmentAlerts = useMemo(() => {
+    const latestByEquipment = new Map();
+    scopedMeasures.forEach((m) => {
+      if (!m.equipmentId) return;
+      const existing = latestByEquipment.get(m.equipmentId);
+      if (!existing || new Date(m.savedAt) > new Date(existing.savedAt)) {
+        latestByEquipment.set(m.equipmentId, m);
+      }
+    });
+    return [...latestByEquipment.values()]
+      .filter((m) => GRADE_TO_ALERT_STATUS[m.grade])
+      .sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt))
+      .slice(0, 5)
+      .map((m) => ({ name: m.equipmentId, status: GRADE_TO_ALERT_STATUS[m.grade] }));
+  }, [scopedMeasures]);
 
   const recentHistory = useMemo(() => {
     try {
@@ -346,6 +580,7 @@ function Dashboard() {
 
   return (
     <AppLayout
+      factoryRowBelowTitle
       title={
         <>
           <span className="flex lg:hidden items-center gap-2.5">
@@ -368,32 +603,36 @@ function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <StatCard
           label={t.dashboard.statElectricity}
-          value="00.00"
-          trend={12.3}
+          value={dashboardStats.electricityMwh.toFixed(2)}
+          unit={t.dashboard.statElectricityUnit}
+          trend={dashboardStats.trendElectricity}
           accentColor="#FACC15"
           onClick={() => navigate('/reports')}
           vsLabel={t.dashboard.vsLastMonth}
         />
         <StatCard
           label={t.dashboard.statHeat}
-          value="00.00"
-          trend={-5.1}
+          value={dashboardStats.heatGj.toFixed(2)}
+          unit={t.dashboard.statHeatUnit}
+          trend={dashboardStats.trendHeat}
           accentColor="#FB923C"
           onClick={() => navigate('/reports')}
           vsLabel={t.dashboard.vsLastMonth}
         />
         <StatCard
           label={t.dashboard.statGhg}
-          value="00.00"
-          trend={8.7}
+          value={dashboardStats.ghgTonnes.toFixed(2)}
+          unit={t.dashboard.statGhgUnit}
+          trend={dashboardStats.trendGhg}
           accentColor="#4ADE80"
           onClick={() => navigate('/reports')}
           vsLabel={t.dashboard.vsLastMonth}
         />
         <StatCard
           label={t.dashboard.statCost}
-          value="00.00"
-          trend={0}
+          value={dashboardStats.costMillionBaht.toFixed(2)}
+          unit={t.dashboard.statCostUnit}
+          trend={dashboardStats.trendCost}
           accentColor="#60A5FA"
           onClick={() => navigate('/reports')}
           vsLabel={t.dashboard.vsLastMonth}
@@ -405,14 +644,16 @@ function Dashboard() {
         <QuickStat
           icon={<ClipboardIcon className="w-5 h-5 text-[#0F2854] dark:text-[#E7EEF7]" />}
           label={t.dashboard.measuresInProgress}
-          value={`03 ${t.common.items}`}
+          value={String(scopedMeasures.length).padStart(2, '0')}
+          unit={t.common.items}
           onClick={() => navigate('/equipment')}
           border="rounded-l-2xl"
         />
         <QuickStat
           icon={<ClockIcon className="w-5 h-5 text-[#0F2854] dark:text-[#E7EEF7]" />}
           label={t.dashboard.avgPayback}
-          value={`00.0 ${t.dashboard.years}`}
+          value={avgPaybackYears.toFixed(1)}
+          unit={t.dashboard.years}
           onClick={() => navigate('/history')}
           border="rounded-r-2xl"
         />
@@ -422,32 +663,50 @@ function Dashboard() {
       <div className="grid lg:grid-cols-3 gap-4 mb-5">
         <Panel className="lg:col-span-2 pt-5 pb-4 flex flex-col">
           <div className="px-5">
-            <SectionHeader
-              title={t.dashboard.cumulativeSavingsTrend}
-              tag="kWh & kgCO₂e"
-              right={
-                <div className="flex items-center gap-3 text-xs font-semibold">
-                  <span className="flex items-center gap-1.5 text-[#0F2854] dark:text-[#E7EEF7]">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ENERGY_COLOR }} />
-                    {t.dashboard.energyKwh}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[#0F2854] dark:text-[#E7EEF7]">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CARBON_COLOR }} />
-                    {t.dashboard.carbonKgco2e}
-                  </span>
-                </div>
-              }
-            />
+            {/* Desktop: title, unit tag, and legend all fit on one row */}
+            <div className="hidden lg:block">
+              <SectionHeader
+                title={t.dashboard.cumulativeSavingsTrend}
+                tag="kWh & kgCO₂e"
+                right={
+                  <div className="flex items-center gap-3 text-xs font-semibold">
+                    <span className="flex items-center gap-1.5 text-[#0F2854] dark:text-[#E7EEF7]">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ENERGY_COLOR }} />
+                      {t.dashboard.energyKwh}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[#0F2854] dark:text-[#E7EEF7]">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CARBON_COLOR }} />
+                      {t.dashboard.carbonKgco2e}
+                    </span>
+                  </div>
+                }
+              />
+            </div>
+            {/* Mobile: title alone, legend on its own row below (no room for all 3 on one line) */}
+            <div className="lg:hidden">
+              <SectionHeader title={t.dashboard.cumulativeSavingsTrend} />
+              <div className="flex items-center gap-3 text-[11px] font-semibold -mt-2.5 mb-3.5">
+                <span className="flex items-center gap-1.5 text-[#0F2854] dark:text-[#E7EEF7]">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ENERGY_COLOR }} />
+                  {t.dashboard.energyKwh}
+                </span>
+                <span className="flex items-center gap-1.5 text-[#0F2854] dark:text-[#E7EEF7]">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CARBON_COLOR }} />
+                  {t.dashboard.carbonKgco2e}
+                </span>
+              </div>
+            </div>
           </div>
-          <SavingsTrendChart months={t.dashboard.savingsMonths} />
+          <SavingsTrendChart series={savingsSeries} />
         </Panel>
         <Panel className="p-5 flex flex-col">
           <SectionHeader title={t.dashboard.energyByMeasure} tag="GHG %" />
           <div className="flex-1 flex items-center">
-            <DonutChart
-              labels={[t.dashboard.measure1, t.dashboard.measure2, t.dashboard.measure3]}
-              measuresLabel={t.dashboard.measuresWord}
-            />
+            {donutData.totalCount > 0 ? (
+              <DonutChart segments={donutData.segments} totalCount={donutData.totalCount} measuresLabel={t.dashboard.measuresWord} />
+            ) : (
+              <p className="w-full text-center text-sm text-gray-400 dark:text-[#7E93AF] py-8">{t.dashboard.noHistoryShort}</p>
+            )}
           </div>
         </Panel>
       </div>
@@ -458,33 +717,37 @@ function Dashboard() {
           title={t.dashboard.measureDetails}
           right={
             <span className="text-[10px] font-mono font-bold text-[#4988C4] bg-[#EEF3FB] dark:bg-white/5 px-2 py-0.5 rounded-full">
-              {MOCK_MEASURES.length} {t.common.items}
+              {recentMeasures.length} {t.common.items}
             </span>
           }
         />
-        <div className="divide-y divide-[#F0F4FB] dark:divide-white/8">
-          {MOCK_MEASURES.map((measure, i) => {
-            const st = MEASURE_STATUS[measure.status];
-            return (
-              <button key={i} type="button" onClick={() => navigate('/equipment')}
-                className="w-full flex items-center justify-between gap-3 text-left px-2 py-3.5 rounded-lg hover:bg-[#F4F7FC] dark:hover:bg-white/5 transition-colors">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-[10px] font-mono text-[#4988C4]/50 shrink-0">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span className="text-sm font-medium text-gray-700 dark:text-[#C3D2E5] min-w-0 break-words">{t.dashboard[measure.labelKey]}</span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`flex items-center gap-1.5 text-xs font-medium whitespace-nowrap ${st.cls}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
-                    {t.dashboard[st.labelKey]}
-                  </span>
-                  <ChevronDownIcon className="w-4 h-4 text-gray-300 dark:text-white/20 -rotate-90" />
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {recentMeasures.length === 0 ? (
+          <p className="text-center text-sm text-gray-400 dark:text-[#7E93AF] py-8">{t.dashboard.noHistoryShort}</p>
+        ) : (
+          <div className="divide-y divide-[#F0F4FB] dark:divide-white/8">
+            {recentMeasures.map((measure, i) => {
+              const st = MEASURE_STATUS[GRADE_TO_MEASURE_STATUS[measure.grade] || 'pending'];
+              return (
+                <button key={measure.id} type="button" onClick={() => navigate('/history')}
+                  className="w-full flex items-center justify-between gap-3 text-left px-2 py-3.5 rounded-lg hover:bg-[#F4F7FC] dark:hover:bg-white/5 transition-colors">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-[10px] font-mono text-[#4988C4]/50 shrink-0">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-[#C3D2E5] min-w-0 break-words">{t.measures.names[measure.measure] || measure.measure}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`flex items-center gap-1.5 text-xs font-medium whitespace-nowrap ${st.cls}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
+                      {t.dashboard[st.labelKey]}
+                    </span>
+                    <ChevronDownIcon className="w-4 h-4 text-gray-300 dark:text-white/20 -rotate-90" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </Panel>
 
       {/* Alerts */}
@@ -493,32 +756,70 @@ function Dashboard() {
           title={t.dashboard.equipmentNeedsAction}
           right={
             <span className="text-[10px] font-mono font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">
-              {EQUIPMENT_ALERTS.length} {t.common.items}
+              {equipmentAlerts.length} {t.common.items}
             </span>
           }
         />
-        <div className="flex flex-col gap-2">
-          {EQUIPMENT_ALERTS.map((item) => {
-            const s = ALERT_STYLE[item.status];
-            return (
-              <button key={item.name} type="button" onClick={() => navigate('/equipment')}
-                className="w-full flex items-center gap-3 text-left px-3 py-3 rounded-xl hover:bg-[#F4F7FC] dark:hover:bg-white/5 transition-colors border border-[#F0F4FB] dark:border-white/8 relative overflow-hidden">
-                <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${s.bar}`} />
-                <div className="min-w-0 flex-1 pl-1">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] font-mono">{item.name}</p>
-                    <span className={`text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full ${s.badge}`}>
-                      {s.label}
-                    </span>
+        {equipmentAlerts.length === 0 ? (
+          <p className="text-center text-sm text-gray-400 dark:text-[#7E93AF] py-8">{t.dashboard.noHistoryShort}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {equipmentAlerts.map((item) => {
+              const s = ALERT_STYLE[item.status];
+              return (
+                <button key={item.name} type="button" onClick={() => navigate('/equipment')}
+                  className="w-full flex items-center gap-3 text-left px-3 py-3 rounded-xl hover:bg-[#F4F7FC] dark:hover:bg-white/5 transition-colors border border-[#F0F4FB] dark:border-white/8 relative overflow-hidden">
+                  <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${s.bar}`} />
+                  <div className="min-w-0 flex-1 pl-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] font-mono">{item.name}</p>
+                      <span className={`text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full ${s.badge}`}>
+                        {s.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-[#8CA3C0]">
+                      {t.dashboard[item.status === 'danger' ? 'alertLowEfficiency' : 'alertCheckSoon']}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-[#8CA3C0]">{t.dashboard[item.issueKey]}</p>
-                </div>
-                <ChevronDownIcon className="w-4 h-4 text-gray-300 dark:text-white/20 -rotate-90 shrink-0" />
-              </button>
-            );
-          })}
-        </div>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-300 dark:text-white/20 -rotate-90 shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </Panel>
+
+      {/* Factory overview — only when viewing all factories at once */}
+      {!selectedFactory && factoryOverviewRows.length > 0 && (
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <FactoryIcon className="w-5 h-5 text-[#4988C4]" />
+              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.dashboard.factoryOverview}</p>
+            </div>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/factories')}
+                className="flex items-center gap-1 text-xs font-semibold text-[#4988C4] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
+              >
+                {t.dashboard.manageFactories}
+                <ArrowRightIcon className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {factoryOverviewRows.map((row) => (
+              <FactoryOverviewCard
+                key={row.name}
+                row={row}
+                t={t}
+                onClick={() => navigate(`/factories/${encodeURIComponent(row.name)}`)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent history */}
       <Panel className="p-5">
