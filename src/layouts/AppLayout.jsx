@@ -4,6 +4,7 @@ import companyLogo from '../assets/Logo.png';
 import { useFactory } from '../context/factoryStore.js';
 import { getSession, logout as clearSession } from '../context/authStore.js';
 import { fetchAllEquipment } from '../context/equipmentStore.js';
+import { fetchAllCatalogItems } from '../context/catalogStore.js';
 import { useTheme } from '../context/themeStore.js';
 import { useLang } from '../context/languageStore.js';
 import { Select } from '../components/Dropdown.jsx';
@@ -144,15 +145,20 @@ function AppLayout({
     const readLen = (key) => {
       try { return (JSON.parse(localStorage.getItem(key) || '[]') || []).length; } catch { return 0; }
     };
-    return { reports: readLen('reports'), catalog: readLen('catalog'), history: readLen('history') };
+    return { reports: readLen('reports'), history: readLen('history') };
   }, []);
   const [equipmentCount, setEquipmentCount] = useState(0);
   useEffect(() => {
     fetchAllEquipment().then((eq) => setEquipmentCount(eq.length)).catch(() => {});
   }, []);
+  const [catalogCount, setCatalogCount] = useState(0);
+  useEffect(() => {
+    fetchAllCatalogItems().then((items) => setCatalogCount(items.length)).catch(() => {});
+  }, []);
   const getCount = (countKey) => {
     if (countKey === 'factories') return factories.length;
     if (countKey === 'equipment') return equipmentCount;
+    if (countKey === 'catalog') return catalogCount;
     return localCounts[countKey] || 0;
   };
 

@@ -4,25 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel, SectionHeader } from '../components/ui';
 import { fetchAllCategories } from '../context/equipmentStore.js';
+import { fetchAllCatalogItems, saveCatalogItem, deleteCatalogItem } from '../context/catalogStore.js';
 import { ICON_MAP } from '../components/iconMap.js';
 import { fileToResizedDataUrl } from '../utils/image.js';
 import { uploadImage, deleteImage } from '../context/storageStore.js';
 import { useLang } from '../context/languageStore.js';
 import { BoxIcon, CalculatorIcon, ChevronDownIcon, ClipboardIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons';
 import SavingsCalculator from './catalog/SavingsCalculator.jsx';
-
-function loadCatalog() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('catalog') || '[]');
-    return Array.isArray(saved) ? saved : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCatalog(items) {
-  localStorage.setItem('catalog', JSON.stringify(items));
-}
 
 function fmt(n) {
   return Math.round(n || 0).toLocaleString('th-TH');
@@ -108,7 +96,8 @@ function Catalog() {
   useEffect(() => { fetchAllCategories().then(setCategories).catch(() => setCategories([])); }, []);
   const realCategories = useMemo(() => categories.filter((c) => c.key !== 'all'), [categories]);
   const [activeCategory, setActiveCategory] = useState(() => realCategories[0]?.key || 'chiller');
-  const [items, setItems] = useState(loadCatalog);
+  const [items, setItems] = useState([]);
+  useEffect(() => { fetchAllCatalogItems().then(setItems).catch(() => setItems([])); }, []);
 
   const [modalMode, setModalMode] = useState(null); // null | 'add' | 'edit'
   const [editingId, setEditingId] = useState(null);
@@ -167,7 +156,7 @@ function Catalog() {
     }
   };
 
-  const handleSaveItem = () => {
+  const handleSaveItem = async () => {
     const brand = form.brand.trim();
     const model = form.model.trim();
     if (!brand) { setFormError(t.catalog.errBrand); return; }
@@ -183,30 +172,23 @@ function Catalog() {
       image: form.image,
     };
     if (modalMode === 'edit' && editingId) {
-      setItems((prev) => {
-        const next = prev.map((i) => (i.id === editingId ? { ...i, ...record } : i));
-        saveCatalog(next);
-        return next;
-      });
+      const item = { id: editingId, ...record };
+      await saveCatalogItem(item);
+      setItems((prev) => prev.map((i) => (i.id === editingId ? item : i)));
     } else {
-      setItems((prev) => {
-        const next = [{ id: `cat_${Date.now()}`, ...record }, ...prev];
-        saveCatalog(next);
-        return next;
-      });
+      const item = { id: `cat_${Date.now()}`, ...record };
+      await saveCatalogItem(item);
+      setItems((prev) => [item, ...prev]);
     }
     setModalMode(null);
   };
 
-  const handleDeleteItem = (id) => {
+  const handleDeleteItem = async (id) => {
     if (!window.confirm(t.catalog.deleteItemConfirm)) return;
-    setItems((prev) => {
-      const removed = prev.find((i) => i.id === id);
-      const next = prev.filter((i) => i.id !== id);
-      saveCatalog(next);
-      if (removed?.image) deleteImage(removed.image);
-      return next;
-    });
+    const removed = items.find((i) => i.id === id);
+    await deleteCatalogItem(id);
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    if (removed?.image) deleteImage(removed.image);
   };
 
   return (

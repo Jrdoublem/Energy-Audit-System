@@ -14,6 +14,10 @@ function useClock() {
   return time.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
+// Temporarily hidden per request — flip back to true to restore the Quick
+// Demo Access panel on the login page.
+const SHOW_DEMO_ACCESS = false;
+
 const DEMO_ACCOUNTS = [
   { name: 'Admin User', email: 'admin@enginspect.com', password: 'admin1234', role: 'Admin', avatarBg: 'bg-[#0F2854]', badge: 'bg-red-50 text-red-500 border border-red-100' },
   { name: 'วิศวกร ทดสอบ', email: 'engineer@enginspect.com', password: 'engineer1234', role: 'Engineer', avatarBg: 'bg-[#4988C4]', badge: 'bg-sky-50 text-sky-600 border border-sky-100' },
@@ -87,30 +91,30 @@ function Login() {
         </div>
       </div>
 
-      {/* Logo + title */}
-      <div className="w-full max-w-[23rem] flex flex-col justify-center items-center relative pt-8 pb-5 sm:pt-0 sm:pb-4 z-10 shrink-0">
+      {/* Logo + title — mobile keeps the original larger sizing; sm:+ (desktop) uses the smaller scale */}
+      <div className="w-full max-w-[26rem] sm:max-w-[23rem] flex flex-col justify-center items-center relative pt-10 pb-6 sm:pt-0 sm:pb-4 z-10 shrink-0">
         <img
           src={companyLogo}
           alt="ENGINSPECT Logo"
-          className="w-24 sm:w-24 h-auto object-contain mb-3 drop-shadow-lg"
+          className="w-28 sm:w-24 h-auto object-contain mb-4 sm:mb-3 drop-shadow-lg"
           style={{ filter: 'drop-shadow(0 0 12px rgba(56,189,248,0.35))' }}
         />
         <h1
-          className="text-2xl sm:text-2xl font-black text-white tracking-[0.2em] text-center"
+          className="text-3xl sm:text-2xl font-black text-white tracking-[0.22em] sm:tracking-[0.2em] text-center"
           style={{ fontFamily: "'Courier New', 'Lucida Console', monospace", textShadow: '0 0 20px rgba(56,189,248,0.4)' }}
         >
           ENGINSPECT<span className="login-cursor" />
         </h1>
-        <p className="text-[11px] sm:text-[11px] text-[#38BDF8]/80 font-medium tracking-[0.18em] mt-1.5 uppercase">
+        <p className="text-xs sm:text-[11px] text-[#38BDF8]/80 font-medium tracking-[0.18em] mt-2 sm:mt-1.5 uppercase">
           Energy Audit System
         </p>
-        <p className="text-[10px] text-white/30 tracking-widest mt-1 uppercase">
+        <p className="text-[11px] sm:text-[10px] text-white/30 tracking-widest mt-1 uppercase">
           SID-EN Co., Ltd.
         </p>
       </div>
 
       {/* Card */}
-      <div className="login-glass w-full max-w-[23rem] rounded-t-[2.5rem] sm:rounded-[2rem] px-6 pt-7 pb-8 sm:py-7 z-10 flex-1 sm:flex-none flex flex-col relative overflow-hidden">
+      <div className="login-glass w-full max-w-[26rem] sm:max-w-[23rem] rounded-t-[2.5rem] sm:rounded-[2rem] px-7 sm:px-6 pt-10 pb-9 sm:py-7 z-10 flex-1 sm:flex-none flex flex-col relative overflow-hidden">
 
         {/* Corner crosshair markers */}
         <span className="absolute top-3.5 left-3.5 w-4 h-4 border-t-[1.5px] border-l-[1.5px] border-[#38BDF8]/50 pointer-events-none" />
@@ -119,43 +123,54 @@ function Login() {
         <span className="absolute bottom-3.5 right-3.5 w-4 h-4 border-b-[1.5px] border-r-[1.5px] border-[#38BDF8]/50 pointer-events-none" />
 
         {/* Quick demo access — vertical list, scrolls naturally with the mouse wheel / touch once it overflows */}
-        <div className="bg-[#F4F7FC] rounded-2xl p-3 mb-3">
-          <p className="text-[10px] sm:text-[11px] font-bold text-[#0F2854] tracking-wide mb-2">
-            Quick Demo Access (Click to autofill):
-          </p>
-          <div className="flex flex-col gap-1.5 max-h-28 sm:max-h-32 overflow-y-auto pr-1">
-            {DEMO_ACCOUNTS.map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => fillDemo(account)}
-                className="w-full flex items-center gap-1.5 sm:gap-2 bg-white rounded-xl px-2 py-1.5 sm:py-2 text-left border border-[#EEF3FB] hover:border-[#4988C4]/40 hover:shadow-sm transition-all shrink-0"
-              >
-                <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg ${account.avatarBg} text-white text-[10px] sm:text-[11px] font-bold flex items-center justify-center shrink-0`}>
-                  {initialsOf(account.name)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] sm:text-xs font-bold text-[#0F2854] truncate leading-tight">{account.name}</p>
-                  <p className="text-[10px] sm:text-[11px] text-[#64748B] truncate leading-tight mt-0.5">{account.email}</p>
-                </div>
-                <span className={`text-[9px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded-full shrink-0 ${account.badge}`}>
-                  {account.role}
-                </span>
-              </button>
-            ))}
+        {SHOW_DEMO_ACCESS && (
+          <div className="bg-[#F4F7FC] rounded-2xl p-3.5 sm:p-3 mb-3.5 sm:mb-3">
+            <p className="text-[11px] font-bold text-[#0F2854] tracking-wide mb-2.5 sm:mb-2">
+              Quick Demo Access (Click to autofill):
+            </p>
+            <div className="flex flex-col gap-1.5 max-h-28 sm:max-h-32 overflow-y-auto pr-1">
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => fillDemo(account)}
+                  className="w-full flex items-center gap-1.5 sm:gap-2 bg-white rounded-xl px-2.5 sm:px-2 py-2 text-left border border-[#EEF3FB] hover:border-[#4988C4]/40 hover:shadow-sm transition-all shrink-0"
+                >
+                  <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg ${account.avatarBg} text-white text-[10px] sm:text-[11px] font-bold flex items-center justify-center shrink-0`}>
+                    {initialsOf(account.name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-[#0F2854] truncate leading-tight">{account.name}</p>
+                    <p className="text-[11px] text-[#64748B] truncate leading-tight mt-0.5">{account.email}</p>
+                  </div>
+                  <span className={`text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded-full shrink-0 ${account.badge}`}>
+                    {account.role}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        <form className="flex flex-col gap-3.5">
+        <h2 className="text-2xl sm:text-xl font-black text-[#0F2854] text-center mb-5 sm:mb-4">
+          {t.loginHeading}
+        </h2>
+
+        <form className="flex flex-col gap-6 sm:gap-5">
+
+          {/* Email + password kept close together as one group so the password
+              field sits right under email instead of drifting down with the
+              same big gap the rest of the form spreads across. */}
+          <div className="flex flex-col gap-5 sm:gap-4">
 
           {/* Email */}
           <div>
-            <label className="block text-[11px] sm:text-xs font-bold text-[#0F2854] mb-1 tracking-wider uppercase">
+            <label className="block text-sm sm:text-xs font-bold text-[#0F2854] mb-2 sm:mb-1.5 tracking-wider uppercase">
               {t.emailLabel}
             </label>
             <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#4988C4] pointer-events-none">
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4988C4] pointer-events-none">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
                 </svg>
               </div>
@@ -164,19 +179,19 @@ function Login() {
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 placeholder="your@email.com"
-                className="login-input w-full pl-10 pr-4 py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-sm font-medium"
+                className="login-input w-full pl-11 pr-4 py-3.5 sm:py-3 rounded-xl text-base sm:text-sm font-medium"
               />
             </div>
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-[11px] sm:text-xs font-bold text-[#0F2854] mb-1 tracking-wider uppercase">
+            <label className="block text-sm sm:text-xs font-bold text-[#0F2854] mb-2 sm:mb-1.5 tracking-wider uppercase">
               {t.passwordLabel}
             </label>
             <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#4988C4] pointer-events-none">
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4988C4] pointer-events-none">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
                 </svg>
               </div>
@@ -185,7 +200,7 @@ function Login() {
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 placeholder="••••••••"
-                className="login-input w-full pl-10 pr-11 py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-sm font-medium"
+                className="login-input w-full pl-11 pr-12 py-3.5 sm:py-3 rounded-xl text-base sm:text-sm font-medium"
               />
               <button
                 type="button"
@@ -193,11 +208,11 @@ function Login() {
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F2854] transition-colors"
               >
                 {showPw ? (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" d="M17.94 17.94A10.07 10.07 0 0112 20c-5 0-9.27-3.11-11-7.5a10.06 10.06 0 012.55-3.91M6.53 6.53A9.94 9.94 0 0112 4c5 0 9.27 3.11 11 7.5a10.06 10.06 0 01-4.13 5.36M1 1l22 22" />
                   </svg>
                 ) : (
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                   </svg>
                 )}
@@ -206,25 +221,25 @@ function Login() {
           </div>
 
           {error && (
-            <p className="text-[11px] sm:text-xs font-medium text-red-500 -mt-2">{error}</p>
+            <p className="text-sm sm:text-xs font-medium text-red-500 -mt-3">{error}</p>
           )}
 
           {/* Remember me + Forgot password */}
-          <div className="flex items-center justify-between mt-0.5">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="remember"
-                className="w-3.5 h-3.5 rounded border-[#CBD5E1] accent-[#0F2854] cursor-pointer"
+                className="w-4 h-4 rounded border-[#CBD5E1] accent-[#0F2854] cursor-pointer"
               />
-              <label htmlFor="remember" className="text-[13px] text-[#64748B] cursor-pointer select-none">
+              <label htmlFor="remember" className="text-sm text-[#64748B] cursor-pointer select-none">
                 {t.remember}
               </label>
             </div>
             <button
               type="button"
               onClick={() => navigate('/forgot-password')}
-              className="text-[13px] font-semibold text-[#4988C4] hover:text-[#0F2854] transition-colors tracking-wide"
+              className="text-sm font-semibold text-[#4988C4] hover:text-[#0F2854] transition-colors tracking-wide"
             >
               {t.forgot}
             </button>
@@ -235,7 +250,7 @@ function Login() {
             type="button"
             onClick={handleLogin}
             disabled={loggingIn}
-            className="w-full py-2.5 sm:py-3 rounded-xl font-bold text-[13px] sm:text-sm text-white tracking-widest uppercase transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 mt-1 disabled:opacity-60 disabled:pointer-events-none"
+            className="w-full py-3.5 sm:py-3 rounded-xl font-bold text-base sm:text-sm text-white tracking-widest uppercase transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 mt-4 sm:mt-3 disabled:opacity-60 disabled:pointer-events-none"
             style={{
               background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 55%, #38BDF8 100%)',
               boxShadow: '0 4px 20px rgba(15,40,84,0.35)',
@@ -246,9 +261,10 @@ function Login() {
           >
             {loggingIn ? '...' : t.loginBtn}
           </button>
+          </div>
         </form>
 
-        <p className="text-center text-[9px] text-[#94A3B8] tracking-[0.25em] uppercase mt-5"
+        <p className="text-center text-[9px] text-[#94A3B8] tracking-[0.25em] uppercase mt-10 sm:mt-8"
           style={{ fontFamily: "'Courier New', monospace" }}>
           v2.1.0 · ENGINSPECT PLATFORM
         </p>

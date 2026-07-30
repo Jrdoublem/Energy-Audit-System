@@ -4,6 +4,7 @@
 export const TRANSLATIONS = {
   th: {
     // Login
+    loginHeading: 'ลงชื่อเข้าใช้',
     emailLabel: 'อีเมล',
     passwordLabel: 'รหัสผ่าน',
     remember: 'จดจำฉันในอุปกรณ์นี้',
@@ -509,6 +510,7 @@ export const TRANSLATIONS = {
   },
   en: {
     // Login
+    loginHeading: 'Sign In',
     emailLabel: 'Email',
     passwordLabel: 'Password',
     remember: 'Remember this device',
