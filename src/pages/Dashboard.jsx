@@ -10,12 +10,15 @@ import { getSession } from '../context/authStore.js';
 import { useTheme } from '../context/themeStore.js';
 import { useLang } from '../context/languageStore.js';
 import { Panel, SectionHeader } from '../components/ui';
+import companyLogo from '../assets/Logo.png';
 import {
   ArrowRightIcon,
   ChevronDownIcon,
   ClipboardIcon,
   ClockIcon,
+  CollapseIcon,
   CompressorIcon,
+  ExpandIcon,
   EyeIcon,
   FactoryIcon,
   FlameIcon,
@@ -414,6 +417,230 @@ function FactoryOverviewCard({ row, onClick, t }) {
   );
 }
 
+/* ── Presentation mode ── */
+// Full-screen, high-contrast layout for showing the dashboard on a projector
+// or meeting-room display — bigger type, denser-but-clearer grid, no sidebar
+// or nav chrome. Dark variants are wrapped in `dark` so the shared chart/donut
+// components pick up their dark-mode text colors regardless of the site's
+// actual theme toggle; the light variant relies on those components' normal
+// light-mode classes instead. Colors are kept muted/desaturated (no pure
+// saturated hues) so the page stays comfortable to look at for a long meeting.
+const PRESENTATION_THEMES = [
+  { key: 'navy',  swatch: '#4E6E99', base: '#0E1B2E', from: '#1B3350', dark: true },
+  { key: 'paper', swatch: '#FFFFFF', base: '#F3F5F9', from: '#FFFFFF', dark: false },
+];
+const PRESENTATION_THEME_STORAGE_KEY = 'presentationTheme';
+
+function PresentationStat({ label, value, unit, accentColor, c }) {
+  return (
+    <div className={`relative rounded-3xl p-6 xl:p-7 border overflow-hidden flex flex-col gap-2 ${c.panel}`}>
+      {accentColor && <span className="absolute top-0 left-0 right-0 h-1" style={{ background: accentColor }} />}
+      <p className={`text-sm xl:text-base font-semibold tracking-wide ${c.textSub}`}>{label}</p>
+      <p className={`text-4xl xl:text-5xl font-extrabold leading-none tracking-tight whitespace-nowrap ${c.text}`}>
+        {value}
+        {unit && <span className={`text-base xl:text-lg font-semibold ml-2 tracking-normal ${c.textSub}`}>{unit}</span>}
+      </p>
+    </div>
+  );
+}
+
+function PresentationView({
+  t, dashboardStats, avgPaybackYears, savingsSeries, donutData, recentMeasures, equipmentAlerts,
+  selectedFactory, onExit,
+}) {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000 * 30);
+    return () => clearInterval(timer);
+  }, []);
+
+  const [themeKey, setThemeKey] = useState(() => {
+    const saved = localStorage.getItem(PRESENTATION_THEME_STORAGE_KEY);
+    return PRESENTATION_THEMES.some((th) => th.key === saved) ? saved : 'navy';
+  });
+  const theme = PRESENTATION_THEMES.find((th) => th.key === themeKey) || PRESENTATION_THEMES[0];
+  const setTheme = (key) => {
+    setThemeKey(key);
+    localStorage.setItem(PRESENTATION_THEME_STORAGE_KEY, key);
+  };
+  const isLight = !theme.dark;
+  // Small set of style tokens so the page's own chrome (header, panels,
+  // dividers) follows the picked theme — the shared chart/donut components
+  // keep using their existing light/dark: classes via the `dark` wrapper below.
+  const c = {
+    text: isLight ? 'text-[#0F2854]' : 'text-white',
+    textSub: isLight ? 'text-[#5B6B85]' : 'text-[#8CA3C0]',
+    panel: isLight ? 'bg-white border-[#E4EBF6] shadow-[0_2px_14px_rgba(15,40,84,0.06)]' : 'bg-white/[0.05] border-white/10',
+    pill: isLight ? 'bg-white border-[#E4EBF6] shadow-sm' : 'bg-white/[0.06] border-white/10',
+    divide: isLight ? 'divide-[#EEF3FB]' : 'divide-white/8',
+    rowBorder: isLight ? 'border-[#EEF3FB]' : 'border-white/8',
+    exitBtn: isLight
+      ? 'bg-[#0F2854]/[0.06] hover:bg-[#0F2854]/[0.1] text-[#0F2854] border-[#0F2854]/10'
+      : 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/10',
+  };
+  const ringColor = isLight ? '#0F2854' : '#FFFFFF';
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onExit(); };
+    const onFsChange = () => { if (!document.fullscreenElement) onExit(); };
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('fullscreenchange', onFsChange);
+    };
+  }, [onExit]);
+
+  return (
+    <div className={`${theme.dark ? 'dark' : ''} fixed inset-0 z-[100] overflow-y-auto`} style={{ backgroundColor: theme.base }}>
+      <div
+        className="min-h-full px-8 xl:px-14 py-7 xl:py-9 flex flex-col gap-6 xl:gap-7"
+        style={{ backgroundImage: `radial-gradient(circle at top, ${theme.from}, ${theme.base} 65%)` }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between shrink-0 flex-wrap gap-y-3">
+          <div className="flex items-center gap-3.5">
+            <img src={companyLogo} alt="Logo" className="w-11 h-11 xl:w-12 xl:h-12 object-contain drop-shadow" />
+            <div>
+              <div className={`text-lg xl:text-xl font-extrabold tracking-[0.2em] leading-tight ${c.text}`} style={{ fontFamily: "'Courier New', monospace" }}>
+                ENGINSPECT
+              </div>
+              <div className={`text-xs xl:text-sm tracking-wide ${c.textSub}`}>{t.dashboard.presentationSubtitle}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-1.5 rounded-full pl-2.5 pr-2.5 py-2 border ${c.pill}`}>
+              {PRESENTATION_THEMES.map((th) => {
+                const selected = themeKey === th.key;
+                return (
+                  <button
+                    key={th.key}
+                    type="button"
+                    title={t.dashboard.presentationThemeLabel}
+                    onClick={() => setTheme(th.key)}
+                    className={`w-5 h-5 rounded-full shrink-0 transition-transform ${selected ? 'scale-110' : 'hover:scale-110 opacity-80 hover:opacity-100'}`}
+                    style={{
+                      backgroundColor: th.swatch,
+                      boxShadow: selected
+                        ? `0 0 0 2px ${theme.base}, 0 0 0 4px ${ringColor}, inset 0 0 0 1px rgba(0,0,0,0.08)`
+                        : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <div className={`flex items-center gap-1.5 rounded-full pl-3.5 pr-4 py-2 text-sm font-medium border ${c.pill} ${c.text}`}>
+              <FactoryIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" />
+              {selectedFactory || t.dashboard.allFactoriesLabel}
+            </div>
+            <div className={`hidden sm:block text-xs xl:text-sm font-mono whitespace-nowrap ${c.textSub}`}>
+              {t.dashboard.updatedAt} {formatShortDate(now.toISOString())} {now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <button
+              type="button"
+              onClick={onExit}
+              className={`flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border transition-colors ${c.exitBtn}`}
+            >
+              <CollapseIcon className="w-4 h-4" />
+              {t.dashboard.exitPresentation}
+            </button>
+          </div>
+        </div>
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 xl:gap-5 shrink-0">
+          <PresentationStat c={c} label={t.dashboard.statElectricity} value={dashboardStats.electricityMwh.toFixed(2)} unit={t.dashboard.statElectricityUnit} accentColor="#FACC15" />
+          <PresentationStat c={c} label={t.dashboard.statHeat} value={dashboardStats.heatGj.toFixed(2)} unit={t.dashboard.statHeatUnit} accentColor="#FB923C" />
+          <PresentationStat c={c} label={t.dashboard.statGhg} value={dashboardStats.ghgTonnes.toFixed(2)} unit={t.dashboard.statGhgUnit} accentColor="#4ADE80" />
+          <PresentationStat c={c} label={t.dashboard.statCost} value={dashboardStats.costMillionBaht.toFixed(2)} unit={t.dashboard.statCostUnit} accentColor="#60A5FA" />
+          <PresentationStat c={c} label={t.dashboard.avgPayback} value={avgPaybackYears.toFixed(1)} unit={t.dashboard.years} accentColor="#38BDF8" />
+        </div>
+
+        {/* Chart + donut */}
+        <div className="grid xl:grid-cols-3 gap-5 xl:gap-6 flex-1 min-h-0">
+          <div className={`xl:col-span-2 rounded-3xl border p-6 xl:p-7 flex flex-col min-h-[280px] ${c.panel}`}>
+            <div className="flex items-center justify-between mb-2">
+              <p className={`text-base xl:text-lg font-bold ${c.text}`}>{t.dashboard.cumulativeSavingsTrend}</p>
+              <div className="flex items-center gap-3 text-xs xl:text-sm font-semibold">
+                <span className={`flex items-center gap-1.5 ${c.text}`}>
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ENERGY_COLOR }} />
+                  {t.dashboard.energyKwh}
+                </span>
+                <span className={`flex items-center gap-1.5 ${c.text}`}>
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CARBON_COLOR }} />
+                  {t.dashboard.carbonKgco2e}
+                </span>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center">
+              <SavingsTrendChart series={savingsSeries} />
+            </div>
+          </div>
+          <div className={`rounded-3xl border p-6 xl:p-7 flex flex-col min-h-[280px] ${c.panel}`}>
+            <p className={`text-base xl:text-lg font-bold mb-2 ${c.text}`}>{t.dashboard.energyByMeasure}</p>
+            <div className="flex-1 flex items-center">
+              {donutData.totalCount > 0 ? (
+                <DonutChart segments={donutData.segments} totalCount={donutData.totalCount} measuresLabel={t.dashboard.measuresWord} />
+              ) : (
+                <p className={`w-full text-center text-sm py-8 ${c.textSub}`}>{t.dashboard.noHistoryShort}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Highlights */}
+        <div className="grid xl:grid-cols-2 gap-5 xl:gap-6 shrink-0">
+          <div className={`rounded-3xl border p-6 xl:p-7 ${c.panel}`}>
+            <p className={`text-base xl:text-lg font-bold mb-3 ${c.text}`}>{t.dashboard.measureDetails}</p>
+            {recentMeasures.length === 0 ? (
+              <p className={`text-center text-sm py-4 ${c.textSub}`}>{t.dashboard.noHistoryShort}</p>
+            ) : (
+              <div className={`divide-y ${c.divide}`}>
+                {recentMeasures.slice(0, 4).map((measure, i) => {
+                  const st = MEASURE_STATUS[GRADE_TO_MEASURE_STATUS[measure.grade] || 'pending'];
+                  return (
+                    <div key={measure.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-[10px] font-mono text-[#4988C4]/60 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                        <span className={`text-sm xl:text-base font-medium min-w-0 truncate ${c.text}`}>{t.measures.names[measure.measure] || measure.measure}</span>
+                      </div>
+                      <span className={`flex items-center gap-1.5 text-xs xl:text-sm font-medium whitespace-nowrap shrink-0 ${st.cls}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
+                        {t.dashboard[st.labelKey]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div className={`rounded-3xl border p-6 xl:p-7 ${c.panel}`}>
+            <p className={`text-base xl:text-lg font-bold mb-3 ${c.text}`}>{t.dashboard.equipmentNeedsAction}</p>
+            {equipmentAlerts.length === 0 ? (
+              <p className={`text-center text-sm py-4 ${c.textSub}`}>{t.dashboard.noHistoryShort}</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {equipmentAlerts.slice(0, 4).map((item) => {
+                  const s = ALERT_STYLE[item.status];
+                  return (
+                    <div key={item.name} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border relative overflow-hidden ${c.rowBorder}`}>
+                      <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${s.bar}`} />
+                      <div className="min-w-0 flex-1 pl-1 flex items-center gap-2">
+                        <p className={`text-sm xl:text-base font-bold font-mono ${c.text}`}>{item.name}</p>
+                        <span className={`text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full ${s.badge}`}>{s.label}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Dashboard ── */
 function Dashboard() {
   const navigate = useNavigate();
@@ -421,6 +648,18 @@ function Dashboard() {
   const isAdmin = getSession().role === 'admin';
 
   const { factories, selectedFactory, allowedFactories } = useFactory();
+
+  const [presenting, setPresenting] = useState(false);
+  const enterPresentation = () => {
+    setPresenting(true);
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  };
+  const exitPresentation = () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setPresenting(false);
+  };
 
   const [equipment, setEquipment] = useState([]);
   useEffect(() => { fetchAllEquipment().then(setEquipment).catch(() => setEquipment([])); }, []);
@@ -581,9 +820,35 @@ function Dashboard() {
     return [...scoped].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).slice(0, 5);
   }, [history, selectedFactory, allowedFactories]);
 
+  if (presenting) {
+    return (
+      <PresentationView
+        t={t}
+        dashboardStats={dashboardStats}
+        avgPaybackYears={avgPaybackYears}
+        savingsSeries={savingsSeries}
+        donutData={donutData}
+        recentMeasures={recentMeasures}
+        equipmentAlerts={equipmentAlerts}
+        selectedFactory={selectedFactory}
+        onExit={exitPresentation}
+      />
+    );
+  }
+
   return (
     <AppLayout
       factoryRowBelowTitle
+      actions={
+        <button
+          type="button"
+          onClick={enterPresentation}
+          className="flex items-center gap-2 bg-[#0F2854] hover:bg-[#1C4D8D] dark:bg-white/10 dark:hover:bg-white/15 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition-colors shrink-0"
+        >
+          <ExpandIcon className="w-4 h-4" />
+          {t.dashboard.presentationMode}
+        </button>
+      }
       title={
         <>
           <span className="flex lg:hidden items-center gap-2.5">

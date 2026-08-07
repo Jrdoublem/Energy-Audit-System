@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel, SectionHeader } from '../components/ui';
+import { Combobox } from '../components/Dropdown.jsx';
 import {
   getSession, fetchAllUsers, createUserAccount, updateUserAccount, deleteUserAccount,
 } from '../context/authStore.js';
@@ -12,6 +13,15 @@ import { useLang } from '../context/languageStore.js';
 import {
   ShieldIcon, UsersIcon, DollarSignIcon, PencilIcon, TrashIcon, PlusIcon,
 } from '../components/icons';
+
+// Seed suggestions so the combobox isn't empty before any real position has
+// been recorded — merged with whatever positions are already in use below,
+// so the list grows to reflect this team's actual job titles over time.
+const POSITION_SUGGESTIONS = [
+  'System Administrator', 'Energy Engineer', 'Field Engineer',
+  'Maintenance Engineer', 'Project Engineer', 'Electrical Engineer',
+  'Mechanical Engineer', 'Site Supervisor', 'Plant Manager',
+];
 
 function initialsOf(name) {
   const parts = (name || '').trim().split(/\s+/);
@@ -81,6 +91,10 @@ function AdminPanel() {
   }, []);
 
   const allFactories = useMemo(() => readFactories(undefined, equipment, factoryRecords), [equipment, factoryRecords]);
+  const positionOptions = useMemo(
+    () => [...new Set([...POSITION_SUGGESTIONS, ...users.map((u) => u.position).filter(Boolean)])],
+    [users]
+  );
 
   const openAddUser = () => {
     setUserForm({ role: 'engineer', factories: [] });
@@ -444,7 +458,7 @@ function AdminPanel() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeUserModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div
-            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md flex flex-col"
+            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md lg:max-w-2xl flex flex-col"
             style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -465,11 +479,12 @@ function AdminPanel() {
               </div>
               <div>
                 <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.adminPanel.position}</label>
-                <input
+                <Combobox
                   value={userForm.position || ''}
-                  onChange={(e) => setUserForm((p) => ({ ...p, position: e.target.value }))}
+                  onChange={(v) => setUserForm((p) => ({ ...p, position: v }))}
+                  options={positionOptions}
                   placeholder={t.adminPanel.egPosition}
-                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                  inputClassName="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 />
               </div>
               <div>

@@ -112,7 +112,7 @@ function History() {
     <AppLayout hideHeader fullBleed mobileHeaderCenter>
       <div className="flex flex-col min-h-screen">
 
-        <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-4">
+        <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-[2px]">
           <GlassSelect value={filterMonth} onChange={setFilterMonth}>
             <option value="" className="text-gray-800">{t.history.allMonths}</option>
             {t.history.months.map((m, i) => (

@@ -118,7 +118,7 @@ function NavBadge({ count, active }) {
 function AppLayout({
   title, actions, children, hideHeader = false, fullBleed = false, hideFactorySelect = false,
   mobileHeaderRight = false, mobileHeaderCenter = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
-  hideRoleBadge = false, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
+  hideRoleBadge = false, hideRoleBadgeMobile = hideRoleBadge, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
 }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -438,9 +438,9 @@ function AppLayout({
           </div>
         </div>
 
-        {factoryRowBelowTitle && !(hideRoleBadge && hideFactorySelect) && (
+        {factoryRowBelowTitle && !(hideRoleBadgeMobile && hideFactorySelect) && (
           <div className="flex lg:hidden justify-center w-full max-w-md items-center gap-2 px-6 pb-2 -mt-[10px]">
-            {!hideRoleBadge && <RoleBadge role={roleLabel} />}
+            {!hideRoleBadgeMobile && <RoleBadge role={roleLabel} />}
             {!hideFactorySelect && (
               <FactorySelect
                 selectedFactory={selectedFactory}

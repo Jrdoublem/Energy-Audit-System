@@ -281,7 +281,7 @@ function Catalog() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div
-            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md flex flex-col"
+            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md lg:max-w-2xl flex flex-col"
             style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >

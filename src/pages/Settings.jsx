@@ -36,7 +36,17 @@ function Settings() {
   );
 
   return (
-    <AppLayout title={t.nav.settings} hideFactorySelect factoryRowBelowTitle>
+    <AppLayout
+      title={
+        <span className="flex items-center gap-2.5">
+          <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
+          {t.nav.settings}
+        </span>
+      }
+      hideFactorySelect
+      factoryRowBelowTitle
+      hideRoleBadgeMobile
+    >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-2xl lg:max-w-none lg:items-start">
 
         {/* โปรไฟล์ผู้ใช้งาน */}

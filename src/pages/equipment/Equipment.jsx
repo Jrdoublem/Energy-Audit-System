@@ -329,6 +329,7 @@ function Equipment() {
         {/* Content */}
         <div className="flex-1 p-4 lg:p-6 lg:pt-20 pb-28 lg:pb-6 pr-5 lg:pr-10 min-w-0 relative">
           <div className="flex items-center gap-2 mb-4">
+            <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
             <p className="text-xl font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.pageTitle}</p>
             <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-sm text-[#0F2854] dark:text-[#E7EEF7]">
               {activeCategory?.label}
@@ -448,7 +449,7 @@ function Equipment() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div
-            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg flex flex-col"
+            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg lg:max-w-3xl flex flex-col"
             style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -722,7 +723,7 @@ function Equipment() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div
-            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-sm flex flex-col"
+            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-sm lg:max-w-lg flex flex-col"
             style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >

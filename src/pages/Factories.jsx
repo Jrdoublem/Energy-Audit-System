@@ -219,7 +219,16 @@ function Factories() {
 
   if (!isAdmin) {
     return (
-      <AppLayout title={t.factories.pageTitle} hideFactorySelect factoryRowBelowTitle>
+      <AppLayout
+        title={
+          <span className="flex items-center gap-2.5">
+            <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
+            {t.factories.pageTitle}
+          </span>
+        }
+        hideFactorySelect
+        factoryRowBelowTitle
+      >
         <Panel className="p-8 text-center text-sm text-gray-400 dark:text-[#7E93AF]">
           {t.factories.adminOnly}
         </Panel>
@@ -228,7 +237,16 @@ function Factories() {
   }
 
   return (
-    <AppLayout title={t.factories.pageTitle} hideFactorySelect factoryRowBelowTitle>
+    <AppLayout
+      title={
+        <span className="flex items-center gap-2.5">
+          <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
+          {t.factories.pageTitle}
+        </span>
+      }
+      hideFactorySelect
+      factoryRowBelowTitle
+    >
       <div className="flex flex-col gap-5 max-w-3xl lg:max-w-none">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-4">
           <StatCard label={t.factories.totalFactories} value={factories.length} />

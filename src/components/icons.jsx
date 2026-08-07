@@ -38,4 +38,6 @@ export {
   Shield as ShieldIcon,
   Users as UsersIcon,
   DollarSign as DollarSignIcon,
+  Maximize2 as ExpandIcon,
+  Minimize2 as CollapseIcon,
 } from 'lucide-react';

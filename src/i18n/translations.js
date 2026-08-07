@@ -114,6 +114,13 @@ export const TRANSLATIONS = {
       measuredCount: 'ตรวจวัดแล้ว',
       totalMeasures: 'มาตรการรวม',
       savingsMwh: 'ผลประหยัด (MWh)',
+      presentationMode: 'โหมดนำเสนอ',
+      exitPresentation: 'ออกจากโหมดนำเสนอ',
+      presentationHint: 'กด Esc เพื่อออกจากโหมดนำเสนอ',
+      presentationSubtitle: 'ภาพรวมข้อมูลพลังงานสำหรับการนำเสนอ',
+      presentationThemeLabel: 'เปลี่ยนธีมสี',
+      allFactoriesLabel: 'ทุกโรงงาน',
+      updatedAt: 'ข้อมูล ณ วันที่',
     },
 
     equipment: {
@@ -735,6 +742,13 @@ export const TRANSLATIONS = {
       measuredCount: 'Measured',
       totalMeasures: 'Total Measures',
       savingsMwh: 'Savings (MWh)',
+      presentationMode: 'Presentation Mode',
+      exitPresentation: 'Exit Presentation Mode',
+      presentationHint: 'Press Esc to exit presentation mode',
+      presentationSubtitle: 'Energy overview for presentation',
+      presentationThemeLabel: 'Change color theme',
+      allFactoriesLabel: 'All Factories',
+      updatedAt: 'Data as of',
     },
 
     equipment: {
