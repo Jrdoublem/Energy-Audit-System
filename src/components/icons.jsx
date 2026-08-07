@@ -35,4 +35,7 @@ export {
   Camera as CameraIcon,
   Sparkles as SparkleIcon,
   Printer as PrinterIcon,
+  Shield as ShieldIcon,
+  Users as UsersIcon,
+  DollarSign as DollarSignIcon,
 } from 'lucide-react';

@@ -110,19 +110,19 @@ const updateUserAccountFn = httpsCallable(functions, 'updateUserAccount');
 const deleteUserAccountFn = httpsCallable(functions, 'deleteUserAccount');
 
 export async function createUserAccount({
-  email, password, name, role, factories,
+  email, password, name, role, factories, position,
 }) {
   const res = await createUserAccountFn({
-    email, password, name, role, factories,
+    email, password, name, role, factories, position,
   });
   return res.data.uid;
 }
 
 export async function updateUserAccount({
-  uid, email, password, name, role, factories,
+  uid, email, password, name, role, factories, position,
 }) {
   await updateUserAccountFn({
-    uid, email, password, name, role, factories,
+    uid, email, password, name, role, factories, position,
   });
 }
 

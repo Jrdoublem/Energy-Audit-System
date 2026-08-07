@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel, SectionHeader } from '../components/ui';
 import {
@@ -16,6 +17,7 @@ function initialsOf(name) {
 
 function Profile() {
   const { t } = useLang();
+  const navigate = useNavigate();
   const session = getSession();
   const roleLabel = session.role === 'admin' ? t.nav.roleAdmin : t.settings.roleEngineer;
   const isAdmin = session.role === 'admin';
@@ -120,28 +122,28 @@ function Profile() {
 
   return (
     <AppLayout title={t.profile.pageTitle} hideFactorySelect factoryRowBelowTitle>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-2xl lg:max-w-none lg:items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-5 max-w-2xl lg:max-w-none">
 
-        <Panel className="p-5">
+        <Panel className="p-5 flex flex-col">
           <SectionHeader title={t.profile.photoSectionTitle} />
-          <div className="flex flex-col items-center text-center">
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
             {photoURL ? (
-              <img src={photoURL} alt="" className="w-20 h-20 rounded-2xl object-cover shrink-0" />
+              <img src={photoURL} alt="" className="w-32 h-32 rounded-2xl object-cover shrink-0" />
             ) : (
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-white text-2xl font-bold shrink-0 font-mono shadow-md">
+              <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-white text-4xl font-bold shrink-0 font-mono shadow-md">
                 {initialsOf(name || session.name)}
               </div>
             )}
-            <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mt-3">{name || session.name}</p>
-            <p className="text-xs text-gray-400 dark:text-[#7E93AF] mt-0.5">{roleLabel}</p>
-            <label className={`w-full flex items-center justify-center py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm font-semibold text-[#4988C4] mt-4 transition-colors ${
-              photoUploading ? 'opacity-60 pointer-events-none' : 'hover:border-[#4988C4] hover:bg-[#4988C4]/5 cursor-pointer'
-            }`}>
-              <CameraIcon className="w-4 h-4 mr-1.5" />
-              {photoUploading ? t.profile.uploadingPhoto : t.profile.changePhoto}
-              <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" disabled={photoUploading} />
-            </label>
+            <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] mt-4">{name || session.name}</p>
+            <p className="text-sm text-gray-400 dark:text-[#7E93AF] mt-1">{roleLabel}</p>
           </div>
+          <label className={`w-full flex items-center justify-center py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm font-semibold text-[#4988C4] transition-colors ${
+            photoUploading ? 'opacity-60 pointer-events-none' : 'hover:border-[#4988C4] hover:bg-[#4988C4]/5 cursor-pointer'
+          }`}>
+            <CameraIcon className="w-4 h-4 mr-1.5" />
+            {photoUploading ? t.profile.uploadingPhoto : t.profile.changePhoto}
+            <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" disabled={photoUploading} />
+          </label>
           {photoError && <p className="text-xs text-red-500 mt-2.5 text-center">{photoError}</p>}
         </Panel>
 
@@ -163,7 +165,21 @@ function Profile() {
                 disabled
                 className="w-full px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-400 dark:text-[#7E93AF] cursor-not-allowed"
               />
-              <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] mt-1">{t.profile.emailNotEditable}</p>
+              <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] mt-1">
+                {t.profile.emailNotEditable}
+                {isAdmin && (
+                  <>
+                    {' · '}
+                    <button
+                      type="button"
+                      onClick={() => navigate('/admin')}
+                      className="text-[#4988C4] font-semibold underline underline-offset-2 hover:text-[#0F2854] dark:hover:text-[#E7EEF7] transition-colors"
+                    >
+                      {t.profile.goToManageUsers}
+                    </button>
+                  </>
+                )}
+              </p>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-[#7E93AF] mb-1.5 block">{t.profile.role}</label>

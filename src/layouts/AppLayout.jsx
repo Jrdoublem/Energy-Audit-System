@@ -22,6 +22,7 @@ import {
   MapPinIcon,
   MoonIcon,
   PlusIcon,
+  ShieldIcon,
   SunIcon,
 } from '../components/icons';
 
@@ -87,6 +88,7 @@ const navSections = [
       // Reachable on mobile via a card on the Settings page instead of its own
       // bottom-nav slot — same reasoning as catalog, the bar only fits so many icons.
       { to: '/factories', labelKey: 'factories', icon: MapPinIcon, countKey: 'factories', mobileHidden: true },
+      { to: '/admin', labelKey: 'adminPanel', icon: ShieldIcon, mobileHidden: true },
     ],
   },
   {
@@ -221,54 +223,32 @@ function AppLayout({
           )}
         </div>
 
-        {/* User account card */}
-        <div className="relative mb-5">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            title={collapsed ? session.name : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] hover:from-white/10 hover:to-white/[0.04] border border-white/10 shadow-sm transition-colors text-left ${
-              collapsed ? 'justify-center' : ''
-            }`}
-          >
-            <span className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-sm font-bold shrink-0 font-mono shadow-md ring-1 ring-white/10 overflow-hidden">
-              {session.photoURL ? (
-                <img src={session.photoURL} alt="" className="w-full h-full object-cover" />
-              ) : initialsOf(session.name)}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0F2854]" />
-            </span>
-            {!collapsed && (
-              <>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold truncate tracking-wide leading-tight">{session.name}</p>
-                  <span className="inline-block mt-1 text-[9px] font-bold text-[#38BDF8] tracking-widest font-mono uppercase bg-[#38BDF8]/10 px-1.5 py-0.5 rounded-full leading-none">
-                    {roleLabel}
-                  </span>
-                </div>
-                <ChevronDownIcon className={`w-3.5 h-3.5 text-white/30 shrink-0 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
-              </>
-            )}
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-              <div className="absolute left-0 top-full mt-2 w-48 bg-[#0F2854] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-40 text-sm">
-                <div className="px-3 py-2 border-b border-white/8">
-                  <p className="text-[9px] font-mono text-white/30 tracking-widest uppercase">{t.nav.userMenu}</p>
-                </div>
-                <button type="button" onClick={() => { setMenuOpen(false); navigate('/profile'); }}
-                  className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                  {t.nav.profile}
-                </button>
-                <div className="h-px bg-white/8" />
-                <button type="button" onClick={handleLogout}
-                  className="w-full text-left px-4 py-2.5 text-red-400 hover:bg-white/5 transition-colors">
-                  {t.nav.logout}
-                </button>
-              </div>
-            </>
+        {/* User account card — desktop: jumps straight to Profile (logout
+            already has its own dedicated button lower in the sidebar, so no
+            dropdown/menu is needed here). */}
+        <button
+          type="button"
+          onClick={() => navigate('/profile')}
+          title={collapsed ? session.name : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 mb-5 rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] hover:from-white/10 hover:to-white/[0.04] border border-white/10 shadow-sm transition-colors text-left ${
+            collapsed ? 'justify-center' : ''
+          }`}
+        >
+          <span className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-sm font-bold shrink-0 font-mono shadow-md ring-1 ring-white/10 overflow-hidden">
+            {session.photoURL ? (
+              <img src={session.photoURL} alt="" className="w-full h-full object-cover" />
+            ) : initialsOf(session.name)}
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0F2854]" />
+          </span>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold truncate tracking-wide leading-tight">{session.name}</p>
+              <span className="inline-block mt-1 text-[9px] font-bold text-[#38BDF8] tracking-widest font-mono uppercase bg-[#38BDF8]/10 px-1.5 py-0.5 rounded-full leading-none">
+                {roleLabel}
+              </span>
+            </div>
           )}
-        </div>
+        </button>
 
         <div className="h-px bg-white/8 mb-5" />
 

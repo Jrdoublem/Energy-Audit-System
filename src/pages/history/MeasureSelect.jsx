@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Combobox, Select } from '../../components/Dropdown.jsx';
-import { DEFAULT_SETTINGS, fetchSettings } from '../../context/settingsStore.js';
+import { DEFAULT_SETTINGS, fetchSettings, getEmissionFactorValue } from '../../context/settingsStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { saveMeasureItem, deleteMeasureItem } from '../../context/measuresStore.js';
 
@@ -212,15 +212,16 @@ function BoltIcon({ className }) {
   );
 }
 
-// Emission factors used to convert energy saved into an estimated GHG
-// reduction. Boiler measures represent fuel/thermal kWh (combustion —
-// approximated with a fuel-oil factor); everything else represents
-// electrical kWh (Thailand grid mix factor, same one SavingsCalculator uses).
-const GRID_GHG_FACTOR_KG_PER_KWH = 0.5561;
-const FUEL_GHG_FACTOR_KG_PER_KWH = 0.2664;
+// Fallback emission factors, used only if the admin-configurable value
+// (Admin Panel > System Defaults) is missing — see getEmissionFactorValue.
+// Boiler measures represent fuel/thermal kWh (combustion — approximated
+// with a fuel-oil factor); everything else represents electrical kWh
+// (Thailand grid mix factor, same one SavingsCalculator uses).
+const FALLBACK_GRID_GHG_FACTOR_KG_PER_KWH = 0.5561;
+const FALLBACK_FUEL_GHG_FACTOR_KG_PER_KWH = 0.2664;
 
 /* ── Evaluation section ── */
-function EvalSection({ basePower, category, evalData, onChange, onSave }) {
+function EvalSection({ basePower, category, evalData, onChange, onSave, appDefaults }) {
   const { t } = useLang();
   const ref = useRef(null);
 
@@ -245,7 +246,9 @@ function EvalSection({ basePower, category, evalData, onChange, onSave }) {
 
   const energySaved = base * (pct / 100) * hours;
   const costSaved   = energySaved * rate;
-  const ghgFactor   = category === 'boiler' ? FUEL_GHG_FACTOR_KG_PER_KWH : GRID_GHG_FACTOR_KG_PER_KWH;
+  const ghgFactor   = category === 'boiler'
+    ? getEmissionFactorValue(appDefaults, 'fuel', FALLBACK_FUEL_GHG_FACTOR_KG_PER_KWH)
+    : getEmissionFactorValue(appDefaults, 'electricity', FALLBACK_GRID_GHG_FACTOR_KG_PER_KWH);
   const ghgSaved    = (energySaved * ghgFactor) / 1000; // tonnes CO2e
   const payback     = invest > 0 && costSaved > 0 ? (invest / costSaved).toFixed(1) : null;
   const hasResult   = base > 0 && pct > 0 && hours > 0 && rate > 0;
@@ -486,6 +489,7 @@ function FormPanel({ activeMeasure, onChangeMeasure, measures, item, result, for
             evalData={evalData}
             onChange={handleEvalChange}
             onSave={handleSave}
+            appDefaults={appDefaults}
           />
         )}
       </div>

@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchAllEquipment } from '../../context/equipmentStore.js';
 import { saveMeasureItem } from '../../context/measuresStore.js';
-import { DEFAULT_SETTINGS, fetchSettings } from '../../context/settingsStore.js';
+import { DEFAULT_SETTINGS, fetchSettings, getEmissionFactorValue } from '../../context/settingsStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { Select } from '../../components/Dropdown.jsx';
 
-// Thailand grid mix emission factor (kg CO2e per kWh) — used to convert
-// energy savings into an estimated GHG reduction figure.
-const GHG_FACTOR_KG_PER_KWH = 0.5561;
+// Thailand grid mix emission factor (kg CO2e per kWh), used as the fallback
+// when the admin-configurable value (Admin Panel > System Defaults) is
+// missing — see getEmissionFactorValue in settingsStore.js.
+const FALLBACK_GRID_GHG_FACTOR_KG_PER_KWH = 0.5561;
 
 function nextMeasureId() {
   return Date.now();
@@ -53,10 +54,14 @@ function SavingsCalculator({ item, onClose }) {
 
   const [hours, setHours] = useState(DEFAULT_SETTINGS.defaultOperatingHours);
   const [rate, setRate] = useState(DEFAULT_SETTINGS.defaultElectricityRate);
+  const [ghgFactor, setGhgFactor] = useState(
+    getEmissionFactorValue(DEFAULT_SETTINGS, 'electricity', FALLBACK_GRID_GHG_FACTOR_KG_PER_KWH)
+  );
   useEffect(() => {
     fetchSettings().then((s) => {
       setHours(s.defaultOperatingHours || '');
       setRate(s.defaultElectricityRate || '');
+      setGhgFactor(getEmissionFactorValue(s, 'electricity', FALLBACK_GRID_GHG_FACTOR_KG_PER_KWH));
     }).catch(() => {});
   }, []);
   const [investment, setInvestment] = useState(item.costEst ? String(item.costEst) : '');
@@ -77,7 +82,7 @@ function SavingsCalculator({ item, onClose }) {
 
   const energySaved = coolingCapacity * Math.max(oldEfficiency - newEfficiency, 0) * h;
   const costSaved = energySaved * r;
-  const ghgSaved = (energySaved * GHG_FACTOR_KG_PER_KWH) / 1000;
+  const ghgSaved = (energySaved * ghgFactor) / 1000;
   const payback = costSaved > 0 && inv > 0 ? (inv / costSaved).toFixed(2) : null;
   const hasResult = !!selected && coolingCapacity > 0 && newEfficiency > 0 && h > 0 && r > 0;
 

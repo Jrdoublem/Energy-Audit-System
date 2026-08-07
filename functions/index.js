@@ -19,7 +19,7 @@ async function assertIsAdmin(auth) {
 exports.createUserAccount = onCall(async (request) => {
   await assertIsAdmin(request.auth);
 
-  const { email, password, name, role, factories } = request.data || {};
+  const { email, password, name, role, factories, position } = request.data || {};
   if (!email || !password || !name || !role) {
     throw new HttpsError('invalid-argument', 'ข้อมูลผู้ใช้ไม่ครบถ้วน');
   }
@@ -36,6 +36,7 @@ exports.createUserAccount = onCall(async (request) => {
     email,
     role,
     factories: factories || [],
+    position: position || '',
   });
 
   return { uid: userRecord.uid };
@@ -44,7 +45,7 @@ exports.createUserAccount = onCall(async (request) => {
 exports.updateUserAccount = onCall(async (request) => {
   await assertIsAdmin(request.auth);
 
-  const { uid, email, password, name, role, factories } = request.data || {};
+  const { uid, email, password, name, role, factories, position } = request.data || {};
   if (!uid) {
     throw new HttpsError('invalid-argument', 'ไม่พบรหัสผู้ใช้');
   }
@@ -69,6 +70,7 @@ exports.updateUserAccount = onCall(async (request) => {
   if (email) profileUpdate.email = email;
   if (role) profileUpdate.role = role;
   if (factories) profileUpdate.factories = factories;
+  if (position !== undefined) profileUpdate.position = position;
   if (Object.keys(profileUpdate).length > 0) {
     await db.collection(USERS_COLLECTION).doc(uid).set(profileUpdate, { merge: true });
   }

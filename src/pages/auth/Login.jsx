@@ -14,9 +14,7 @@ function useClock() {
   return time.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
-// Temporarily hidden per request — flip back to true to restore the Quick
-// Demo Access panel on the login page.
-const SHOW_DEMO_ACCESS = false;
+const SHOW_DEMO_ACCESS = true;
 
 const DEMO_ACCOUNTS = [
   { name: 'Admin User', email: 'admin@enginspect.com', password: 'admin1234', role: 'Admin', avatarBg: 'bg-[#0F2854]', badge: 'bg-red-50 text-red-500 border border-red-100' },
@@ -151,10 +149,6 @@ function Login() {
             </div>
           </div>
         )}
-
-        <h2 className="text-2xl sm:text-xl font-black text-[#0F2854] text-center mb-5 sm:mb-4">
-          {t.loginHeading}
-        </h2>
 
         <form className="flex flex-col gap-6 sm:gap-5">
 
