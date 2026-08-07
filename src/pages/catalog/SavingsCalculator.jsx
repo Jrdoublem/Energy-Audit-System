@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchAllEquipment } from '../../context/equipmentStore.js';
 import { saveMeasureItem } from '../../context/measuresStore.js';
-import { loadSettings } from '../../context/settingsStore.js';
+import { DEFAULT_SETTINGS, fetchSettings } from '../../context/settingsStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { Select } from '../../components/Dropdown.jsx';
 
@@ -51,9 +51,14 @@ function SavingsCalculator({ item, onClose }) {
   const [selectedId, setSelectedId] = useState('');
   const selected = matching.find((e) => e.id === selectedId) || null;
 
-  const appDefaults = loadSettings();
-  const [hours, setHours] = useState(appDefaults.defaultOperatingHours || '');
-  const [rate, setRate] = useState(appDefaults.defaultElectricityRate || '');
+  const [hours, setHours] = useState(DEFAULT_SETTINGS.defaultOperatingHours);
+  const [rate, setRate] = useState(DEFAULT_SETTINGS.defaultElectricityRate);
+  useEffect(() => {
+    fetchSettings().then((s) => {
+      setHours(s.defaultOperatingHours || '');
+      setRate(s.defaultElectricityRate || '');
+    }).catch(() => {});
+  }, []);
   const [investment, setInvestment] = useState(item.costEst ? String(item.costEst) : '');
   const [saved, setSaved] = useState(false);
 

@@ -75,19 +75,6 @@ body {
   background: linear-gradient(160deg, #0B1B33 0%, #101F38 100%);
 }
 
-/* Plain CSS rather than a Tailwind lg: max-w-* utility — Tailwind's Vite
-   plugin wasn't emitting a fresh lg: max-width variant for this exact class
-   on this page even after a full cache clear, so this sidesteps whatever
-   that gap is. */
-.catalog-modal-panel {
-  max-width: 24rem;
-}
-@media (min-width: 1024px) {
-  .catalog-modal-panel {
-    max-width: 48rem;
-  }
-}
-
 .scrollbar-none {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -157,4 +144,23 @@ body {
 }
 .status-dot {
   animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* --- Report print preview: hide everything except the printable
+   document (app chrome, modal backdrop/toolbar) when the browser's
+   print dialog is used. --- */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #report-print-root,
+  #report-print-root * {
+    visibility: visible;
+  }
+  #report-print-root {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
 }

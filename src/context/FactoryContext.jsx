@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FactoryContext, SELECTED_KEY, readFactories } from './factoryStore.js';
+import { FactoryContext, SELECTED_KEY, readFactories, fetchAllFactoryRecords } from './factoryStore.js';
 import { getSession } from './authStore.js';
 import { fetchAllEquipment } from './equipmentStore.js';
 
@@ -15,12 +15,13 @@ export function FactoryProvider({ children }) {
   const [selectedFactory, setSelectedFactoryState] = useState(() => localStorage.getItem(SELECTED_KEY) || '');
 
   const refreshFactories = useCallback(async () => {
-    const equipment = await fetchAllEquipment();
-    setFactories(readFactories(allowedFactories, equipment));
+    const [equipment, factoryRecords] = await Promise.all([fetchAllEquipment(), fetchAllFactoryRecords()]);
+    setFactories(readFactories(allowedFactories, equipment, factoryRecords));
   }, [allowedFactories]);
 
   useEffect(() => {
-    fetchAllEquipment().then((equipment) => setFactories(readFactories(allowedFactories, equipment)));
+    Promise.all([fetchAllEquipment(), fetchAllFactoryRecords()])
+      .then(([equipment, factoryRecords]) => setFactories(readFactories(allowedFactories, equipment, factoryRecords)));
   }, [allowedFactories]);
 
   const setSelectedFactory = useCallback((factory) => {

@@ -3,9 +3,13 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel } from '../components/ui';
-import { computeFactoryStats, getFactoryMeta, setFactoryMeta } from '../context/factoryStore.js';
+import {
+  computeFactoryStats, getFactoryMeta, fetchAllFactoryRecords, saveFactoryRecord,
+} from '../context/factoryStore.js';
 import { fetchAllCategories, fetchAllEquipment } from '../context/equipmentStore.js';
 import { fetchAllMeasures } from '../context/measuresStore.js';
+import { fetchAllHistory } from '../context/historyStore.js';
+import { fetchSettings } from '../context/settingsStore.js';
 import { ICON_MAP } from '../components/iconMap.js';
 import {
   ActivityIcon, ChevronDownIcon, ClipboardIcon, FactoryIcon, LightningIcon,
@@ -30,14 +34,24 @@ function FactoryDetail() {
   const [categories, setCategories] = useState([]);
   const [allEquipment, setAllEquipment] = useState([]);
   const [measures, setMeasures] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [defaultOperatingHours, setDefaultOperatingHours] = useState('8000');
+  const [factoryRecords, setFactoryRecords] = useState([]);
+  const refreshFactoryRecords = () => fetchAllFactoryRecords().then(setFactoryRecords).catch(() => setFactoryRecords([]));
   useEffect(() => {
     fetchAllCategories().then(setCategories).catch(() => setCategories([]));
     fetchAllEquipment().then(setAllEquipment).catch(() => setAllEquipment([]));
     fetchAllMeasures().then(setMeasures).catch(() => setMeasures([]));
+    fetchAllHistory().then(setHistory).catch(() => setHistory([]));
+    fetchSettings().then((s) => setDefaultOperatingHours(s.defaultOperatingHours)).catch(() => {});
+    refreshFactoryRecords();
   }, []);
   const equipment = useMemo(() => allEquipment.filter((e) => e.factory === name), [allEquipment, name]);
-  const [meta, setMeta] = useState(() => getFactoryMeta(name));
-  const stats = useMemo(() => computeFactoryStats(name, allEquipment, measures), [name, allEquipment, measures]);
+  const meta = useMemo(() => getFactoryMeta(name, factoryRecords), [name, factoryRecords]);
+  const stats = useMemo(
+    () => computeFactoryStats(name, allEquipment, measures, history, defaultOperatingHours),
+    [name, allEquipment, measures, history, defaultOperatingHours]
+  );
 
   const [editModal, setEditModal] = useState(false);
   const [form, setForm] = useState({ description: '', province: '', image: '' });
@@ -68,9 +82,9 @@ function FactoryDetail() {
     }
   };
 
-  const handleSave = () => {
-    setFactoryMeta(name, { description: form.description.trim(), province: form.province.trim(), image: form.image });
-    setMeta(getFactoryMeta(name));
+  const handleSave = async () => {
+    await saveFactoryRecord(name, { description: form.description.trim(), province: form.province.trim(), image: form.image });
+    await refreshFactoryRecords();
     setEditModal(false);
   };
 

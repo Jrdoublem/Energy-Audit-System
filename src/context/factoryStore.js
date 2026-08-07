@@ -1,79 +1,66 @@
 import { createContext, useContext } from 'react';
-import { loadSettings } from './settingsStore.js';
+import {
+  collection, doc, getDocs, setDoc, deleteDoc,
+} from 'firebase/firestore';
+import { db } from '../firebase.js';
 
 export const FactoryContext = createContext(null);
 
 export const SELECTED_KEY = 'selectedFactory';
-export const MANUAL_FACTORIES_KEY = 'manualFactories';
-export const FACTORY_META_KEY = 'factoryMeta';
 
 // Every factory in the app is named "โรงงาน<something>" — new ones only ask
 // for the <something> and this gets prepended automatically.
 export const FACTORY_NAME_PREFIX = 'โรงงาน';
 
-// Factories manually registered by an admin (e.g. before any equipment
-// exists for them yet), separate from the ones implied by equipment records.
-export function loadManualFactories() {
-  try { return JSON.parse(localStorage.getItem(MANUAL_FACTORIES_KEY) || '[]'); } catch { return []; }
+// Factory records — backed by Firestore (collection 'factories', doc id =
+// factory name). A record only exists once a factory has been manually
+// added or edited (description/province/image); factories that only exist
+// because equipment references them have no record and fall back to empty
+// meta. `manual: true` marks factories registered before any equipment
+// exists for them yet (as opposed to ones only implied by equipment).
+const FACTORIES_COLLECTION = 'factories';
+
+export async function fetchAllFactoryRecords() {
+  const snap = await getDocs(collection(db, FACTORIES_COLLECTION));
+  return snap.docs.map((d) => ({ name: d.id, ...d.data() }));
 }
 
-export function saveManualFactories(list) {
-  localStorage.setItem(MANUAL_FACTORIES_KEY, JSON.stringify(list));
+export async function saveFactoryRecord(name, data) {
+  await setDoc(doc(db, FACTORIES_COLLECTION, name), data, { merge: true });
 }
 
-export function addManualFactory(name) {
-  const trimmed = name.trim();
-  if (!trimmed) return;
-  const existing = readFactories();
-  if (existing.includes(trimmed)) return;
-  saveManualFactories([...loadManualFactories(), trimmed]);
-}
-
-export function removeManualFactory(name) {
-  saveManualFactories(loadManualFactories().filter((f) => f !== name));
-}
-
-// Optional description/province per factory — kept separate from the name
-// list above since every factory (equipment-derived or manual) can have it.
-export function loadFactoryMeta() {
-  try { return JSON.parse(localStorage.getItem(FACTORY_META_KEY) || '{}'); } catch { return {}; }
-}
-
-export function saveFactoryMeta(map) {
-  localStorage.setItem(FACTORY_META_KEY, JSON.stringify(map));
-}
-
-export function getFactoryMeta(name) {
-  const map = loadFactoryMeta();
-  return { description: '', province: '', image: '', ...map[name] };
-}
-
-export function setFactoryMeta(name, meta) {
-  const map = loadFactoryMeta();
-  map[name] = { ...map[name], ...meta };
-  saveFactoryMeta(map);
+export async function deleteFactoryRecord(name) {
+  await deleteDoc(doc(db, FACTORIES_COLLECTION, name));
 }
 
 // allowedFactories is null for admin (unrestricted) or an engineer's
-// assigned-factory list — pass it to scope the option list to what
-// that engineer is actually allowed to see. `equipmentList` is fetched by
-// the caller (equipment now lives in Firestore, not localStorage).
-export function readFactories(allowedFactories, equipmentList = []) {
+// assigned-factory list — pass it to scope the option list to what that
+// engineer is actually allowed to see. `equipmentList` and `factoryRecords`
+// are both fetched by the caller (both now live in Firestore).
+export function readFactories(allowedFactories, equipmentList = [], factoryRecords = []) {
   const fromEquipment = equipmentList.map((e) => e.factory).filter(Boolean);
-  const all = [...new Set([...fromEquipment, ...loadManualFactories()])];
+  const manualNames = factoryRecords.filter((f) => f.manual).map((f) => f.name);
+  const all = [...new Set([...fromEquipment, ...manualNames])];
   if (!allowedFactories) return all;
   return all.filter((f) => allowedFactories.includes(f));
 }
 
+export function getFactoryMeta(name, factoryRecords = []) {
+  const rec = factoryRecords.find((f) => f.name === name);
+  return { description: rec?.description || '', province: rec?.province || '', image: rec?.image || '' };
+}
+
 // Aggregate stats for one factory, derived from data already saved elsewhere
 // (equipment list, saved calculation results, saved measures) — there is no
-// separate "factory energy" figure stored anywhere. `equipmentList` and
-// `measuresList` are fetched by the caller (both now live in Firestore);
-// history still lives in localStorage for now.
-export function computeFactoryStats(factoryName, equipmentList = [], measuresList = []) {
+// separate "factory energy" figure stored anywhere. `equipmentList`,
+// `measuresList`, and `historyList` are all fetched by the caller (all now
+// live in Firestore). `defaultOperatingHours` is the admin-configured
+// calculation default (fetched by the caller via settingsStore) — used to
+// annualize the latest calculated power draw for equipment with no measure
+// evaluation yet.
+export function computeFactoryStats(factoryName, equipmentList = [], measuresList = [], historyList = [], defaultOperatingHours = 8000) {
   const equipment = equipmentList;
-  let history = [];
-  try { history = JSON.parse(localStorage.getItem('history') || '[]'); } catch { /* ignore */ }
+  const history = historyList;
   const measures = measuresList;
 
   const equipCount = equipment.filter((e) => e.factory === factoryName).length;
@@ -92,7 +79,7 @@ export function computeFactoryStats(factoryName, equipmentList = [], measuresLis
       }
     });
 
-  const operatingHours = parseFloat(loadSettings().defaultOperatingHours) || 0;
+  const operatingHours = parseFloat(defaultOperatingHours) || 0;
   const energyKWhYear = Object.values(latestByEquip).reduce((sum, h) => {
     const power = parseFloat(h.result?.powerBaseline ?? h.result?.powerCF ?? 0);
     return power > 0 ? sum + power * operatingHours : sum;

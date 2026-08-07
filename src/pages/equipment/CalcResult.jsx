@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDownIcon } from '../../components/icons';
 import { useTheme } from '../../context/themeStore.js';
 import { useLang } from '../../context/languageStore.js';
+import { saveHistoryItem } from '../../context/historyStore.js';
 import MeasureSelect from '../history/MeasureSelect';
 
 function getGradeConfig(t) {
@@ -92,8 +93,7 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
     { key: 'efficiency', label: 'Efficiency', value: result.efficiency || '-', unit: 'kW/TR' },
   ];
 
-  const handleSave = () => {
-    const existing = JSON.parse(localStorage.getItem('history') || '[]');
+  const handleSave = async () => {
     const record = {
       id: Date.now(),
       savedAt: new Date().toISOString(),
@@ -101,7 +101,7 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
       item,
       result,
     };
-    localStorage.setItem('history', JSON.stringify([record, ...existing]));
+    await saveHistoryItem(record);
     navigate('/history');
   };
 

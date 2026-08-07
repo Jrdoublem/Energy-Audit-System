@@ -4,6 +4,8 @@ import AppLayout from '../layouts/AppLayout';
 import { matchesFactory, useFactory, computeFactoryStats } from '../context/factoryStore.js';
 import { fetchAllEquipment } from '../context/equipmentStore.js';
 import { fetchAllMeasures } from '../context/measuresStore.js';
+import { fetchAllHistory } from '../context/historyStore.js';
+import { fetchSettings } from '../context/settingsStore.js';
 import { getSession } from '../context/authStore.js';
 import { useTheme } from '../context/themeStore.js';
 import { useLang } from '../context/languageStore.js';
@@ -426,11 +428,15 @@ function Dashboard() {
   const [measures, setMeasures] = useState([]);
   useEffect(() => { fetchAllMeasures().then(setMeasures).catch(() => setMeasures([])); }, []);
 
+  const [history, setHistory] = useState([]);
+  useEffect(() => { fetchAllHistory().then(setHistory).catch(() => setHistory([])); }, []);
+
+  const [defaultOperatingHours, setDefaultOperatingHours] = useState('8000');
+  useEffect(() => { fetchSettings().then((s) => setDefaultOperatingHours(s.defaultOperatingHours)).catch(() => {}); }, []);
+
   const factoryOverviewRows = useMemo(() => {
-    let history = [];
-    try { history = JSON.parse(localStorage.getItem('history') || '[]'); } catch { /* ignore */ }
     return factories.map((name) => {
-      const stats = computeFactoryStats(name, equipment, measures);
+      const stats = computeFactoryStats(name, equipment, measures, history, defaultOperatingHours);
       const measuredIds = new Set(
         history
           .filter((h) => (h.item || h.equipment || {}).factory === name)
@@ -447,7 +453,7 @@ function Dashboard() {
         categories,
       };
     });
-  }, [factories, equipment, measures]);
+  }, [factories, equipment, measures, history, defaultOperatingHours]);
 
   // Headline dashboard numbers, aggregated from every saved measure's
   // evalData (kept generic across categories: boiler measures represent
@@ -571,12 +577,9 @@ function Dashboard() {
   }, [scopedMeasures]);
 
   const recentHistory = useMemo(() => {
-    try {
-      const all = JSON.parse(localStorage.getItem('history') || '[]');
-      const scoped = all.filter((r) => matchesFactory((r.item || r.equipment || {}).factory, selectedFactory, allowedFactories));
-      return scoped.slice(0, 5);
-    } catch { return []; }
-  }, [selectedFactory, allowedFactories]);
+    const scoped = history.filter((r) => matchesFactory((r.item || r.equipment || {}).factory, selectedFactory, allowedFactories));
+    return [...scoped].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).slice(0, 5);
+  }, [history, selectedFactory, allowedFactories]);
 
   return (
     <AppLayout

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import AppLayout from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { fetchAllMeasures } from '../../context/measuresStore.js';
+import { fetchAllHistory, deleteHistoryItem } from '../../context/historyStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { GlassSearchInput, GlassSelect, PageHeader } from '../../components/ui';
 import CalcResult from '../equipment/CalcResult';
@@ -56,10 +57,12 @@ function History() {
   const [filterYear, setFilterYear]   = useState('');
   const [search, setSearch]           = useState('');
 
-  const [records, setRecords] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('history') || '[]'); }
-    catch { return []; }
-  });
+  const [records, setRecords] = useState([]);
+  useEffect(() => {
+    fetchAllHistory()
+      .then((list) => setRecords([...list].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt))))
+      .catch(() => setRecords([]));
+  }, []);
 
   const [allMeasures, setAllMeasures] = useState([]);
   useEffect(() => { fetchAllMeasures().then(setAllMeasures).catch(() => setAllMeasures([])); }, []);
@@ -74,13 +77,11 @@ function History() {
 
   const confirmDelete = (id) => setConfirmId(id);
 
-  const deleteRecord = () => {
-    setRecords((prev) => {
-      const next = prev.filter((r) => r.id !== confirmId);
-      localStorage.setItem('history', JSON.stringify(next));
-      return next;
-    });
+  const deleteRecord = async () => {
+    const id = confirmId;
     setConfirmId(null);
+    await deleteHistoryItem(id);
+    setRecords((prev) => prev.filter((r) => r.id !== id));
   };
 
   const availableYears = useMemo(() =>
@@ -108,10 +109,10 @@ function History() {
   const monthKeys = Object.keys(groups);
 
   return (
-    <AppLayout hideHeader fullBleed>
+    <AppLayout hideHeader fullBleed mobileHeaderCenter>
       <div className="flex flex-col min-h-screen">
 
-        <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle}>
+        <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-4">
           <GlassSelect value={filterMonth} onChange={setFilterMonth}>
             <option value="" className="text-gray-800">{t.history.allMonths}</option>
             {t.history.months.map((m, i) => (

@@ -5,6 +5,7 @@
 // unchanged. Firebase Auth persistence is set to session-scope to match.
 import {
   signInWithEmailAndPassword, signOut, setPersistence, browserSessionPersistence,
+  updatePassword, reauthenticateWithCredential, EmailAuthProvider,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -19,7 +20,7 @@ function ensurePersistence() {
   return persistenceReady;
 }
 
-async function fetchUserProfile(uid) {
+export async function fetchUserProfile(uid) {
   const snap = await getDoc(doc(db, USERS_COLLECTION, uid));
   return snap.exists() ? { id: uid, ...snap.data() } : null;
 }
@@ -36,7 +37,12 @@ export async function login(email, password) {
       return null;
     }
     const session = {
-      id: profile.id, name: profile.name, role: profile.role, factories: profile.factories || [],
+      id: profile.id,
+      name: profile.name,
+      email: profile.email || email,
+      photoURL: profile.photoURL || '',
+      role: profile.role,
+      factories: profile.factories || [],
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
@@ -55,7 +61,30 @@ export function getSession() {
     const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
     if (saved && typeof saved === 'object') return saved;
   } catch { /* ignore corrupt data */ }
-  return { id: null, name: '', role: null, factories: [] };
+  return {
+    id: null, name: '', email: '', photoURL: '', role: null, factories: [],
+  };
+}
+
+// Merges a patch (e.g. { name, photoURL }) into the cached session after the
+// user edits their own profile, so the sidebar/menu avatar and name update
+// immediately without needing a re-login.
+export function updateSessionUser(patch) {
+  const session = { ...getSession(), ...patch };
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  return session;
+}
+
+// Self-service password change for the currently signed-in user. Firebase
+// requires a "recent" login for this, so we re-authenticate with the
+// current password first rather than surfacing the raw auth/requires-recent-
+// login error.
+export async function changeOwnPassword(currentPassword, newPassword) {
+  const user = auth.currentUser;
+  if (!user || !user.email) throw new Error('not-signed-in');
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
 }
 
 // ---- Admin user directory (Settings page) ----

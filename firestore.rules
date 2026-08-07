@@ -15,7 +15,12 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      // Admins can write anything; a signed-in user editing their own doc
+      // (Profile page) may only touch name/photoURL — never role/factories.
+      allow write: if isAdmin() || (
+        isSignedIn() && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL'])
+      );
     }
     match /categories/{categoryId} {
       allow read: if isSignedIn();
@@ -32,6 +37,22 @@ service cloud.firestore {
     match /catalog/{itemId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
+    }
+    match /history/{historyId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /reports/{reportId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /factories/{factoryId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

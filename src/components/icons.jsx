@@ -32,4 +32,7 @@ export {
   Package as BoxIcon,
   LogOut as LogoutIcon,
   BarChart3 as CompressorIcon,
+  Camera as CameraIcon,
+  Sparkles as SparkleIcon,
+  Printer as PrinterIcon,
 } from 'lucide-react';

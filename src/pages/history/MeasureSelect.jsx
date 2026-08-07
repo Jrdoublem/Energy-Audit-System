@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Combobox, Select } from '../../components/Dropdown.jsx';
-import { loadSettings } from '../../context/settingsStore.js';
+import { DEFAULT_SETTINGS, fetchSettings } from '../../context/settingsStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { saveMeasureItem, deleteMeasureItem } from '../../context/measuresStore.js';
 
@@ -373,11 +373,10 @@ function EvalSection({ basePower, category, evalData, onChange, onSave }) {
 }
 
 /* ── Form panel — slides in from right on mount ── */
-function FormPanel({ activeMeasure, onChangeMeasure, measures, item, result, formData, onChange, onSave, initialEvalData }) {
+function FormPanel({ activeMeasure, onChangeMeasure, measures, item, result, formData, onChange, onSave, initialEvalData, appDefaults }) {
   const { t } = useLang();
   const ref = useRef(null);
   const [showEval, setShowEval]   = useState(!!initialEvalData?.percentReduction);
-  const appDefaults = loadSettings();
   const [evalData, setEvalData]   = useState({
     percentReduction: '',
     operatingHours:   appDefaults.defaultOperatingHours,
@@ -503,7 +502,10 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
   const [activeMeasure, setActiveMeasure] = useState('');
   const [formData, setFormData]           = useState({});
   const [savedMeasures, setSavedMeasures] = useState(initialSavedMeasures || []);
+  const [appDefaults, setAppDefaults]     = useState(DEFAULT_SETTINGS);
   const activeMeasureId = useRef(null);
+
+  useEffect(() => { fetchSettings().then(setAppDefaults).catch(() => {}); }, []);
 
   const grade    = t.common.grade[result?.grade] || '-';
   const measures = MEASURES[item?.category] || ALL_MEASURES;
@@ -710,6 +712,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
           onChange={handleFormChange}
           onSave={handleSave}
           initialEvalData={editEvalData}
+          appDefaults={appDefaults}
         />
       )}
     </div>

@@ -1,21 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel, SectionHeader } from '../components/ui';
-import { loadSettings, saveSettings } from '../context/settingsStore.js';
+import { DEFAULT_SETTINGS, fetchSettings, saveSettingsItem } from '../context/settingsStore.js';
 import {
   getSession, fetchAllUsers, createUserAccount, updateUserAccount, deleteUserAccount,
 } from '../context/authStore.js';
-import { readFactories } from '../context/factoryStore.js';
+import { readFactories, fetchAllFactoryRecords } from '../context/factoryStore.js';
 import { fetchAllEquipment, fetchAllCategories } from '../context/equipmentStore.js';
 import { useLang } from '../context/languageStore.js';
 import {
-  ArrowRightIcon, ClipboardIcon, DocumentIcon, FactoryIcon, GearIcon, PencilIcon, TrashIcon,
+  ArrowRightIcon, ClipboardIcon, FactoryIcon, GearIcon, PencilIcon, TrashIcon,
 } from '../components/icons';
 import { ICON_MAP } from '../components/iconMap.js';
-
-const BACKUP_KEYS = ['history', 'reports', 'settings'];
 
 function initialsOf(name) {
   const parts = (name || '').trim().split(/\s+/);
@@ -44,15 +42,12 @@ function Field({ label, unit, value, onChange }) {
 function Settings() {
   const { t, lang, setLang } = useLang();
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
   const session = getSession();
   const roleLabel = session.role === 'admin' ? t.nav.roleAdmin : t.settings.roleEngineer;
   const isAdmin = session.role === 'admin';
 
-  const [settings, setSettings] = useState(loadSettings);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [savedFlash, setSavedFlash] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [importMsg, setImportMsg] = useState('');
 
   const [users, setUsers] = useState([]);
   const [userModal, setUserModal] = useState(false);
@@ -64,67 +59,27 @@ function Settings() {
   const [deleteUserError, setDeleteUserError] = useState('');
   const [equipment, setEquipment] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [factoryRecords, setFactoryRecords] = useState([]);
 
   useEffect(() => {
     fetchAllUsers().then(setUsers).catch(() => setUsers([]));
     fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
     fetchAllCategories().then((cats) => setCategories(cats.filter((c) => c.key !== 'all'))).catch(() => setCategories([]));
+    fetchAllFactoryRecords().then(setFactoryRecords).catch(() => setFactoryRecords([]));
+    fetchSettings().then(setSettings).catch(() => {});
   }, []);
 
-  const allFactories = useMemo(() => readFactories(undefined, equipment), [equipment]);
+  const allFactories = useMemo(() => readFactories(undefined, equipment, factoryRecords), [equipment, factoryRecords]);
 
   const equipCounts = useMemo(
     () => equipment.reduce((acc, e) => { acc[e.category] = (acc[e.category] || 0) + 1; return acc; }, {}),
     [equipment]
   );
 
-  const handleSaveSettings = () => {
-    saveSettings(settings);
+  const handleSaveSettings = async () => {
+    await saveSettingsItem(settings);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 2000);
-  };
-
-  const handleExport = () => {
-    const data = {};
-    BACKUP_KEYS.forEach((k) => {
-      const raw = localStorage.getItem(k);
-      if (raw != null) { try { data[k] = JSON.parse(raw); } catch { /* skip invalid */ } }
-    });
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `enginspect-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        BACKUP_KEYS.forEach((k) => {
-          if (data[k] !== undefined) localStorage.setItem(k, JSON.stringify(data[k]));
-        });
-        setImportMsg(t.settings.importSuccess);
-        setSettings(loadSettings());
-      } catch {
-        setImportMsg(t.settings.importError);
-      }
-      setTimeout(() => setImportMsg(''), 4000);
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  const handleClearAll = () => {
-    BACKUP_KEYS.forEach((k) => localStorage.removeItem(k));
-    setConfirmClear(false);
-    setSettings(loadSettings());
-    navigate('/home');
   };
 
   const openAddUser = () => {
@@ -210,11 +165,19 @@ function Settings() {
         {/* โปรไฟล์ผู้ใช้งาน */}
         <Panel className="p-5">
           <SectionHeader title={t.settings.userProfile} />
-          <div className="flex items-center gap-3">
-            <span className="w-12 h-12 rounded-xl bg-[#1C4D8D] border border-[#38BDF8]/20 flex items-center justify-center text-white text-base font-bold shrink-0 font-mono">
-              {initialsOf(session.name)}
-            </span>
-            <div className="min-w-0">
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="w-full flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+          >
+            {session.photoURL ? (
+              <img src={session.photoURL} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+            ) : (
+              <span className="w-12 h-12 rounded-xl bg-[#1C4D8D] border border-[#38BDF8]/20 flex items-center justify-center text-white text-base font-bold shrink-0 font-mono">
+                {initialsOf(session.name)}
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{session.name}</p>
               <p className="text-xs text-[#4988C4] font-medium tracking-wide uppercase mt-0.5">{roleLabel}</p>
               {!isAdmin && (
@@ -223,7 +186,8 @@ function Settings() {
                 </p>
               )}
             </div>
-          </div>
+            <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0" />
+          </button>
         </Panel>
 
         {/* เกี่ยวกับระบบ */}
@@ -406,75 +370,7 @@ function Settings() {
             })}
           </div>
         </Panel>
-
-        {/* สำรองข้อมูล */}
-        <Panel className="p-5 lg:col-span-2">
-          <SectionHeader title={t.settings.systemDataBackup} />
-          <p className="text-xs text-gray-500 dark:text-[#7E93AF] mb-4 leading-relaxed">
-            {t.settings.backupDesc}
-          </p>
-          <div className="flex flex-wrap gap-2.5 mb-2">
-            <button
-              type="button"
-              onClick={handleExport}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-semibold transition-colors"
-            >
-              <DocumentIcon className="w-4 h-4" />
-              {t.settings.exportData}
-            </button>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-[#4988C4] text-[#0F2854] dark:text-[#E7EEF7] text-sm font-semibold transition-colors"
-            >
-              {t.settings.importData}
-            </button>
-            <input ref={fileInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
-            <button
-              type="button"
-              onClick={() => setConfirmClear(true)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-500/20 hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 dark:text-red-400 text-sm font-semibold transition-colors ml-auto"
-            >
-              <TrashIcon className="w-4 h-4" />
-              {t.settings.clearAllData}
-            </button>
-          </div>
-          {importMsg && <p className="text-xs font-medium text-[#4988C4] mt-2">{importMsg}</p>}
-        </Panel>
       </div>
-
-      {/* Confirm clear-all dialog */}
-      {confirmClear && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6 font-sans">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmClear(false)} />
-          <div className="relative bg-white dark:bg-[#111F35] rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
-            <div className="flex flex-col items-center gap-2 text-center">
-              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500">
-                <TrashIcon className="w-6 h-6" />
-              </div>
-              <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.settings.clearAllConfirm}</p>
-              <p className="text-sm text-gray-400 dark:text-[#7E93AF]">{t.settings.clearAllWarning}</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmClear(false)}
-                className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
-              >
-                {t.common.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={handleClearAll}
-                className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors"
-              >
-                {t.settings.clearData}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
 
       {/* เพิ่ม/แก้ไขผู้ใช้งาน */}
       {userModal && createPortal(

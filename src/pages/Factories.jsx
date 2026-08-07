@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel } from '../components/ui';
 import {
-  addManualFactory, computeFactoryStats, FACTORY_NAME_PREFIX, getFactoryMeta,
-  loadManualFactories, readFactories, removeManualFactory, setFactoryMeta,
+  computeFactoryStats, FACTORY_NAME_PREFIX, getFactoryMeta,
+  fetchAllFactoryRecords, saveFactoryRecord, deleteFactoryRecord, readFactories,
 } from '../context/factoryStore.js';
 import { getSession, fetchAllUsers } from '../context/authStore.js';
 import { fetchAllEquipment } from '../context/equipmentStore.js';
 import { fetchAllMeasures } from '../context/measuresStore.js';
+import { fetchAllHistory } from '../context/historyStore.js';
+import { fetchSettings } from '../context/settingsStore.js';
 import {
   ActivityIcon, ArrowRightIcon, FactoryIcon, LightningIcon,
   MapPinIcon, PencilIcon, PlusIcon, TrashIcon, TrendDownIcon,
@@ -129,14 +131,18 @@ function Factories() {
   useEffect(() => { fetchAllEquipment().then(setEquipment).catch(() => setEquipment([])); }, []);
   const [measures, setMeasures] = useState([]);
   useEffect(() => { fetchAllMeasures().then(setMeasures).catch(() => setMeasures([])); }, []);
+  const [history, setHistory] = useState([]);
+  useEffect(() => { fetchAllHistory().then(setHistory).catch(() => setHistory([])); }, []);
+  const [defaultOperatingHours, setDefaultOperatingHours] = useState('8000');
+  useEffect(() => { fetchSettings().then((s) => setDefaultOperatingHours(s.defaultOperatingHours)).catch(() => {}); }, []);
   const [users, setUsers] = useState([]);
   useEffect(() => { fetchAllUsers().then(setUsers).catch(() => setUsers([])); }, []);
-  const [manualFactories, setManualFactories] = useState(() => loadManualFactories());
-  // manualFactories isn't passed into readFactories (it re-reads localStorage
-  // internally) — it's listed purely to force a recompute after add/remove.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const factories = useMemo(() => readFactories(undefined, equipment), [equipment, manualFactories]);
-  const [, forceUpdate] = useReducer((c) => c + 1, 0);
+
+  const [factoryRecords, setFactoryRecords] = useState([]);
+  const refreshFactoryRecords = () => fetchAllFactoryRecords().then(setFactoryRecords).catch(() => setFactoryRecords([]));
+  useEffect(() => { refreshFactoryRecords(); }, []);
+
+  const factories = useMemo(() => readFactories(undefined, equipment, factoryRecords), [equipment, factoryRecords]);
 
   const [modalMode, setModalMode] = useState(null); // null | 'add' | 'edit'
   const [editingName, setEditingName] = useState(null);
@@ -145,12 +151,10 @@ function Factories() {
   const [imageError, setImageError] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
 
-  // Not memoized: getFactoryMeta/computeFactoryStats read storage fresh on
-  // every call, and forceUpdate() re-renders after the modal writes meta.
   const rows = factories.map((f) => ({
     name: f,
-    meta: getFactoryMeta(f),
-    stats: computeFactoryStats(f, equipment, measures),
+    meta: getFactoryMeta(f, factoryRecords),
+    stats: computeFactoryStats(f, equipment, measures, history, defaultOperatingHours),
   }));
 
   const assignedEngineerCount = users.filter((u) => u.role === 'engineer' && (u.factories || []).length > 0).length;
@@ -164,7 +168,7 @@ function Factories() {
   };
 
   const openEditFactory = (name) => {
-    const meta = getFactoryMeta(name);
+    const meta = getFactoryMeta(name, factoryRecords);
     setModalMode('edit');
     setEditingName(name);
     setForm({ name: '', description: meta.description || '', province: meta.province || '', image: meta.image || '' });
@@ -192,26 +196,24 @@ function Factories() {
     }
   };
 
-  const handleSaveFactory = () => {
+  const handleSaveFactory = async () => {
     if (modalMode === 'add') {
       const suffix = form.name.trim();
       if (!suffix) { setFormError(t.factories.errFactoryName); return; }
       const fullName = `${FACTORY_NAME_PREFIX} ${suffix}`;
       if (factories.includes(fullName)) { setFormError(t.factories.errFactoryExists); return; }
-      addManualFactory(fullName);
-      setFactoryMeta(fullName, { description: form.description.trim(), province: form.province.trim(), image: form.image });
-      setManualFactories(loadManualFactories());
+      await saveFactoryRecord(fullName, { description: form.description.trim(), province: form.province.trim(), image: form.image, manual: true });
     } else if (modalMode === 'edit' && editingName) {
-      setFactoryMeta(editingName, { description: form.description.trim(), province: form.province.trim(), image: form.image });
+      await saveFactoryRecord(editingName, { description: form.description.trim(), province: form.province.trim(), image: form.image });
     }
-    forceUpdate();
+    await refreshFactoryRecords();
     setModalMode(null);
   };
 
-  const handleRemoveFactory = (name) => {
-    const meta = getFactoryMeta(name);
-    removeManualFactory(name);
-    setManualFactories(loadManualFactories());
+  const handleRemoveFactory = async (name) => {
+    const meta = getFactoryMeta(name, factoryRecords);
+    await deleteFactoryRecord(name);
+    await refreshFactoryRecords();
     if (meta.image) deleteImage(meta.image);
   };
 
@@ -256,7 +258,7 @@ function Factories() {
               <FactoryCard
                 key={r.name}
                 row={r}
-                removable={r.stats.equipCount === 0 && manualFactories.includes(r.name)}
+                removable={r.stats.equipCount === 0 && factoryRecords.some((fr) => fr.name === r.name && fr.manual)}
                 onEdit={openEditFactory}
                 onDelete={handleRemoveFactory}
               />

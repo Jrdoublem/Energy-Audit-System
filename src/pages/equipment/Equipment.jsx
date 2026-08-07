@@ -8,8 +8,9 @@ import { getSession } from '../../context/authStore.js';
 import {
   fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem,
 } from '../../context/equipmentStore.js';
+import { fetchAllCatalogItems } from '../../context/catalogStore.js';
 import { GlassSearchInput, GlassSelect, ShellActionButton } from '../../components/ui';
-import { Combobox } from '../../components/Dropdown.jsx';
+import { Combobox, Select } from '../../components/Dropdown.jsx';
 import CalcModal from './CalcModal';
 import {
   BoxIcon,
@@ -28,6 +29,9 @@ import {
   TrashIcon,
   SnowflakeIcon,
   UserIcon,
+  ClockIcon,
+  SparkleIcon,
+  ActivityIcon,
 } from '../../components/icons';
 import { ICON_MAP } from '../../components/iconMap.js';
 
@@ -54,19 +58,29 @@ const BRAND_OPTIONS = {
 function getFormFields(t) {
   return [
     { key: 'id',          label: t.equipment.fieldId,          placeholder: t.equipment.egId, required: true },
-    { key: 'factory',     label: t.equipment.fieldFactory,     placeholder: '',            required: true },
+    { key: 'factory',     label: t.equipment.fieldFactory,     placeholder: t.equipment.pickOrType, type: 'datalist', required: true },
     { key: 'building',    label: t.equipment.fieldBuilding,     placeholder: '' },
     { key: 'brandModel',  label: t.equipment.fieldBrandModel,  placeholder: t.equipment.pickOrType, type: 'datalist' },
     { key: 'installDate', label: t.equipment.fieldInstallDate, placeholder: '', type: 'month' },
+    { key: 'installYear', label: t.equipment.fieldInstallYear, placeholder: t.equipment.selectYear, type: 'year' },
     { key: 'owner',       label: t.equipment.fieldOwner,        placeholder: '' },
   ];
+}
+
+const CURRENT_YEAR = new Date().getFullYear();
+const INSTALL_YEAR_OPTIONS = Array.from({ length: 41 }, (_, i) => String(CURRENT_YEAR - i));
+
+function equipmentAgeYears(installYear) {
+  if (!installYear) return null;
+  const age = CURRENT_YEAR - parseInt(installYear, 10);
+  return Number.isFinite(age) && age >= 0 ? age : null;
 }
 
 function Equipment() {
   const { t } = useLang();
   const navigate = useNavigate();
   const formFields = getFormFields(t);
-  const { selectedFactory, allowedFactories, refreshFactories } = useFactory();
+  const { selectedFactory, allowedFactories, refreshFactories, factories: factoryNames } = useFactory();
   const session = getSession();
   const isAdmin = session.role === 'admin';
   const [categories, setCategories] = useState([]);
@@ -82,12 +96,28 @@ function Equipment() {
   const [sortOrder, setSortOrder] = useState('newest');
   const [saving, setSaving] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const [catalogItems, setCatalogItems] = useState([]);
   const catScrollRef = useRef(null);
 
   useEffect(() => {
     fetchAllCategories().then(setCategories).catch(() => setCategories([]));
     fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
+    fetchAllCatalogItems().then(setCatalogItems).catch(() => setCatalogItems([]));
   }, []);
+
+  const catalogOptionsForCategory = catalogItems
+    .filter((c) => c.catId === form.category)
+    .map((c) => ({ value: c.id, label: `${c.brand || ''} ${c.model || ''}`.trim() || c.id }));
+
+  const applyCatalogPreset = (catalogId) => {
+    const item = catalogItems.find((c) => c.id === catalogId);
+    if (!item) return;
+    setForm((p) => ({
+      ...p,
+      brandModel: `${item.brand || ''} ${item.model || ''}`.trim(),
+      ...(item.specificPower ? { chillerEfficiency: String(item.specificPower) } : {}),
+    }));
+  };
 
   const activeCategory = categories.find((c) => c.key === category);
 
@@ -229,7 +259,18 @@ function Equipment() {
   );
 
   return (
-    <AppLayout hideHeader fullBleed mobileHeaderRight mobileRailOffset={!railCollapsed} topSlot={mobileTabSwitcher}>
+    <AppLayout
+      hideHeader
+      fullBleed
+      mobileHeaderRight
+      mobileRailOffset={!railCollapsed}
+      topSlot={mobileTabSwitcher}
+      hideRoleBadge
+      hideFactorySelect
+      factoryRowBelowTitle
+      showFactoryPill
+      factoryPillAlign="right"
+    >
       <div className="flex min-h-dvh lg:min-h-screen lg:gap-4">
 
         {/* Rail — pinned full-height on the left on mobile (edge flush with the
@@ -252,7 +293,7 @@ function Equipment() {
                 }`}
               >
                 <Icon className="w-7 h-7 shrink-0" />
-                <span className="text-[11px] font-semibold leading-tight text-center">{label}</span>
+                <span className="w-full min-w-0 text-[11px] font-semibold leading-tight text-center break-words [overflow-wrap:anywhere]">{label}</span>
               </button>
             );
           })}
@@ -344,10 +385,22 @@ function Equipment() {
                         {item.brandModel}/{item.building}
                       </p>
                       <p className="flex items-center gap-1 text-xs text-gray-400 dark:text-[#7E93AF] min-w-0 mt-0.5">
-                        <MapPinIcon className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{item.factory}</span>
-                        <UserIcon className="w-3 h-3 shrink-0 ml-1.5" />
+                        <span className="hidden lg:flex items-center gap-1 shrink-0">
+                          <MapPinIcon className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{item.factory}</span>
+                        </span>
+                        <UserIcon className="w-3 h-3 shrink-0 lg:ml-1.5" />
                         <span className="truncate">{item.owner}</span>
+                        {item.installYear && (
+                          <>
+                            <ClockIcon className="w-3 h-3 shrink-0 ml-1.5" />
+                            <span className="truncate shrink-0">
+                              {equipmentAgeYears(item.installYear) === 0
+                                ? t.equipment.ageThisYear
+                                : `${equipmentAgeYears(item.installYear)} ${t.equipment.ageYearsSuffix}`}
+                            </span>
+                          </>
+                        )}
                       </p>
                     </div>
                     {/* Mobile: edit+delete row / calc below — Desktop: all in a row */}
@@ -454,60 +507,94 @@ function Equipment() {
 
               {form.category === 'chiller' && (
                 <div className="border-2 border-[#0F2854]/15 dark:border-white/10 rounded-2xl p-4 flex flex-col gap-4">
+                  {/* Section header */}
+                  <div className="flex items-center gap-1.5">
+                    <GearIcon className="w-4 h-4 text-[#4988C4] shrink-0" />
+                    <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.machineSpecTitle}</p>
+                  </div>
+
+                  {/* Catalog quick-fill */}
+                  {catalogOptionsForCategory.length > 0 && (
+                    <div className="bg-gradient-to-br from-[#EAF4FC] dark:from-white/5 to-white dark:to-transparent border border-[#4988C4]/20 dark:border-white/10 rounded-xl p-3.5">
+                      <p className="flex items-center gap-1.5 text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-2">
+                        <SparkleIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" />
+                        {t.equipment.catalogQuickFillTitle}
+                      </p>
+                      <Select
+                        value=""
+                        onChange={applyCatalogPreset}
+                        options={catalogOptionsForCategory}
+                        placeholder={t.equipment.catalogQuickFillPlaceholder}
+                        triggerClassName="flex items-center gap-1.5 w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5]"
+                      />
+                      <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] mt-2 leading-relaxed">{t.equipment.catalogQuickFillHint}</p>
+                    </div>
+                  )}
+
                   {/* Chiller Type */}
                   <div>
-                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Chiller Type</label>
+                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.chillerTypeLabel}</label>
                     <div className="flex gap-2">
-                      {['AIR COOL', 'WATER COOL'].map((type) => (
+                      {[
+                        { value: 'AIR COOL', label: t.equipment.chillerTypeAirCool },
+                        { value: 'WATER COOL', label: t.equipment.chillerTypeWaterCool },
+                      ].map(({ value, label }) => (
                         <button
-                          key={type}
+                          key={value}
                           type="button"
-                          onClick={() => setForm((p) => ({ ...p, chillerType: type }))}
+                          onClick={() => setForm((p) => ({ ...p, chillerType: value }))}
                           className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                            form.chillerType === type
+                            form.chillerType === value
                               ? 'border-[#0F2854] bg-[#0F2854] text-white'
                               : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
                           }`}
                         >
-                          {type}
+                          {label}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Cooling Capacity */}
-                  <div>
-                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Cooling Capacity (RT)</label>
-                    <input
-                      type="number"
-                      value={form.coolingCapacity || ''}
-                      onChange={(e) => setForm((p) => ({ ...p, coolingCapacity: e.target.value }))}
-                      placeholder={t.equipment.egCoolingCapacity}
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                    />
-                  </div>
-
-                  {/* Power & Efficiency */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Cooling Capacity / Power / Efficiency */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Power (kW)</label>
-                      <input
-                        type="number"
-                        value={form.chillerPower || ''}
-                        onChange={(e) => setForm((p) => ({ ...p, chillerPower: e.target.value }))}
-                        placeholder={t.equipment.egPower}
-                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                      />
+                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.coolingCapacityLabel}</label>
+                      <div className="relative">
+                        <SnowflakeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4988C4] shrink-0 pointer-events-none" />
+                        <input
+                          type="number"
+                          value={form.coolingCapacity || ''}
+                          onChange={(e) => setForm((p) => ({ ...p, coolingCapacity: e.target.value }))}
+                          placeholder={t.equipment.egCoolingCapacity}
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base font-mono text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                        />
+                      </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Efficiency (kW/RT)</label>
-                      <input
-                        type="number"
-                        value={form.chillerEfficiency || ''}
-                        onChange={(e) => setForm((p) => ({ ...p, chillerEfficiency: e.target.value }))}
-                        placeholder={t.equipment.egEfficiency}
-                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                      />
+                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.powerLabel}</label>
+                      <div className="relative">
+                        <LightningIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4988C4] shrink-0 pointer-events-none" />
+                        <input
+                          type="number"
+                          value={form.chillerPower || ''}
+                          onChange={(e) => setForm((p) => ({ ...p, chillerPower: e.target.value }))}
+                          placeholder={t.equipment.egPower}
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base font-mono text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.efficiencyLabel}</label>
+                      <div className="relative">
+                        <ActivityIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4988C4] shrink-0 pointer-events-none" />
+                        <input
+                          type="number"
+                          value={form.chillerEfficiency || ''}
+                          onChange={(e) => setForm((p) => ({ ...p, chillerEfficiency: e.target.value }))}
+                          placeholder={t.equipment.egEfficiency}
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base font-mono text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -519,7 +606,7 @@ function Equipment() {
                       value={form.electricityCost || ''}
                       onChange={(e) => setForm((p) => ({ ...p, electricityCost: e.target.value }))}
                       placeholder={t.equipment.egCost}
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base font-mono text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                     />
                   </div>
                 </div>
@@ -527,20 +614,25 @@ function Equipment() {
 
               {form.category === 'compressor' && (
                 <div>
-                  <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">Compressor Type</label>
+                  <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.compressorTypeLabel}</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {['Screw', 'Centrifugal', 'VSD', 'Magnetic'].map((type) => (
+                    {[
+                      { value: 'Screw', label: t.equipment.compressorTypeScrew },
+                      { value: 'Centrifugal', label: t.equipment.compressorTypeCentrifugal },
+                      { value: 'VSD', label: t.equipment.compressorTypeVSD },
+                      { value: 'Magnetic', label: t.equipment.compressorTypeMagnetic },
+                    ].map(({ value, label }) => (
                       <button
-                        key={type}
+                        key={value}
                         type="button"
-                        onClick={() => setForm((p) => ({ ...p, compressorType: type }))}
+                        onClick={() => setForm((p) => ({ ...p, compressorType: value }))}
                         className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                          form.compressorType === type
+                          form.compressorType === value
                             ? 'border-[#0F2854] bg-[#0F2854] text-white'
                             : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
                         }`}
                       >
-                        {type}
+                        {label}
                       </button>
                     ))}
                   </div>
@@ -558,7 +650,7 @@ function Equipment() {
                       <Combobox
                         value={form[f.key] || ''}
                         onChange={(v) => { setForm((p) => ({ ...p, [f.key]: v })); setFormErrors((p) => ({ ...p, [f.key]: false })); }}
-                        options={BRAND_OPTIONS[form.category] || Object.values(BRAND_OPTIONS).flat()}
+                        options={f.key === 'factory' ? factoryNames : (BRAND_OPTIONS[form.category] || Object.values(BRAND_OPTIONS).flat())}
                         placeholder={f.placeholder}
                         inputClassName={`w-full px-4 py-2.5 pr-9 rounded-xl bg-gray-50 dark:bg-white/5 border text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 ${formErrors[f.key] ? 'border-red-400 focus:ring-red-300' : 'border-gray-200 dark:border-white/10 focus:ring-[#4988C4]'}`}
                       />
@@ -579,6 +671,23 @@ function Equipment() {
                       onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
                       className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                     />
+                  ) : f.type === 'year' ? (
+                    <>
+                      <Select
+                        value={form[f.key] || ''}
+                        onChange={(v) => setForm((p) => ({ ...p, [f.key]: v }))}
+                        options={INSTALL_YEAR_OPTIONS}
+                        placeholder={f.placeholder}
+                        triggerClassName="flex items-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5]"
+                      />
+                      {form[f.key] && (
+                        <p className="text-xs text-[#4988C4] mt-1.5">
+                          {equipmentAgeYears(form[f.key]) === 0
+                            ? t.equipment.ageThisYear
+                            : `${t.equipment.ageLabel} ${equipmentAgeYears(form[f.key])} ${t.equipment.ageYearsSuffix}`}
+                        </p>
+                      )}
+                    </>
                   ) : (
                     <input
                       value={form[f.key] || ''}

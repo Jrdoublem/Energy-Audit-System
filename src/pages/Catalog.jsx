@@ -192,7 +192,20 @@ function Catalog() {
   };
 
   return (
-    <AppLayout title={t.catalog.pageTitle} hideFactorySelect factoryRowBelowTitle>
+    <AppLayout
+      title={
+        <span className="flex items-center gap-2.5 flex-wrap">
+          <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
+          {t.catalog.pageTitle}
+          <span className="text-[11px] lg:text-xs font-bold px-2.5 py-1 rounded-full bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] tracking-wide whitespace-nowrap">
+            {items.length} {t.catalog.itemsCountSuffix}
+          </span>
+        </span>
+      }
+      hideFactorySelect
+      factoryRowBelowTitle
+      hideRoleBadge
+    >
       <div className="flex flex-col gap-5 max-w-3xl lg:max-w-none">
         <div className="lg:hidden flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/5 p-1">
           <button
@@ -265,15 +278,21 @@ function Catalog() {
       </div>
 
       {modalMode && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6 font-sans" onClick={closeModal}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div
-            className="catalog-modal-panel relative bg-white dark:bg-[#111F35] rounded-3xl shadow-2xl w-full p-6 flex flex-col gap-4"
+            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md flex flex-col"
+            style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">
-              {modalMode === 'add' ? t.catalog.addItem : t.catalog.editItemTitle}
-            </p>
+            <div className="flex items-center justify-between px-6 sm:px-7 pt-6 pb-4 shrink-0">
+              <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">
+                {modalMode === 'add' ? t.catalog.addItem : t.catalog.editItemTitle}
+              </p>
+              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors font-bold">✕</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-2 flex flex-col gap-4">
 
             <div>
               <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-2 block">{t.equipment.equipmentCategory}</label>
@@ -403,19 +422,14 @@ function Catalog() {
 
             {formError && <p className="text-xs text-red-500">{formError}</p>}
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
-              >
-                {t.common.cancel}
-              </button>
+            </div>
+
+            <div className="px-6 sm:px-7 py-4 border-t border-gray-100 dark:border-white/8 shrink-0">
               <button
                 type="button"
                 onClick={handleSaveItem}
                 disabled={imageUploading}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-semibold text-sm transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
                 {modalMode === 'add' ? <PlusIcon className="w-4 h-4" /> : null}
                 {modalMode === 'add' ? t.common.add : t.common.save}

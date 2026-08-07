@@ -2,7 +2,10 @@
 // project keys never get committed to the repo. See .env.example for the
 // keys this needs; get them from Firebase console > Project settings.
 import { initializeApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import {
+  initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager,
+  connectFirestoreEmulator,
+} from 'firebase/firestore';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
@@ -20,7 +23,20 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const db = getFirestore(app);
+// Offline persistence: cache reads in IndexedDB and queue writes made while
+// offline, syncing automatically once the connection comes back — lets
+// engineers keep reading/recording equipment data with no signal. Falls
+// back to the plain in-memory client if IndexedDB isn't available (some
+// private-browsing modes), so a lack of persistence never breaks the app.
+let db;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  });
+} catch {
+  db = getFirestore(app);
+}
+export { db };
 export const auth = getAuth(app);
 export const functions = getFunctions(app);
 export const storage = getStorage(app);

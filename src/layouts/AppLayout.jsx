@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import companyLogo from '../assets/Logo.png';
 import { useFactory } from '../context/factoryStore.js';
 import { getSession, logout as clearSession } from '../context/authStore.js';
 import { fetchAllEquipment } from '../context/equipmentStore.js';
 import { fetchAllCatalogItems } from '../context/catalogStore.js';
+import { fetchAllReports } from '../context/reportsStore.js';
+import { fetchAllHistory } from '../context/historyStore.js';
 import { useTheme } from '../context/themeStore.js';
 import { useLang } from '../context/languageStore.js';
 import { Select } from '../components/Dropdown.jsx';
@@ -113,7 +115,8 @@ function NavBadge({ count, active }) {
 
 function AppLayout({
   title, actions, children, hideHeader = false, fullBleed = false, hideFactorySelect = false,
-  mobileHeaderRight = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
+  mobileHeaderRight = false, mobileHeaderCenter = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
+  hideRoleBadge = false, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
 }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -130,23 +133,17 @@ function AppLayout({
   // visible without bringing back the full row.
   const [showScrollFactoryPill, setShowScrollFactoryPill] = useState(false);
   useEffect(() => {
-    if (!factoryRowBelowTitle) return undefined;
+    if (!factoryRowBelowTitle || !showFactoryPill) return undefined;
     const onScroll = () => setShowScrollFactoryPill(window.scrollY > 90);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [factoryRowBelowTitle]);
+  }, [factoryRowBelowTitle, showFactoryPill]);
   const currentFactoryLabel = selectedFactory
     || (session.role === 'engineer' ? t.nav.allFactoriesMine : t.nav.allFactories);
   const visibleNavSections = navSections.filter((s) => !s.adminOnly || session.role === 'admin');
   const visibleNavItems = visibleNavSections.flatMap((s) => s.items);
   const mobileNavItems = visibleNavItems.filter((item) => !item.mobileHidden);
 
-  const localCounts = useMemo(() => {
-    const readLen = (key) => {
-      try { return (JSON.parse(localStorage.getItem(key) || '[]') || []).length; } catch { return 0; }
-    };
-    return { reports: readLen('reports'), history: readLen('history') };
-  }, []);
   const [equipmentCount, setEquipmentCount] = useState(0);
   useEffect(() => {
     fetchAllEquipment().then((eq) => setEquipmentCount(eq.length)).catch(() => {});
@@ -155,11 +152,21 @@ function AppLayout({
   useEffect(() => {
     fetchAllCatalogItems().then((items) => setCatalogCount(items.length)).catch(() => {});
   }, []);
+  const [reportsCount, setReportsCount] = useState(0);
+  useEffect(() => {
+    fetchAllReports().then((items) => setReportsCount(items.length)).catch(() => {});
+  }, []);
+  const [historyCount, setHistoryCount] = useState(0);
+  useEffect(() => {
+    fetchAllHistory().then((items) => setHistoryCount(items.length)).catch(() => {});
+  }, []);
   const getCount = (countKey) => {
     if (countKey === 'factories') return factories.length;
     if (countKey === 'equipment') return equipmentCount;
     if (countKey === 'catalog') return catalogCount;
-    return localCounts[countKey] || 0;
+    if (countKey === 'reports') return reportsCount;
+    if (countKey === 'history') return historyCount;
+    return 0;
   };
 
   const handleLogout = () => {
@@ -224,8 +231,10 @@ function AppLayout({
               collapsed ? 'justify-center' : ''
             }`}
           >
-            <span className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-sm font-bold shrink-0 font-mono shadow-md ring-1 ring-white/10">
-              {initialsOf(session.name)}
+            <span className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-sm font-bold shrink-0 font-mono shadow-md ring-1 ring-white/10 overflow-hidden">
+              {session.photoURL ? (
+                <img src={session.photoURL} alt="" className="w-full h-full object-cover" />
+              ) : initialsOf(session.name)}
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0F2854]" />
             </span>
             {!collapsed && (
@@ -247,13 +256,9 @@ function AppLayout({
                 <div className="px-3 py-2 border-b border-white/8">
                   <p className="text-[9px] font-mono text-white/30 tracking-widest uppercase">{t.nav.userMenu}</p>
                 </div>
-                <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }}
+                <button type="button" onClick={() => { setMenuOpen(false); navigate('/profile'); }}
                   className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
                   {t.nav.profile}
-                </button>
-                <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }}
-                  className="w-full text-left px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                  {t.nav.settings}
                 </button>
                 <div className="h-px bg-white/8" />
                 <button type="button" onClick={handleLogout}
@@ -362,9 +367,9 @@ function AppLayout({
         } ${collapsed ? 'lg:ml-20' : 'lg:ml-72'}`}
       >
         {/* Persistent role badge + factory selector — mobile: every page; desktop: only pages without a header row (it merges into the title row otherwise) */}
-        {!factoryRowBelowTitle && (
-          <div className={`${hideHeader ? 'flex lg:absolute lg:z-20 lg:top-6 lg:right-10 lg:w-auto lg:max-w-none' : 'flex lg:hidden'} ${mobileHeaderRight ? 'justify-end' : ''} w-full max-w-md items-center gap-2 px-6 pt-4`}>
-            <RoleBadge role={roleLabel} stretch={mobileHeaderRight} />
+        {!factoryRowBelowTitle && !(hideRoleBadge && hideFactorySelect) && (
+          <div className={`${hideHeader ? 'flex lg:absolute lg:z-20 lg:top-6 lg:right-10 lg:w-auto lg:max-w-none' : 'flex lg:hidden'} ${mobileHeaderRight ? 'justify-end' : mobileHeaderCenter ? 'justify-center' : ''} w-full max-w-md items-center gap-2 px-6 pt-4`}>
+            {!hideRoleBadge && <RoleBadge role={roleLabel} stretch={mobileHeaderRight} />}
             {!hideFactorySelect && (
               <FactorySelect
                 selectedFactory={selectedFactory}
@@ -389,7 +394,7 @@ function AppLayout({
         >
           {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] shrink-0">{title}</h1>}
           <div className="hidden lg:flex flex-1 items-center justify-end gap-3">
-            <RoleBadge role={roleLabel} />
+            {!hideRoleBadge && <RoleBadge role={roleLabel} />}
             {!hideFactorySelect && (
               <FactorySelect
                 selectedFactory={selectedFactory}
@@ -409,8 +414,10 @@ function AppLayout({
                 onClick={() => setMenuOpen((v) => !v)}
                 className="flex items-center gap-2.5 p-1 rounded-full bg-white dark:bg-[#111F35] hover:bg-[#F4F7FC] dark:hover:bg-white/5 shadow-sm transition-colors"
               >
-                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-white text-sm font-bold shrink-0">
-                  {initialsOf(session.name)}
+                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-white text-sm font-bold shrink-0 overflow-hidden">
+                  {session.photoURL ? (
+                    <img src={session.photoURL} alt="" className="w-full h-full object-cover" />
+                  ) : initialsOf(session.name)}
                 </span>
             </button>
             <span className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap bg-[#0F2854] text-white text-xs font-medium px-2.5 py-1.5 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-40">
@@ -424,21 +431,11 @@ function AppLayout({
                     type="button"
                     onClick={() => {
                       setMenuOpen(false);
-                      navigate('/settings');
+                      navigate('/profile');
                     }}
                     className="w-full text-left px-4 py-2.5 text-gray-700 dark:text-[#C3D2E5] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     {t.nav.profile}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      navigate('/settings');
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-gray-700 dark:text-[#C3D2E5] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                  >
-                    {t.nav.settings}
                   </button>
                   <button
                     type="button"
@@ -461,9 +458,9 @@ function AppLayout({
           </div>
         </div>
 
-        {factoryRowBelowTitle && (
+        {factoryRowBelowTitle && !(hideRoleBadge && hideFactorySelect) && (
           <div className="flex lg:hidden justify-center w-full max-w-md items-center gap-2 px-6 pb-2 -mt-[10px]">
-            <RoleBadge role={roleLabel} />
+            {!hideRoleBadge && <RoleBadge role={roleLabel} />}
             {!hideFactorySelect && (
               <FactorySelect
                 selectedFactory={selectedFactory}
@@ -477,8 +474,12 @@ function AppLayout({
           </div>
         )}
 
-        {factoryRowBelowTitle && !hideFactorySelect && (
-          <div className={`fixed top-3 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:top-6 lg:right-10 z-30 transition-all duration-200 ${
+        {factoryRowBelowTitle && showFactoryPill && (
+          <div className={`fixed top-3 lg:top-6 z-30 transition-all duration-200 ${
+            factoryPillAlign === 'right'
+              ? 'right-4 lg:right-10'
+              : 'left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10'
+          } ${
             showScrollFactoryPill ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3 pointer-events-none'
           }`}>
             <div className="flex items-center gap-1.5 bg-white/95 dark:bg-[#111F35]/95 backdrop-blur-md rounded-full pl-2.5 pr-3.5 py-1.5 lg:pl-3.5 lg:pr-4 lg:py-2 text-xs lg:text-sm font-semibold text-[#0F2854] dark:text-[#E7EEF7] border border-[#0F2854]/10 dark:border-white/10 shadow-md">

@@ -1,23 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AppLayout from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { GlassSearchInput, PageHeader } from '../../components/ui';
-import { ChevronDownIcon } from '../../components/icons';
+import { ChevronDownIcon, PrinterIcon } from '../../components/icons';
+import { fetchAllReports, saveReportItem, deleteReportItem } from '../../context/reportsStore.js';
+import ReportPrintPreview from './ReportPrintPreview.jsx';
 
 /* ── helpers ── */
 function formatDate(iso, monthsShort) {
   const d = new Date(iso);
   return `${d.getDate()} ${monthsShort[d.getMonth()]} ${d.getFullYear() + 543}`;
-}
-
-function loadReports() {
-  try { return JSON.parse(localStorage.getItem('reports') || '[]'); } catch { return []; }
-}
-
-function saveReports(list) {
-  localStorage.setItem('reports', JSON.stringify(list));
 }
 
 /* ── shared UI ── */
@@ -69,7 +63,12 @@ function StepHeader({ num, title }) {
 function ReportList({ onOpen, onNew }) {
   const { t } = useLang();
   const { selectedFactory, allowedFactories } = useFactory();
-  const [reports, setReports] = useState(loadReports);
+  const [reports, setReports] = useState([]);
+  useEffect(() => {
+    fetchAllReports()
+      .then((list) => setReports([...list].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))))
+      .catch(() => setReports([]));
+  }, []);
   const [search, setSearch]   = useState('');
 
   const filtered = reports.filter((r) => {
@@ -83,17 +82,16 @@ function ReportList({ onOpen, onNew }) {
     );
   });
 
-  const handleDelete = (id, e) => {
+  const handleDelete = async (id, e) => {
     e.stopPropagation();
-    const next = reports.filter((r) => r.id !== id);
-    saveReports(next);
-    setReports(next);
+    setReports((prev) => prev.filter((r) => r.id !== id));
+    await deleteReportItem(id);
   };
 
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <PageHeader title={t.report.pageTitle} subtitle={t.report.subtitle}>
+      <PageHeader title={t.report.pageTitle} subtitle={t.report.subtitle} className="-mt-6 lg:-mt-4">
         <GlassSearchInput value={search} onChange={setSearch} placeholder={t.report.searchPlaceholder} className="w-full" />
       </PageHeader>
 
@@ -196,6 +194,8 @@ function ReportForm({ initData, onBack }) {
       responsible:   item.owner                            || '',
       consultant:    '',
       approver:      '',
+      summary:       '',
+      additionalNotes: '',
     };
   });
 
@@ -213,46 +213,70 @@ function ReportForm({ initData, onBack }) {
       })
   );
 
-  const set = (key) => (val) => setForm((p) => ({ ...p, [key]: val }));
+  const isDirty = useRef(false);
+  const set = (key) => (val) => { isDirty.current = true; setForm((p) => ({ ...p, [key]: val })); };
 
-  /* auto-save draft on every change */
+  /* auto-save draft on every change — debounced so typing doesn't fire a
+     Firestore write per keystroke. Gated on isDirty so merely opening an
+     existing (already 'done') report for viewing — with no actual edits —
+     doesn't silently flip its status back to 'draft'. (A plain "skip the
+     first effect run" ref doesn't work here: React StrictMode's dev-only
+     double-invoke of effects consumes that guard on the throwaway first
+     mount, leaving the real mount free to fire the save.) */
+  const draftTimer = useRef(null);
   useEffect(() => {
-    const existing = loadReports();
-    const idx      = existing.findIndex((r) => r.id === reportId);
-    const record   = {
-      id:        reportId,
-      status:    'draft',
-      updatedAt: new Date().toISOString(),
-      item, result, measures, form,
-    };
-    if (idx !== -1) { existing[idx] = { ...existing[idx], ...record }; }
-    else            { existing.unshift(record); }
-    saveReports(existing);
+    if (!isDirty.current) return undefined;
+    clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      saveReportItem({
+        id: reportId,
+        status: 'draft',
+        updatedAt: new Date().toISOString(),
+        item, result, measures, form,
+      });
+    }, 800);
+    return () => clearTimeout(draftTimer.current);
   }, [form, item, result, measures, reportId]);
 
-  const handleSave = () => {
-    const existing = loadReports();
-    const idx      = existing.findIndex((r) => r.id === reportId);
-    const record   = { id: reportId, status: 'done', updatedAt: new Date().toISOString(), item, result, measures, form };
-    if (idx !== -1) existing[idx] = record;
-    else existing.unshift(record);
-    saveReports(existing);
+  const handleSave = async () => {
+    clearTimeout(draftTimer.current);
+    await saveReportItem({ id: reportId, status: 'done', updatedAt: new Date().toISOString(), item, result, measures, form });
     onBack();
   };
+
+  const [showPreview, setShowPreview] = useState(false);
 
   return (
     <div className="flex flex-col min-h-screen">
 
       {/* Back button */}
-      <div className="shrink-0 px-5 pt-14 lg:pt-6 pb-2">
+      <div className="shrink-0 flex items-center gap-3 px-5 pt-14 lg:pt-6 pb-2">
         <button
           type="button"
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-white dark:bg-[#111F35] shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 flex items-center justify-center text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
+          className="w-9 h-9 rounded-full bg-white dark:bg-[#111F35] shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 flex items-center justify-center text-[#0F2854] dark:text-[#E7EEF7] transition-colors shrink-0"
         >
           <ChevronDownIcon className="w-5 h-5 rotate-90" />
         </button>
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white dark:bg-[#111F35] shadow-sm hover:bg-[#F4F7FC] dark:hover:bg-white/5 text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
+        >
+          <PrinterIcon className="w-3.5 h-3.5" />
+          {t.report.previewPrintButton}
+        </button>
       </div>
+
+      {showPreview && (
+        <ReportPrintPreview
+          item={item}
+          result={result}
+          measures={measures}
+          form={form}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
 
       {/* Equipment card */}
       <div className="mx-5 rounded-2xl bg-[#0F2854] px-4 py-4 mb-5 shadow-md">
@@ -291,6 +315,11 @@ function ReportForm({ initData, onBack }) {
             <Field label={t.report.fieldObjective} value={form.objective}     onChange={set('objective')}     span2 textarea />
           </SubSection>
 
+          <SubSection title={t.report.sectionSummaryNotes}>
+            <Field label={t.report.fieldSummary} value={form.summary || ''} onChange={set('summary')} placeholder={t.report.summaryPlaceholder} span2 textarea />
+            <Field label={t.report.fieldAdditionalNotes} value={form.additionalNotes || ''} onChange={set('additionalNotes')} placeholder={t.report.notesPlaceholder} span2 textarea />
+          </SubSection>
+
           <SubSection title={t.report.sectionStakeholders}>
             <Field label={t.equipment.fieldOwner} value={form.responsible} onChange={set('responsible')} span2 auto={autoFields.has('responsible')} />
             <Field label={t.report.fieldConsultant}    value={form.consultant}  onChange={set('consultant')} />
@@ -323,7 +352,7 @@ function Report() {
   const [editing, setEditing] = useState(state ? { ...state } : null);
 
   return (
-    <AppLayout hideHeader fullBleed>
+    <AppLayout hideHeader fullBleed mobileHeaderCenter>
       {editing ? (
         <ReportForm initData={editing} onBack={() => setEditing(null)} />
       ) : (
