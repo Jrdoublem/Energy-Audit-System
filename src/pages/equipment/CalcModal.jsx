@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Panel } from '../../components/ui';
 import {
   ArrowLeftIcon,
@@ -79,6 +79,13 @@ export default function CalcModal({ item, onClose }) {
   const [calcResult, setCalcResult] = useState(null);
   const [fieldUnits, setFieldUnits] = useState(INITIAL_FIELD_UNITS);
   const [flowUnit, setFlowUnit] = useState('GPM');
+
+  // Calculate is usually pressed after scrolling deep into a long form —
+  // jump back to the top so the result (which replaces the form entirely)
+  // is visible immediately instead of landing mid-scroll.
+  useEffect(() => {
+    if (calcResult) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [calcResult]);
 
   const toggleFieldUnit = (key) => {
     const currentUnit = fieldUnits[key];
@@ -235,9 +242,16 @@ export default function CalcModal({ item, onClose }) {
     <div className="max-w-4xl lg:max-w-5xl mx-auto w-full py-6 space-y-6 font-sans">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
+      <div className="flex items-start sm:items-center gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex sm:hidden items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm shrink-0"
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
             คำนวณประสิทธิภาพอุปกรณ์ ({item.id})
           </h2>
           <p className="text-sm lg:text-base text-gray-400 dark:text-[#7E93AF] mt-0.5">
@@ -247,7 +261,7 @@ export default function CalcModal({ item, onClose }) {
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
+          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm shrink-0"
         >
           <ArrowLeftIcon className="w-4 h-4" />
           ยกเลิก / ย้อนกลับ
@@ -279,11 +293,11 @@ export default function CalcModal({ item, onClose }) {
         </div>
 
         {isChiller && (
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10">
             <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0]">
               ประเภทชิลเลอร์ (Chiller Type)
             </label>
-            <div className="flex bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 gap-0.5">
+            <div className="flex bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 gap-0.5 self-start sm:self-auto">
               {['WATER COOL', 'AIR COOL'].map((type) => (
                 <button
                   key={type}
@@ -351,11 +365,11 @@ export default function CalcModal({ item, onClose }) {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mb-1.5">
               <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0]">
                 อัตราการไหล Ultraflow Sonic ({flowUnit})
               </label>
-              <div className="flex bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 gap-0.5">
+              <div className="flex bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 gap-0.5 self-start sm:self-auto">
                 {['GPM', 'm³/h'].map((unit) => (
                   <button
                     key={unit}
@@ -385,9 +399,9 @@ export default function CalcModal({ item, onClose }) {
       {/* SECTION 3: อุณหภูมิน้ำ / อากาศในระบบ */}
       {isChiller && (
         <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-emerald-500">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2 text-xs lg:text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
-              <DropletIcon className="w-4 h-4 text-emerald-500" />
+              <DropletIcon className="w-4 h-4 text-emerald-500 shrink-0" />
               อุณหภูมิในระบบ (TEMPERATURE READINGS)
             </div>
             <div className="flex items-center gap-2">

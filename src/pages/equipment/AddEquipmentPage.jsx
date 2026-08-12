@@ -4,8 +4,11 @@ import { Select } from '../../components/Dropdown.jsx';
 import { useLang } from '../../context/languageStore.js';
 import { fetchAllHistory } from '../../context/historyStore.js';
 import { getSession } from '../../context/authStore.js';
+import { fileToResizedDataUrl } from '../../utils/image.js';
+import { uploadImage } from '../../context/storageStore.js';
 import {
   ArrowLeftIcon,
+  CameraIcon,
   CheckIcon,
   ClipboardIcon,
   GearIcon,
@@ -67,7 +70,29 @@ export default function AddEquipmentPage({
     operatingHours: initialData.operatingHours || '8000',
     loadFactor: initialData.loadFactor || '0.8',
     owner: initialData.owner || '',
+    image: initialData.image || '',
   });
+
+  const [imageError, setImageError] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    setImageError('');
+    setImageUploading(true);
+    try {
+      const dataUrl = await fileToResizedDataUrl(file);
+      const url = await uploadImage(dataUrl, 'equipment');
+      setForm((p) => ({ ...p, image: url }));
+    } catch (err) {
+      console.error('Equipment image upload failed:', err);
+      setImageError('อัปโหลดรูปภาพไม่สำเร็จ');
+    } finally {
+      setImageUploading(false);
+    }
+  };
 
   const [commentsList, setCommentsList] = useState(() => initialData.comments || []);
   const [newCommentText, setNewCommentText] = useState('');
@@ -323,6 +348,35 @@ export default function AddEquipmentPage({
         </div>
       </Panel>
 
+      {/* SECTION 1.5: EQUIPMENT PHOTO */}
+      <Panel className="p-6 space-y-5 rounded-3xl">
+        <div className="flex items-center gap-2 text-xs lg:text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+          <CameraIcon className="w-4 h-4 text-[#4988C4]" />
+          รูปภาพอุปกรณ์ (EQUIPMENT PHOTO)
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 flex flex-col sm:flex-row items-center gap-4">
+          {form.image ? (
+            <img src={form.image} alt="" className="w-24 h-24 rounded-2xl object-cover bg-white dark:bg-white/10 shadow-sm shrink-0" />
+          ) : (
+            <div className="w-24 h-24 rounded-2xl bg-[#EAF4FC] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
+              <CameraIcon className="w-10 h-10" />
+            </div>
+          )}
+          <div className="flex-1 space-y-2 text-center sm:text-left">
+            <p className="text-xs lg:text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ถ่ายภาพสภาพอุปกรณ์ที่ตรวจวัด</p>
+            <p className="text-[11px] lg:text-xs text-gray-400 dark:text-[#7E93AF]">ใช้เป็นภาพก่อนปรับปรุง สำหรับเปรียบเทียบหลังดำเนินมาตรการ</p>
+            <label className={`inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-xs lg:text-sm font-bold text-[#4988C4] transition-colors ${
+              imageUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-[#EAF4FC] cursor-pointer'
+            }`}>
+              {imageUploading ? 'กำลังอัปโหลด...' : (form.image ? 'เปลี่ยนรูปภาพ' : 'เลือกรูปภาพ')}
+              <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" disabled={imageUploading} />
+            </label>
+            {imageError && <p className="text-xs text-rose-500">{imageError}</p>}
+          </div>
+        </div>
+      </Panel>
+
       {/* SECTION 2: SPECIFICATIONS & CATALOG PRESET */}
       <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-[#4988C4]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -497,7 +551,7 @@ export default function AddEquipmentPage({
             <textarea
               value={newCommentText}
               onChange={(e) => setNewCommentText(e.target.value)}
-              placeholder="พิมพ์ข้อความบันทึก เช่น เปลี่ยนน้ำมันเครื่อง, แก้ไขกำลังไฟฟ้า, ตรวจเช็คประจำปี..."
+              placeholder="พิมพ์ข้อความ..."
               rows={2}
               className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-purple-400 focus:outline-none resize-none"
             />

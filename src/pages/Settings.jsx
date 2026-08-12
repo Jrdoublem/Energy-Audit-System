@@ -6,7 +6,7 @@ import { getSession } from '../context/authStore.js';
 import { fetchAllEquipment, fetchAllCategories } from '../context/equipmentStore.js';
 import { useLang } from '../context/languageStore.js';
 import {
-  ArrowRightIcon, ClipboardIcon, FactoryIcon, GearIcon, ShieldIcon,
+  ArrowRightIcon, CalculatorIcon, ClipboardIcon, FactoryIcon, GearIcon, ShieldIcon,
 } from '../components/icons';
 import { ICON_MAP } from '../components/iconMap.js';
 
@@ -77,18 +77,23 @@ function Settings() {
           </button>
         </Panel>
 
-        {/* เกี่ยวกับระบบ */}
-        <Panel className="p-5">
-          <SectionHeader title={t.settings.aboutSystem} />
-          <div className="flex items-center gap-3">
+        {/* เครื่องมือคำนวณ — แบบโทรศัพท์เท่านั้น เพราะแบบคอมยังเข้าได้จาก sidebar อยู่แล้ว */}
+        <Panel className="p-5 lg:hidden">
+          <SectionHeader title={t.settings.calculatorTool} />
+          <button
+            type="button"
+            onClick={() => navigate('/calculator')}
+            className="w-full flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+          >
             <div className="w-9 h-9 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
-              <GearIcon className="w-4 h-4 text-white" />
+              <CalculatorIcon className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ENGINSPECT</p>
-              <p className="text-[10px] text-gray-400 dark:text-[#7E93AF] tracking-widest uppercase font-mono">v2.1.0 · Energy Audit System</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.settings.calculatorTool}</p>
+              <p className="text-xs text-gray-400 dark:text-[#7E93AF]">{t.settings.calculatorToolDesc}</p>
             </div>
-          </div>
+            <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0" />
+          </button>
         </Panel>
 
         {/* การตั้งค่าทั่วไป */}
@@ -189,6 +194,20 @@ function Settings() {
                 </div>
               );
             })}
+          </div>
+        </Panel>
+
+        {/* เกี่ยวกับระบบ */}
+        <Panel className="p-5 lg:col-span-2">
+          <SectionHeader title={t.settings.aboutSystem} />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
+              <GearIcon className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ENGINSPECT</p>
+              <p className="text-[10px] text-gray-400 dark:text-[#7E93AF] tracking-widest uppercase font-mono">v2.1.0 · Energy Audit System</p>
+            </div>
           </div>
         </Panel>
       </div>

@@ -12,6 +12,7 @@ import Equipment from './pages/equipment/Equipment';
 import Catalog from './pages/Catalog';
 import History from './pages/history/History';
 import Report from './pages/report/Report';
+import Calculator from './pages/Calculator';
 import Factories from './pages/Factories';
 import FactoryDetail from './pages/FactoryDetail';
 import Settings from './pages/Settings';
@@ -42,6 +43,7 @@ function App() {
               <Route path="/catalog" element={<RequireAuth><Catalog /></RequireAuth>} />
               <Route path="/history" element={<RequireAuth><History /></RequireAuth>} />
               <Route path="/reports" element={<RequireAuth><Report /></RequireAuth>} />
+              <Route path="/calculator" element={<RequireAuth><Calculator /></RequireAuth>} />
               <Route path="/factories" element={<RequireAuth><Factories /></RequireAuth>} />
               <Route path="/factories/:name" element={<RequireAuth><FactoryDetail /></RequireAuth>} />
               <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />

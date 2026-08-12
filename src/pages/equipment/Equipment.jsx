@@ -10,6 +10,7 @@ import {
   fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem,
 } from '../../context/equipmentStore.js';
 import { fetchAllCatalogItems } from '../../context/catalogStore.js';
+import { deleteImage } from '../../context/storageStore.js';
 import { Combobox, Select } from '../../components/Dropdown.jsx';
 import CalcModal from './CalcModal';
 import AddEquipmentPage from './AddEquipmentPage';
@@ -320,7 +321,9 @@ function Equipment() {
   const deleteEquipment = async () => {
     const id = confirmDeleteId;
     setConfirmDeleteId(null);
+    const removed = equipment.find((e) => e.id === id);
     await deleteEquipmentItem(id);
+    if (removed?.image) deleteImage(removed.image);
     setEquipment((prev) => prev.filter((e) => e.id !== id));
     await refreshFactories();
   };

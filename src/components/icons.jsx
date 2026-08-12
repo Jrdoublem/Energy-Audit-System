@@ -59,4 +59,5 @@ export {
   Filter as FilterIcon,
   PlugZap as PlugZapIcon,
   Container as ContainerIcon,
+  Delete as BackspaceIcon,
 } from 'lucide-react';

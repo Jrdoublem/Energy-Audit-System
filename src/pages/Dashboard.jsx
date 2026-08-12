@@ -881,7 +881,7 @@ function Dashboard() {
         <div className="flex items-center gap-2 flex-nowrap shrink-0">
           <button
             type="button"
-            onClick={() => setSelectedFactory(null)}
+            onClick={() => setSelectedFactory('')}
             className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
               !selectedFactory
                 ? 'bg-[#0F2854] text-white shadow-md'

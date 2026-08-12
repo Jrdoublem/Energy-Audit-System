@@ -12,6 +12,7 @@ import { useLang } from '../context/languageStore.js';
 import { Select } from '../components/Dropdown.jsx';
 import {
   BoxIcon,
+  CalculatorIcon,
   ChevronDownIcon,
   ClipboardIcon,
   ClockIcon,
@@ -79,6 +80,15 @@ const navSections = [
       // its own bottom-nav slot — the bar only fits so many icons there.
       { to: '/catalog', labelKey: 'catalog', icon: BoxIcon, countKey: 'catalog', mobileHidden: true },
       { to: '/history', labelKey: 'history', icon: ClockIcon, countKey: 'history' },
+    ],
+  },
+  {
+    key: 'tools',
+    items: [
+      // Reachable on mobile via a card on the Settings page instead of its
+      // own bottom-nav slot — same reasoning as catalog/factories, the bar
+      // only fits so many icons.
+      { to: '/calculator', labelKey: 'calculator', icon: CalculatorIcon, mobileHidden: true },
     ],
   },
   {
