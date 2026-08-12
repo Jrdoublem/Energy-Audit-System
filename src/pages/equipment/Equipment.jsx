@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../layouts/AppLayout';
+import { Panel } from '../../components/ui';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { getSession } from '../../context/authStore.js';
@@ -9,9 +10,9 @@ import {
   fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem,
 } from '../../context/equipmentStore.js';
 import { fetchAllCatalogItems } from '../../context/catalogStore.js';
-import { GlassSearchInput, GlassSelect, ShellActionButton } from '../../components/ui';
 import { Combobox, Select } from '../../components/Dropdown.jsx';
 import CalcModal from './CalcModal';
+import AddEquipmentPage from './AddEquipmentPage';
 import {
   BoxIcon,
   ChevronDownIcon,
@@ -32,6 +33,10 @@ import {
   ClockIcon,
   SparkleIcon,
   ActivityIcon,
+  SearchIcon,
+  LayoutGridIcon,
+  CloseIcon,
+  FactoryIcon,
 } from '../../components/icons';
 import { ICON_MAP } from '../../components/iconMap.js';
 
@@ -55,6 +60,15 @@ const BRAND_OPTIONS = {
   electrical: ['ABB ACS', 'ABB ACH', 'Siemens SINAMICS', 'Schneider ATV', 'Eaton PowerXL', 'GE AF-650', 'Legrand'],
 };
 
+const CATEGORY_BADGES = {
+  chiller: 'bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400 border-sky-200 dark:border-sky-500/20',
+  compressor: 'bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400 border-violet-200 dark:border-violet-500/20',
+  pump: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+  boiler: 'bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400 border-orange-200 dark:border-orange-500/20',
+  cooling: 'bg-teal-50 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400 border-teal-200 dark:border-teal-500/20',
+  electrical: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+};
+
 function getFormFields(t) {
   return [
     { key: 'id',          label: t.equipment.fieldId,          placeholder: t.equipment.egId, required: true },
@@ -76,6 +90,26 @@ function equipmentAgeYears(installYear) {
   return Number.isFinite(age) && age >= 0 ? age : null;
 }
 
+function StatCard({ label, value, unit, icon: Icon, accentColor }) {
+  return (
+    <Panel className="p-4 relative overflow-hidden flex flex-col justify-between group hover:shadow-md transition-all">
+      {accentColor && <span className="absolute top-0 left-0 right-0 h-1" style={{ background: accentColor }} />}
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs font-bold text-gray-500 dark:text-[#7E93AF]">{label}</p>
+        {Icon && (
+          <div className="w-8 h-8 rounded-xl bg-[#EEF3FB] dark:bg-white/5 flex items-center justify-center text-[#4988C4] shrink-0">
+            <Icon className="w-4 h-4" />
+          </div>
+        )}
+      </div>
+      <p className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono tracking-tight">
+        {value}
+        {unit && <span className="text-xs font-semibold text-gray-400 dark:text-[#7E93AF] ml-1">{unit}</span>}
+      </p>
+    </Panel>
+  );
+}
+
 function Equipment() {
   const { t } = useLang();
   const navigate = useNavigate();
@@ -87,7 +121,7 @@ function Equipment() {
   const [equipment, setEquipment] = useState([]);
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(null); // null | 'add' | 'add-category'
+  const [modal, setModal] = useState(null); // null | 'add' | 'add-category' | 'calc'
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
@@ -95,7 +129,6 @@ function Equipment() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [sortOrder, setSortOrder] = useState('newest');
   const [saving, setSaving] = useState(false);
-  const [railCollapsed, setRailCollapsed] = useState(false);
   const [catalogItems, setCatalogItems] = useState([]);
   const catScrollRef = useRef(null);
 
@@ -121,31 +154,44 @@ function Equipment() {
 
   const activeCategory = categories.find((c) => c.key === category);
 
-  const filtered = equipment
-    .filter((item) => {
-      if (!matchesFactory(item.factory, selectedFactory, allowedFactories)) return false;
-      if (category !== 'all' && item.category !== category) return false;
-      if (search && !item.id.toLowerCase().includes(search.toLowerCase())) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortOrder === 'az') return a.id.localeCompare(b.id, 'th');
-      if (sortOrder === 'za') return b.id.localeCompare(a.id, 'th');
-      if (sortOrder === 'num') {
-        const na = parseInt(a.id.match(/(\d+)$/)?.[1] || 0);
-        const nb = parseInt(b.id.match(/(\d+)$/)?.[1] || 0);
-        return na - nb;
-      }
-      if (sortOrder === 'numd') {
-        const na = parseInt(a.id.match(/(\d+)$/)?.[1] || 0);
-        const nb = parseInt(b.id.match(/(\d+)$/)?.[1] || 0);
-        return nb - na;
-      }
-      return 0;
-    });
+  // Equipment matching current factory filter
+  const factoryScopedEquipment = useMemo(() => {
+    return equipment.filter((item) => matchesFactory(item.factory, selectedFactory, allowedFactories));
+  }, [equipment, selectedFactory, allowedFactories]);
+
+  const filtered = useMemo(() => {
+    return factoryScopedEquipment
+      .filter((item) => {
+        if (category !== 'all' && item.category !== category) return false;
+        if (search) {
+          const q = search.toLowerCase();
+          const matchId = (item.id || '').toLowerCase().includes(q);
+          const matchModel = (item.brandModel || '').toLowerCase().includes(q);
+          const matchBuilding = (item.building || '').toLowerCase().includes(q);
+          const matchOwner = (item.owner || '').toLowerCase().includes(q);
+          const matchFactory = (item.factory || '').toLowerCase().includes(q);
+          if (!matchId && !matchModel && !matchBuilding && !matchOwner && !matchFactory) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortOrder === 'az') return (a.id || '').localeCompare(b.id || '', 'th');
+        if (sortOrder === 'za') return (b.id || '').localeCompare(a.id || '', 'th');
+        if (sortOrder === 'num') {
+          const na = parseInt((a.id || '').match(/(\d+)$/)?.[1] || 0);
+          const nb = parseInt((b.id || '').match(/(\d+)$/)?.[1] || 0);
+          return na - nb;
+        }
+        if (sortOrder === 'numd') {
+          const na = parseInt((a.id || '').match(/(\d+)$/)?.[1] || 0);
+          const nb = parseInt((b.id || '').match(/(\d+)$/)?.[1] || 0);
+          return nb - na;
+        }
+        return 0;
+      });
+  }, [factoryScopedEquipment, category, search, sortOrder]);
 
   const CATEGORY_PREFIX = { chiller: 'CH', compressor: 'AC', pump: 'PU', boiler: 'BO', cooling: 'CT', electrical: 'EL' };
-
   const CHILLER_DEFAULTS = { coolingCapacity: '1000', chillerPower: '650', chillerEfficiency: '0.65', electricityCost: '4.65' };
 
   const getNextId = (catKey) => {
@@ -153,7 +199,7 @@ function Equipment() {
     const used = new Set(
       equipment
         .filter((e) => e.category === catKey)
-        .map((e) => { const m = e.id.match(/(\d+)$/); return m ? parseInt(m[1]) : 0; })
+        .map((e) => { const m = (e.id || '').match(/(\d+)$/); return m ? parseInt(m[1]) : 0; })
     );
     let n = 1;
     while (used.has(n)) n++;
@@ -161,8 +207,13 @@ function Equipment() {
   };
 
   const openAddModal = () => {
-    const initCat = category !== 'all' ? category : null;
-    const base = initCat ? { category: initCat, id: getNextId(initCat) } : {};
+    const initCat = category !== 'all' ? category : 'chiller';
+    const base = {
+      category: initCat,
+      id: getNextId(initCat),
+      factory: selectedFactory || factoryNames[0] || '',
+      installYear: String(CURRENT_YEAR),
+    };
     setForm(initCat === 'chiller' ? { ...base, ...CHILLER_DEFAULTS } : base);
     setFormErrors({});
     setModal('add');
@@ -191,8 +242,6 @@ function Equipment() {
     setSaving(true);
     try {
       await saveEquipmentItem(form);
-      // Editing can change the id itself — since the id IS the Firestore doc
-      // key, that leaves the old doc behind as an orphan unless removed.
       if (editingId && form.id !== editingId) {
         await deleteEquipmentItem(editingId);
       }
@@ -236,487 +285,310 @@ function Equipment() {
     }
   };
 
-  const mobileTabSwitcher = (
-    <div className="lg:hidden w-full max-w-md px-6 pt-3">
-      <div className="flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/5 p-1">
-        <button
-          type="button"
-          className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap bg-white dark:bg-[#111F35] text-[#0F2854] dark:text-[#E7EEF7] shadow-sm"
-        >
-          <ClipboardIcon className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">{t.equipment.pageTitle}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/catalog')}
-          className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap text-gray-500 dark:text-[#7E93AF]"
-        >
-          <BoxIcon className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">{t.catalog.pageTitle}</span>
-        </button>
-      </div>
-    </div>
-  );
+  // Category counts in current factory scope
+  const categoryCounts = useMemo(() => {
+    const realCats = categories.filter((c) => c.key !== 'all');
+    return realCats.map((c) => {
+      const count = factoryScopedEquipment.filter((e) => e.category === c.key).length;
+      return { ...c, count };
+    });
+  }, [categories, factoryScopedEquipment]);
+
+  const uniqueFactoriesCount = useMemo(() => {
+    return new Set(equipment.map((e) => e.factory).filter(Boolean)).size;
+  }, [equipment]);
+
+  const avgAge = useMemo(() => {
+    const ages = factoryScopedEquipment.map((e) => equipmentAgeYears(e.installYear)).filter((a) => a !== null);
+    if (ages.length === 0) return 0;
+    return (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1);
+  }, [factoryScopedEquipment]);
 
   return (
     <AppLayout
-      hideHeader
-      fullBleed
-      mobileHeaderRight
-      mobileRailOffset={!railCollapsed}
-      topSlot={mobileTabSwitcher}
-      hideRoleBadge
-      hideFactorySelect
+      title={
+        <span className="flex items-center gap-2.5">
+          <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
+          {t.equipment.pageTitle}
+        </span>
+      }
       factoryRowBelowTitle
-      showFactoryPill
-      factoryPillAlign="right"
     >
-      <div className="flex min-h-dvh lg:min-h-screen lg:gap-4">
-
-        {/* Rail — pinned full-height on the left on mobile (edge flush with the
-            top of the screen); reverts to a normal in-flow sidebar on desktop.
-            On mobile it can be slid off-screen via railCollapsed + the handle below. */}
-        <div className={`fixed left-0 top-0 bottom-0 z-30 lg:static lg:z-auto lg:translate-x-0 flex flex-col gap-2.5 overflow-y-auto bg-white dark:bg-[#111F35] shadow-[4px_0_12px_rgba(15,40,84,0.06)] border-r border-[#EEF3FB] dark:border-white/8 shrink-0 w-20 lg:w-auto p-2.5 lg:p-3 transition-transform duration-300 ${
-          railCollapsed ? '-translate-x-full' : 'translate-x-0'
-        }`}>
-          {categories.map(({ key, label, iconKey }) => {
-            const Icon = ICON_MAP[iconKey] || ClipboardIcon;
-            const active = category === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                title={label}
-                onClick={() => setCategory(key)}
-                className={`relative w-full h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 transition-colors ${
-                  active ? 'bg-[#0F2854] text-white' : 'text-[#0F2854]/60 dark:text-[#7E93AF] hover:bg-[#F4F7FC] dark:hover:bg-white/5 hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
-                }`}
-              >
-                <Icon className="w-7 h-7 shrink-0" />
-                <span className="w-full min-w-0 text-[11px] font-semibold leading-tight text-center break-words [overflow-wrap:anywhere]">{label}</span>
-              </button>
-            );
-          })}
-          {isAdmin && (
-            <>
-              <div className="h-px bg-gray-100 dark:bg-white/5 my-1.5"></div>
-              <button
-                type="button"
-                title={t.equipment.addCategoryTooltip}
-                onClick={() => { setForm({}); setModal('add-category'); }}
-                className="w-full h-20 rounded-2xl flex flex-col items-center justify-center gap-1 px-1 text-[#0F2854]/60 hover:bg-[#F4F7FC] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors"
-              >
-                <PlusIcon className="w-7 h-7 shrink-0" />
-                <span className="text-[11px] font-semibold leading-tight text-center">{t.common.add}</span>
-              </button>
-            </>
-          )}
+      <div className="flex flex-col gap-6 w-full">
+        {modal === 'calc' && calcItem ? (
+          <CalcModal item={calcItem} onClose={closeModal} />
+        ) : modal === 'add' ? (
+          <AddEquipmentPage
+            initialData={form}
+            isEditing={!!editingId}
+            categoriesList={categories}
+            factoriesList={factoryNames}
+            catalogItems={catalogItems}
+            onCancel={closeModal}
+            onSave={async (data) => {
+              setForm(data);
+              await handleSave();
+            }}
+          />
+        ) : (
+          <>
+        {/* Top 4 Stat Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:gap-4">
+          <StatCard
+            label={selectedFactory ? `${t.equipment.allEquipment} (${selectedFactory})` : t.factories.totalEquipment}
+            value={factoryScopedEquipment.length}
+            unit={t.factories.units}
+            icon={ClipboardIcon}
+            accentColor="#4988C4"
+          />
+          <StatCard
+            label="หมวดหมู่อุปกรณ์"
+            value={categories.filter((c) => c.key !== 'all').length}
+            unit="หมวด"
+            icon={ActivityIcon}
+            accentColor="#38BDF8"
+          />
+          <StatCard
+            label="โรงงานที่เชื่อมต่อ"
+            value={uniqueFactoriesCount}
+            unit="แห่ง"
+            icon={FactoryIcon}
+            accentColor="#FACC15"
+          />
+          <StatCard
+            label="อายุใช้งานเฉลี่ย"
+            value={avgAge}
+            unit="ปี"
+            icon={ClockIcon}
+            accentColor="#4ADE80"
+          />
         </div>
 
-        {/* Mobile-only handle to slide the category rail off-screen / back — stays
-            put (doesn't move with the rail) so it's always reachable to reopen. */}
-        <button
-          type="button"
-          onClick={() => setRailCollapsed((v) => !v)}
-          title={railCollapsed ? t.common.expand : t.common.collapse}
-          className={`lg:hidden fixed top-1/2 -translate-y-1/2 z-30 w-6 h-11 rounded-r-xl bg-white dark:bg-[#111F35] border border-l-0 border-[#EEF3FB] dark:border-white/8 shadow-[4px_0_12px_rgba(15,40,84,0.06)] flex items-center justify-center text-[#0F2854]/50 dark:text-[#7E93AF] transition-[left] duration-300 ${
-            railCollapsed ? 'left-0' : 'left-20'
-          }`}
-        >
-          <ChevronDownIcon className={`w-4 h-4 shrink-0 transition-transform ${railCollapsed ? '-rotate-90' : 'rotate-90'}`} />
-        </button>
-
-        {/* Content */}
-        <div className="flex-1 p-4 lg:p-6 lg:pt-20 pb-28 lg:pb-6 pr-5 lg:pr-10 min-w-0 relative">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
-            <p className="text-xl font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.pageTitle}</p>
-            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-sm text-[#0F2854] dark:text-[#E7EEF7]">
-              {activeCategory?.label}
-            </span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2 mb-4">
-            <GlassSearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t.equipment.searchPlaceholder}
-            />
+        {/* Category Breakdown Filter Pills */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#4988C4]" />
+              {t.factories.categorySummary}
+            </h3>
             {isAdmin && (
-              <ShellActionButton onClick={openAddModal}>
-                <PlusIcon className="w-4 h-4" />
-                {t.equipment.addEquipment}
-              </ShellActionButton>
+              <button
+                type="button"
+                onClick={() => { setForm({}); setModal('add-category'); }}
+                className="text-xs font-semibold text-[#4988C4] hover:underline flex items-center gap-1"
+              >
+                <PlusIcon className="w-3.5 h-3.5" />
+                {t.equipment.addCategoryTitle}
+              </button>
             )}
           </div>
 
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-[#0F2854]/60 dark:text-[#7E93AF]">
-              {category === 'all' ? t.equipment.allEquipment : `${t.equipment.categoryList} ${activeCategory?.label}`} ({filtered.length})
-            </p>
-            <GlassSelect value={sortOrder} onChange={setSortOrder}>
-              <option value="newest" className="text-gray-800">{t.equipment.sortNewest}</option>
-              <option value="az" className="text-gray-800">A-Z</option>
-              <option value="za" className="text-gray-800">Z-A</option>
-              <option value="num" className="text-gray-800">{t.equipment.sortNumAsc}</option>
-              <option value="numd" className="text-gray-800">{t.equipment.sortNumDesc}</option>
-            </GlassSelect>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            {/* ALL filter card */}
+            <button
+              type="button"
+              onClick={() => setCategory('all')}
+              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+                category === 'all'
+                  ? 'border-[#4988C4] bg-[#EAF4FC] dark:bg-[#4988C4]/20 shadow-sm ring-2 ring-[#4988C4]/30'
+                  : 'border-[#E4EBF6] dark:border-white/10 bg-white dark:bg-[#111F35] hover:border-[#4988C4]/40'
+              }`}
+            >
+              <div className="flex justify-between items-start text-[#4988C4]">
+                <LayoutGridIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-[#8CA3C0] truncate">
+                  {t.equipment.allEquipment}
+                </p>
+                <p className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono mt-0.5">
+                  {factoryScopedEquipment.length} <span className="text-[10px] font-sans font-normal text-gray-400">{t.factories.units}</span>
+                </p>
+              </div>
+            </button>
+
+            {/* Category Cards */}
+            {categoryCounts.map((c) => {
+              const Icon = ICON_MAP[c.iconKey] || GearIcon;
+              const isSelected = category === c.key;
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setCategory(c.key)}
+                  className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+                    c.count === 0 ? 'opacity-50 hover:opacity-100' : ''
+                  } ${
+                    isSelected
+                      ? 'border-[#4988C4] bg-[#EAF4FC] dark:bg-[#4988C4]/20 shadow-sm ring-2 ring-[#4988C4]/30'
+                      : 'border-[#E4EBF6] dark:border-white/10 bg-white dark:bg-[#111F35] hover:border-[#4988C4]/40'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <Icon className="w-5 h-5 text-[#4988C4]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-[#8CA3C0] truncate" title={c.label}>
+                      {c.label}
+                    </p>
+                    <p className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono mt-0.5">
+                      {c.count} <span className="text-[10px] font-sans font-normal text-gray-400">{t.factories.units}</span>
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Toolbar Header (Search, Sort, Add) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-md">
+            <div className="relative w-full">
+              <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t.equipment.searchPlaceholder}
+                className="w-full pl-9 pr-8 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+              />
+              {search && (
+                <button type="button" onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <CloseIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <GearIcon className="w-10 h-10 mb-2 text-[#0F2854]/20 dark:text-[#7E93AF]/30" />
-              <p className="text-sm text-[#0F2854]/50 dark:text-[#7E93AF]">{t.equipment.noEquipmentFound}</p>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {filtered.map((item) => {
-                const ItemIcon = ICON_MAP[categories.find((c) => c.key === item.category)?.iconKey] || ClipboardIcon;
-                return (
-                  <div
-                    key={item.id}
-                    className="w-full flex items-center justify-between gap-3 bg-white dark:bg-[#111F35] rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-1.5 text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">
-                        <ItemIcon className="w-5 h-5 text-[#4988C4] shrink-0" />
-                        {item.id}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-[#7E93AF] truncate mt-0.5">
-                        {item.brandModel}/{item.building}
-                      </p>
-                      <p className="flex items-center gap-1 text-xs text-gray-400 dark:text-[#7E93AF] min-w-0 mt-0.5">
-                        <span className="hidden lg:flex items-center gap-1 shrink-0">
-                          <MapPinIcon className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{item.factory}</span>
-                        </span>
-                        <UserIcon className="w-3 h-3 shrink-0 lg:ml-1.5" />
-                        <span className="truncate">{item.owner}</span>
-                        {item.installYear && (
-                          <>
-                            <ClockIcon className="w-3 h-3 shrink-0 ml-1.5" />
-                            <span className="truncate shrink-0">
-                              {equipmentAgeYears(item.installYear) === 0
-                                ? t.equipment.ageThisYear
-                                : `${equipmentAgeYears(item.installYear)} ${t.equipment.ageYearsSuffix}`}
-                            </span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    {/* Mobile: edit+delete row / calc below — Desktop: all in a row */}
-                    <div className="flex flex-col items-end gap-1.5 shrink-0 lg:flex-row lg:items-center lg:gap-2">
-                      {isAdmin && (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(item)}
-                            title={t.common.edit}
-                            className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#0F2854] hover:text-white text-[#4988C4] flex items-center justify-center transition-colors"
-                          >
-                            <PencilIcon className="w-3 h-3 lg:w-4 lg:h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(item.id)}
-                            title={t.common.delete}
-                            className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center transition-colors"
-                          >
-                            <TrashIcon className="w-3 h-3 lg:w-4 lg:h-4" />
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => openCalcModal(item)}
-                        className="flex items-center gap-1.5 px-3 py-2 lg:px-4 lg:py-2.5 rounded-xl text-white text-xs lg:text-sm font-bold transition-all duration-200 hover:shadow-[0_4px_14px_rgba(15,40,84,0.35)] hover:-translate-y-0.5 active:translate-y-0"
-                        style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
-                      >
-                        <CalculatorIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0" />
-                        {t.equipment.calculate}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Modal: เพิ่มทะเบียนอุปกรณ์ */}
-      {modal === 'add' && createPortal(
-        <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-          <div
-            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg lg:max-w-3xl flex flex-col"
-            style={{ maxHeight: '90dvh' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 sm:px-7 pt-6 pb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#0F2854] flex items-center justify-center shrink-0">
-                  {editingId ? <PencilIcon className="w-4 h-4 text-white" /> : <PlusIcon className="w-4 h-4 text-white" />}
-                </div>
-                <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{editingId ? t.equipment.editEquipment : t.equipment.addEquipment}</p>
-              </div>
-              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#8CA3C0] transition-colors font-bold">✕</button>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 dark:text-[#7E93AF] font-medium hidden sm:inline">เรียงตาม:</span>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-xs font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+              >
+                <option value="newest">{t.equipment.sortNewest}</option>
+                <option value="az">A-Z</option>
+                <option value="za">Z-A</option>
+                <option value="num">{t.equipment.sortNumAsc}</option>
+                <option value="numd">{t.equipment.sortNumDesc}</option>
+              </select>
             </div>
 
-            {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-2 flex flex-col gap-4">
-              <div>
-                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-2 block">{t.equipment.equipmentCategory}</label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => catScrollRef.current?.scrollBy({ left: -160, behavior: 'smooth' })}
-                    className="hidden sm:flex absolute left-0 top-0 bottom-1 z-10 items-center pr-3 bg-gradient-to-r from-white dark:from-[#111F35] via-white/90 dark:via-[#111F35]/90 to-transparent"
-                  >
-                    <ChevronDownIcon className="w-4 h-4 text-[#0F2854] dark:text-[#E7EEF7] rotate-90" />
-                  </button>
-                  <div ref={catScrollRef} className="flex gap-2 overflow-x-auto pb-1 scrollbar-none sm:px-5">
-                    {categories.filter((c) => c.key !== 'all').map(({ key, label, iconKey }) => {
-                      const Icon = ICON_MAP[iconKey] || GearIcon;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => setForm((p) => ({ ...p, category: key, brandModel: '', id: getNextId(key), ...(key === 'chiller' ? CHILLER_DEFAULTS : {}) }))}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-colors text-sm font-semibold shrink-0 ${
-                            form.category === key
-                              ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
-                          }`}
-                        >
-                          <Icon className="w-3.5 h-3.5 shrink-0" />
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => catScrollRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}
-                    className="hidden sm:flex absolute right-0 top-0 bottom-1 z-10 items-center pl-3 bg-gradient-to-l from-white dark:from-[#111F35] via-white/90 dark:via-[#111F35]/90 to-transparent"
-                  >
-                    <ChevronDownIcon className="w-4 h-4 text-[#0F2854] dark:text-[#E7EEF7] -rotate-90" />
-                  </button>
-                </div>
-              </div>
-
-              {form.category === 'chiller' && (
-                <div className="border-2 border-[#0F2854]/15 dark:border-white/10 rounded-2xl p-4 flex flex-col gap-4">
-                  {/* Section header */}
-                  <div className="flex items-center gap-1.5">
-                    <GearIcon className="w-4 h-4 text-[#4988C4] shrink-0" />
-                    <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.machineSpecTitle}</p>
-                  </div>
-
-                  {/* Catalog quick-fill */}
-                  {catalogOptionsForCategory.length > 0 && (
-                    <div className="bg-gradient-to-br from-[#EAF4FC] dark:from-white/5 to-white dark:to-transparent border border-[#4988C4]/20 dark:border-white/10 rounded-xl p-3.5">
-                      <p className="flex items-center gap-1.5 text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-2">
-                        <SparkleIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" />
-                        {t.equipment.catalogQuickFillTitle}
-                      </p>
-                      <Select
-                        value=""
-                        onChange={applyCatalogPreset}
-                        options={catalogOptionsForCategory}
-                        placeholder={t.equipment.catalogQuickFillPlaceholder}
-                        triggerClassName="flex items-center gap-1.5 w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5]"
-                      />
-                      <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] mt-2 leading-relaxed">{t.equipment.catalogQuickFillHint}</p>
-                    </div>
-                  )}
-
-                  {/* Chiller Type */}
-                  <div>
-                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.chillerTypeLabel}</label>
-                    <div className="flex gap-2">
-                      {[
-                        { value: 'AIR COOL', label: t.equipment.chillerTypeAirCool },
-                        { value: 'WATER COOL', label: t.equipment.chillerTypeWaterCool },
-                      ].map(({ value, label }) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setForm((p) => ({ ...p, chillerType: value }))}
-                          className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                            form.chillerType === value
-                              ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Cooling Capacity / Power / Efficiency */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.coolingCapacityLabel}</label>
-                      <div className="relative">
-                        <SnowflakeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4988C4] shrink-0 pointer-events-none" />
-                        <input
-                          type="number"
-                          value={form.coolingCapacity || ''}
-                          onChange={(e) => setForm((p) => ({ ...p, coolingCapacity: e.target.value }))}
-                          placeholder={t.equipment.egCoolingCapacity}
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base font-mono text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.powerLabel}</label>
-                      <div className="relative">
-                        <LightningIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4988C4] shrink-0 pointer-events-none" />
-                        <input
-                          type="number"
-                          value={form.chillerPower || ''}
-                          onChange={(e) => setForm((p) => ({ ...p, chillerPower: e.target.value }))}
-                          placeholder={t.equipment.egPower}
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base font-mono text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.efficiencyLabel}</label>
-                      <div className="relative">
-                        <ActivityIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4988C4] shrink-0 pointer-events-none" />
-                        <input
-                          type="number"
-                          value={form.chillerEfficiency || ''}
-                          onChange={(e) => setForm((p) => ({ ...p, chillerEfficiency: e.target.value }))}
-                          placeholder={t.equipment.egEfficiency}
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base font-mono text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Average Electricity Cost */}
-                  <div>
-                    <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.avgElecCost}</label>
-                    <input
-                      type="number"
-                      value={form.electricityCost || ''}
-                      onChange={(e) => setForm((p) => ({ ...p, electricityCost: e.target.value }))}
-                      placeholder={t.equipment.egCost}
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base font-mono text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {form.category === 'compressor' && (
-                <div>
-                  <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.compressorTypeLabel}</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { value: 'Screw', label: t.equipment.compressorTypeScrew },
-                      { value: 'Centrifugal', label: t.equipment.compressorTypeCentrifugal },
-                      { value: 'VSD', label: t.equipment.compressorTypeVSD },
-                      { value: 'Magnetic', label: t.equipment.compressorTypeMagnetic },
-                    ].map(({ value, label }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setForm((p) => ({ ...p, compressorType: value }))}
-                        className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                          form.compressorType === value
-                            ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {formFields.map((f) => (
-                <div key={f.key}>
-                  <label className={`text-sm font-bold mb-1.5 flex items-center gap-1 ${formErrors[f.key] ? 'text-red-500' : 'text-[#0F2854] dark:text-[#E7EEF7]'}`}>
-                    {f.label}
-                    {f.required && <span className="text-red-500">*</span>}
-                  </label>
-                  {f.type === 'datalist' ? (
-                    <div className="relative">
-                      <Combobox
-                        value={form[f.key] || ''}
-                        onChange={(v) => { setForm((p) => ({ ...p, [f.key]: v })); setFormErrors((p) => ({ ...p, [f.key]: false })); }}
-                        options={f.key === 'factory' ? factoryNames : (BRAND_OPTIONS[form.category] || Object.values(BRAND_OPTIONS).flat())}
-                        placeholder={f.placeholder}
-                        inputClassName={`w-full px-4 py-2.5 pr-9 rounded-xl bg-gray-50 dark:bg-white/5 border text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 ${formErrors[f.key] ? 'border-red-400 focus:ring-red-300' : 'border-gray-200 dark:border-white/10 focus:ring-[#4988C4]'}`}
-                      />
-                      {form[f.key] && (
-                        <button
-                          type="button"
-                          onClick={() => setForm((p) => ({ ...p, [f.key]: '' }))}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/15 flex items-center justify-center text-gray-500 dark:text-[#8CA3C0] text-xs leading-none transition-colors z-10"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  ) : f.type === 'date' || f.type === 'month' ? (
-                    <input
-                      type={f.type}
-                      value={form[f.key] || ''}
-                      onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                    />
-                  ) : f.type === 'year' ? (
-                    <>
-                      <Select
-                        value={form[f.key] || ''}
-                        onChange={(v) => setForm((p) => ({ ...p, [f.key]: v }))}
-                        options={INSTALL_YEAR_OPTIONS}
-                        placeholder={f.placeholder}
-                        triggerClassName="flex items-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5]"
-                      />
-                      {form[f.key] && (
-                        <p className="text-xs text-[#4988C4] mt-1.5">
-                          {equipmentAgeYears(form[f.key]) === 0
-                            ? t.equipment.ageThisYear
-                            : `${t.equipment.ageLabel} ${equipmentAgeYears(form[f.key])} ${t.equipment.ageYearsSuffix}`}
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <input
-                      value={form[f.key] || ''}
-                      onChange={(e) => { setForm((p) => ({ ...p, [f.key]: e.target.value })); setFormErrors((p) => ({ ...p, [f.key]: false })); }}
-                      placeholder={f.placeholder}
-                      className={`w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 ${formErrors[f.key] ? 'border-red-400 focus:ring-red-300' : 'border-gray-200 dark:border-white/10 focus:ring-[#4988C4]'}`}
-                    />
-                  )}
-                  {formErrors[f.key] && <p className="text-xs text-red-500 mt-1">{t.equipment.fieldRequired}{f.label}</p>}
-                </div>
-              ))}
-
-            </div>
-
-            {/* Sticky footer */}
-            <div className="px-6 sm:px-7 py-4 border-t border-gray-100 dark:border-white/8 shrink-0">
+            {isAdmin && (
               <button
                 type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                onClick={openAddModal}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
               >
-                {saving ? '...' : (editingId ? t.equipment.saveEdits : t.equipment.saveData)}
+                <PlusIcon className="w-4 h-4" />
+                {t.equipment.addEquipment}
               </button>
-            </div>
+            )}
           </div>
         </div>
-      , document.body)}
+
+        {/* Equipment Cards Grid */}
+        {filtered.length === 0 ? (
+          <Panel className="p-12 text-center text-sm text-gray-400 dark:text-[#7E93AF] rounded-3xl">
+            <GearIcon className="w-10 h-10 mx-auto mb-2 text-[#0F2854]/20 dark:text-[#7E93AF]/30" />
+            <p>{t.equipment.noEquipmentFound}</p>
+          </Panel>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filtered.map((item) => {
+              const cat = categories.find((c) => c.key === item.category);
+              const ItemIcon = ICON_MAP[cat?.iconKey] || ClipboardIcon;
+              const badgeCls = CATEGORY_BADGES[item.category] || 'bg-gray-100 text-gray-600 border-gray-200';
+              const age = equipmentAgeYears(item.installYear);
+
+              return (
+                <Panel
+                  key={item.id}
+                  className="p-5 flex flex-col justify-between gap-4 group hover:shadow-lg hover:border-[#4988C4]/40 transition-all rounded-3xl"
+                >
+                  <div className="space-y-3">
+                    {/* Top Row: Tag + Category Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="flex items-center gap-1.5 text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono group-hover:text-[#4988C4] transition-colors">
+                          <ItemIcon className="w-5 h-5 text-[#4988C4] shrink-0" />
+                          {item.id}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-[#8CA3C0] font-medium mt-0.5">
+                          {item.brandModel || '-'}
+                        </p>
+                      </div>
+
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border shrink-0 ${badgeCls}`}>
+                        {cat?.label || item.category}
+                      </span>
+                    </div>
+
+                    {/* Metadata details */}
+                    <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-[#EEF3FB] dark:border-white/8">
+                      <div className="flex items-center gap-1.5 text-gray-600 dark:text-[#8CA3C0] truncate">
+                        <MapPinIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" />
+                        <span className="truncate">{item.factory || '-'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-gray-600 dark:text-[#8CA3C0] truncate">
+                        <BoxIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span className="truncate">{item.building || '-'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-gray-600 dark:text-[#8CA3C0] truncate">
+                        <UserIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span className="truncate">{item.owner || '-'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-gray-600 dark:text-[#8CA3C0] truncate">
+                        <ClockIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span>{age === null ? '-' : age === 0 ? t.equipment.ageThisYear : `${age} ${t.equipment.ageYearsSuffix}`}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions Row */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#EEF3FB] dark:border-white/8">
+                    {isAdmin ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(item)}
+                          title={t.common.edit}
+                          className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] flex items-center justify-center transition-colors"
+                        >
+                          <PencilIcon className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(item.id)}
+                          title={t.common.delete}
+                          className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-rose-500 hover:text-white text-rose-400 flex items-center justify-center transition-colors"
+                        >
+                          <TrashIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : <div />}
+
+                    <button
+                      type="button"
+                      onClick={() => openCalcModal(item)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold transition-all duration-200 hover:shadow-md hover:opacity-95 active:scale-95"
+                      style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
+                    >
+                      <CalculatorIcon className="w-3.5 h-3.5 shrink-0" />
+                      {t.equipment.calculate}
+                    </button>
+                  </div>
+                </Panel>
+              );
+            })}
+          </div>
+        )}
+          </>
+        )}
+      </div>
 
       {/* Modal: เพิ่มหมวดหมู่อุปกรณ์ */}
       {modal === 'add-category' && createPortal(
@@ -728,7 +600,7 @@ function Equipment() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 sm:px-7 pt-6 pb-4 shrink-0">
+            <div className="flex items-center justify-between px-6 sm:px-7 pt-6 pb-4 shrink-0 border-b border-gray-100 dark:border-white/8">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-[#0F2854] flex items-center justify-center shrink-0">
                   <PlusIcon className="w-4 h-4 text-white" />
@@ -739,7 +611,7 @@ function Equipment() {
             </div>
 
             {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-2 flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto px-6 sm:px-7 py-4 flex flex-col gap-4">
               <div>
                 <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.equipment.categoryNameLabel}</label>
                 <input
@@ -777,7 +649,7 @@ function Equipment() {
                 type="button"
                 onClick={handleSaveCategory}
                 disabled={saving}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors disabled:opacity-60 disabled:pointer-events-none shadow-md shadow-[#0F2854]/20"
               >
                 {saving ? '...' : t.equipment.saveCategory}
               </button>

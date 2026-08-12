@@ -9,7 +9,7 @@ import { ICON_MAP } from '../components/iconMap.js';
 import { fileToResizedDataUrl } from '../utils/image.js';
 import { uploadImage, deleteImage } from '../context/storageStore.js';
 import { useLang } from '../context/languageStore.js';
-import { BoxIcon, CalculatorIcon, ChevronDownIcon, ClipboardIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons';
+import { BoxIcon, CalculatorIcon, ChevronDownIcon, ClipboardIcon, PencilIcon, PlusIcon, TrashIcon, ArrowLeftIcon, CheckIcon, SparkleIcon, GearIcon } from '../components/icons';
 import SavingsCalculator from './catalog/SavingsCalculator.jsx';
 
 function fmt(n) {
@@ -206,239 +206,296 @@ function Catalog() {
       factoryRowBelowTitle
       hideRoleBadge
     >
-      <div className="flex flex-col gap-5 max-w-3xl lg:max-w-none">
-        <div className="lg:hidden flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/5 p-1">
-          <button
-            type="button"
-            onClick={() => navigate('/equipment')}
-            className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap text-gray-500 dark:text-[#7E93AF]"
-          >
-            <ClipboardIcon className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{t.equipment.pageTitle}</span>
-          </button>
-          <button
-            type="button"
-            className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap bg-white dark:bg-[#111F35] text-[#0F2854] dark:text-[#E7EEF7] shadow-sm"
-          >
-            <BoxIcon className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{t.catalog.pageTitle}</span>
-          </button>
-        </div>
-
-        <p className="text-sm text-gray-400 dark:text-[#7E93AF] -mt-2">{t.catalog.subtitle}</p>
-
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {realCategories.map(({ key, label, iconKey }) => {
-            const Icon = ICON_MAP[iconKey] || BoxIcon;
-            const active = activeCategory === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setActiveCategory(key)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 transition-colors text-sm font-semibold shrink-0 ${
-                  active
-                    ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
-        <SectionHeader
-          title={`${t.catalog.recommended} (${activeCategoryLabel})`}
-          right={
-            <button
-              type="button"
-              onClick={openAddItem}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity"
-              style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
-            >
-              <PlusIcon className="w-3.5 h-3.5" />
-              {t.catalog.addItem}
-            </button>
-          }
-        />
-
-        {activeItems.length === 0 ? (
-          <Panel className="p-8 text-center text-sm text-gray-400 dark:text-[#7E93AF]">
-            {t.catalog.noItemsYet}
-          </Panel>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeItems.map((item) => (
-              <CatalogCard key={item.id} item={item} onEdit={openEditItem} onDelete={handleDeleteItem} onCalculate={setCalculatorItem} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {modalMode && createPortal(
-        <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-          <div
-            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md lg:max-w-2xl flex flex-col"
-            style={{ maxHeight: '90dvh' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-6 sm:px-7 pt-6 pb-4 shrink-0">
-              <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">
-                {modalMode === 'add' ? t.catalog.addItem : t.catalog.editItemTitle}
-              </p>
-              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors font-bold">✕</button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-2 flex flex-col gap-4">
-
-            <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-2 block">{t.equipment.equipmentCategory}</label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => catScrollRef.current?.scrollBy({ left: -160, behavior: 'smooth' })}
-                  className="hidden sm:flex absolute left-0 top-0 bottom-1 z-10 items-center pr-3 bg-gradient-to-r from-white dark:from-[#111F35] via-white/90 dark:via-[#111F35]/90 to-transparent"
-                >
-                  <ChevronDownIcon className="w-4 h-4 text-[#0F2854] dark:text-[#E7EEF7] rotate-90" />
-                </button>
-                <div ref={catScrollRef} className="flex gap-2 overflow-x-auto pb-1 scrollbar-none sm:px-5">
-                  {realCategories.map(({ key, label, iconKey }) => {
-                    const Icon = ICON_MAP[iconKey] || BoxIcon;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setForm((p) => ({ ...p, catId: key }))}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-colors text-sm font-semibold shrink-0 ${
-                          form.catId === key
-                            ? 'border-[#0F2854] bg-[#0F2854] text-white'
-                            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5 shrink-0" />
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => catScrollRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}
-                  className="hidden sm:flex absolute right-0 top-0 bottom-1 z-10 items-center pl-3 bg-gradient-to-l from-white dark:from-[#111F35] via-white/90 dark:via-[#111F35]/90 to-transparent"
-                >
-                  <ChevronDownIcon className="w-4 h-4 text-[#0F2854] dark:text-[#E7EEF7] -rotate-90" />
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.catalog.brand}</label>
-              <input
-                value={form.brand}
-                onChange={(e) => { setForm((p) => ({ ...p, brand: e.target.value })); setFormError(''); }}
-                placeholder={t.catalog.egBrand}
-                autoFocus
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.catalog.model}</label>
-              <input
-                value={form.model}
-                onChange={(e) => { setForm((p) => ({ ...p, model: e.target.value })); setFormError(''); }}
-                placeholder={t.catalog.egModel}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.catalog.specOptional}</label>
-              <input
-                value={form.spec}
-                onChange={(e) => setForm((p) => ({ ...p, spec: e.target.value }))}
-                placeholder={t.catalog.egSpec}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-              />
-            </div>
-
-            {form.catId === 'chiller' && (
+      <div className="flex flex-col gap-5 w-full">
+        {modalMode ? (
+          <div className="max-w-4xl mx-auto w-full py-6 space-y-6 font-sans">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.catalog.specificPowerNew}</label>
-                <input
-                  type="number"
-                  value={form.specificPower}
-                  onChange={(e) => setForm((p) => ({ ...p, specificPower: e.target.value }))}
-                  placeholder={t.catalog.egSpecificPower}
-                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                />
+                <h2 className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
+                  {modalMode === 'edit' ? 'แก้ไขอุปกรณ์ในแคตตาล็อก' : 'เพิ่มอุปกรณ์ใหม่ในแคตตาล็อก'}
+                </h2>
+                <p className="text-sm text-gray-400 dark:text-[#7E93AF] mt-0.5">
+                  กรอกรายละเอียดข้อมูลสเปก รูปภาพ และราคาประมาณการอุปกรณ์ด้านล่าง
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
+              >
+                <ArrowLeftIcon className="w-4 h-4" />
+                ยกเลิก
+              </button>
+            </div>
+
+            {formError && (
+              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold">
+                {formError}
               </div>
             )}
 
-            <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.catalog.costEstimateOptional}</label>
-              <input
-                type="number"
-                value={form.costEst}
-                onChange={(e) => setForm((p) => ({ ...p, costEst: e.target.value }))}
-                placeholder={t.catalog.egCost}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-base text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-              />
-            </div>
+            <Panel className="p-6 space-y-5 rounded-3xl">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+                <BoxIcon className="w-4 h-4 text-[#4988C4]" />
+                หมวดหมู่และข้อมูลรุ่นอุปกรณ์ (CATEGORY & MODEL)
+              </div>
 
-            <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.catalog.imageOptional}</label>
-              <div className="flex items-center gap-3">
-                {form.image ? (
-                  <img src={form.image} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-[#EAF4FC] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
-                    <BoxIcon className="w-6 h-6" />
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-2 block">หมวดหมู่อุปกรณ์</label>
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    {realCategories.map(({ key, label, iconKey }) => {
+                      const Icon = ICON_MAP[iconKey] || BoxIcon;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setForm((p) => ({ ...p, catId: key }))}
+                          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 transition-colors text-xs font-bold shrink-0 ${
+                            form.catId === key
+                              ? 'border-[#0F2854] bg-[#0F2854] text-white'
+                              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                      ยี่ห้อ (Brand) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="เช่น Trane, Daikin"
+                      value={form.brand}
+                      onChange={(e) => { setForm((p) => ({ ...p, brand: e.target.value })); setFormError(''); }}
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-semibold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                      รุ่น (Model) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="เช่น CVHE, RTAF"
+                      value={form.model}
+                      onChange={(e) => { setForm((p) => ({ ...p, model: e.target.value })); setFormError(''); }}
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-semibold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </Panel>
+
+            <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-[#4988C4]">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+                <GearIcon className="w-4 h-4 text-[#4988C4]" />
+                คุณสมบัติทางเทคนิค & ราคาประมาณการ (SPECIFICATIONS & COST)
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                      สเปกอุปกรณ์ (Specifications)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="เช่น 500 TR, High Efficiency"
+                      value={form.spec}
+                      onChange={(e) => setForm((p) => ({ ...p, spec: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                    />
+                  </div>
+
+                  {form.catId === 'chiller' ? (
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                        ค่ากำลังไฟฟ้าจำเพาะ (Specific Power kW/TR)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="เช่น 0.58"
+                        value={form.specificPower}
+                        onChange={(e) => setForm((p) => ({ ...p, specificPower: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                        ราคาประมาณการ (Cost Estimate ฿)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="เช่น 2500000"
+                        value={form.costEst}
+                        onChange={(e) => setForm((p) => ({ ...p, costEst: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {form.catId === 'chiller' && (
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                      ราคาประมาณการ (Cost Estimate ฿)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="เช่น 2500000"
+                      value={form.costEst}
+                      onChange={(e) => setForm((p) => ({ ...p, costEst: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                    />
                   </div>
                 )}
-                <label className={`flex-1 flex items-center justify-center py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs font-semibold text-gray-500 dark:text-[#8CA3C0] transition-colors ${
-                  imageUploading ? 'opacity-60 pointer-events-none' : 'hover:border-[#4988C4] hover:text-[#4988C4] cursor-pointer'
-                }`}>
-                  {imageUploading ? '...' : (form.image ? t.catalog.changeImage : t.catalog.uploadImage)}
-                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" disabled={imageUploading} />
-                </label>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                    คำอธิบายเพิ่มเติม (Description)
+                  </label>
+                  <textarea
+                    value={form.desc}
+                    onChange={(e) => setForm((p) => ({ ...p, desc: e.target.value }))}
+                    placeholder="ระบุรายละเอียดเพิ่มเติม..."
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none resize-none"
+                  />
+                </div>
               </div>
-              {imageError && <p className="text-xs text-red-500 mt-1.5">{imageError}</p>}
-            </div>
+            </Panel>
 
-            <div>
-              <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-1.5 block">{t.catalog.descriptionOptional}</label>
-              <textarea
-                value={form.desc}
-                onChange={(e) => setForm((p) => ({ ...p, desc: e.target.value }))}
-                placeholder={t.catalog.egDescription}
-                rows={2}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4] resize-none"
-              />
-            </div>
+            <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-emerald-500">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+                <SparkleIcon className="w-4 h-4 text-emerald-500" />
+                รูปภาพประจำรุ่นอุปกรณ์ (CATALOG IMAGE)
+              </div>
 
-            {formError && <p className="text-xs text-red-500">{formError}</p>}
+              <div className="p-4 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 flex flex-col sm:flex-row items-center gap-4">
+                {form.image ? (
+                  <img src={form.image} alt="" className="w-24 h-24 rounded-2xl object-contain bg-white dark:bg-white/10 p-2 shadow-sm shrink-0" />
+                ) : (
+                  <div className="w-24 h-24 rounded-2xl bg-[#EAF4FC] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
+                    <BoxIcon className="w-10 h-10" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-2 text-center sm:text-left">
+                  <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">อัปโหลดรูปภาพรุ่นอุปกรณ์ในแคตตาล็อก</p>
+                  <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">รองรับไฟล์ JPG, PNG ภาพพื้นหลังขาวจะแสดงผลสวยงามที่สุด</p>
+                  <label className={`inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-xs font-bold text-[#4988C4] transition-colors ${
+                    imageUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-[#EAF4FC] cursor-pointer'
+                  }`}>
+                    {imageUploading ? 'กำลังอัปโหลด...' : (form.image ? 'เปลี่ยนรูปภาพ' : 'เลือกรูปภาพ')}
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" disabled={imageUploading} />
+                  </label>
+                  {imageError && <p className="text-xs text-rose-500">{imageError}</p>}
+                </div>
+              </div>
+            </Panel>
 
-            </div>
-
-            <div className="px-6 sm:px-7 py-4 border-t border-gray-100 dark:border-white/8 shrink-0">
+            <div className="flex gap-4 pt-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="flex-1 py-3.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-600 dark:text-[#C3D2E5] font-bold text-sm transition-colors"
+              >
+                ยกเลิก
+              </button>
               <button
                 type="button"
                 onClick={handleSaveItem}
                 disabled={imageUploading}
-                className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-base font-semibold transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                className="flex-1 py-3.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-bold text-sm shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                {modalMode === 'add' ? <PlusIcon className="w-4 h-4" /> : null}
-                {modalMode === 'add' ? t.common.add : t.common.save}
+                <CheckIcon className="w-5 h-5" />
+                {modalMode === 'add' ? 'บันทึกอุปกรณ์ใหม่' : 'บันทึกการแก้ไข'}
               </button>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
+        ) : (
+          <>
+            <div className="lg:hidden flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => navigate('/equipment')}
+                className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap text-gray-500 dark:text-[#7E93AF]"
+              >
+                <ClipboardIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.equipment.pageTitle}</span>
+              </button>
+              <button
+                type="button"
+                className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap bg-white dark:bg-[#111F35] text-[#0F2854] dark:text-[#E7EEF7] shadow-sm"
+              >
+                <BoxIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.catalog.pageTitle}</span>
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-400 dark:text-[#7E93AF] -mt-2">{t.catalog.subtitle}</p>
+
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {realCategories.map(({ key, label, iconKey }) => {
+                const Icon = ICON_MAP[iconKey] || BoxIcon;
+                const active = activeCategory === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveCategory(key)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 transition-colors text-sm font-semibold shrink-0 ${
+                      active
+                        ? 'border-[#0F2854] bg-[#0F2854] text-white'
+                        : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <SectionHeader
+              title={`${t.catalog.recommended} (${activeCategoryLabel})`}
+              right={
+                <button
+                  type="button"
+                  onClick={openAddItem}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity"
+                  style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
+                >
+                  <PlusIcon className="w-3.5 h-3.5" />
+                  {t.catalog.addItem}
+                </button>
+              }
+            />
+
+            {activeItems.length === 0 ? (
+              <Panel className="p-8 text-center text-sm text-gray-400 dark:text-[#7E93AF]">
+                {t.catalog.noItemsYet}
+              </Panel>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeItems.map((item) => (
+                  <CatalogCard key={item.id} item={item} onEdit={openEditItem} onDelete={handleDeleteItem} onCalculate={setCalculatorItem} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {calculatorItem && (
         <SavingsCalculator item={calculatorItem} onClose={() => setCalculatorItem(null)} />

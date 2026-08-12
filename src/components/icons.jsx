@@ -40,4 +40,12 @@ export {
   DollarSign as DollarSignIcon,
   Maximize2 as ExpandIcon,
   Minimize2 as CollapseIcon,
+  AlertTriangle as AlertTriangleIcon,
+  TrendingUp as TrendUpIcon,
+  Leaf as LeafIcon,
+  ArrowLeft as ArrowLeftIcon,
+  Building as BuildingIcon,
+  LayoutGrid as LayoutGridIcon,
+  Check as CheckIcon,
+  X as CloseIcon,
 } from 'lucide-react';
