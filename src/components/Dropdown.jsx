@@ -1,9 +1,43 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDownIcon } from './icons';
+import { createPortal } from 'react-dom';
+import { ChevronDownIcon, CheckIcon } from './icons';
 import { useLang } from '../context/languageStore.js';
+
+// Shared "floating menu" panel styling for Select/Combobox popovers — rounded
+// scroll-inset rows plus a slim custom scrollbar so overflow content doesn't
+// look like it's clipped by a plain browser scrollbar cutting into the
+// rounded corners.
+const DROPDOWN_PANEL_CLASS = 'rounded-2xl bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-xl shadow-[#0F2854]/10 dark:shadow-black/30 p-1.5 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb]:rounded-full';
+const DROPDOWN_ROW_CLASS = 'w-full text-left px-3 py-2 rounded-xl text-sm whitespace-nowrap transition-colors';
 
 function normalizeOptions(options) {
   return options.map((o) => (typeof o === 'object' && o !== null ? o : { value: o, label: o }));
+}
+
+// Popovers used to live inside the trigger's own relatively-positioned
+// wrapper, so any ancestor `Panel` (which sets overflow-hidden to clip its
+// own rounded corners) silently clipped the open dropdown too. Portaling to
+// <body> and tracking the trigger's live viewport position sidesteps that —
+// the panel now floats freely above everything, anchored to the trigger.
+function useAnchoredRect(anchorRef, open) {
+  const [rect, setRect] = useState(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const update = () => {
+      const el = anchorRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setRect({ top: r.bottom + 6, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open, anchorRef]);
+  return rect;
 }
 
 // Fully custom, theme-aware replacement for native <select> — the browser's
@@ -18,12 +52,18 @@ export function Select({
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const ref = useRef(null);
+  const panelRef = useRef(null);
   const opts = normalizeOptions(options);
   const selected = opts.find((o) => o.value === value);
+  const rect = useAnchoredRect(ref, open);
 
   useEffect(() => {
     if (!open) return undefined;
-    const onDocMouseDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onDocMouseDown = (e) => {
+      if (ref.current?.contains(e.target)) return;
+      if (panelRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     const onKeyDown = (e) => {
       if (e.key === 'Escape') { setOpen(false); return; }
       if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight((h) => Math.min(h + 1, opts.length - 1)); }
@@ -57,10 +97,14 @@ export function Select({
         <span className="truncate">{selected?.label ?? placeholder}</span>
         <ChevronDownIcon className={`w-3.5 h-3.5 shrink-0 ml-auto transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && (
-        <div className={`absolute z-30 mt-1.5 rounded-xl bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-lg py-1 max-h-60 overflow-y-auto ${panelClassName || 'w-full'}`}>
+      {open && rect && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width }}
+          className={`z-50 max-h-60 ${DROPDOWN_PANEL_CLASS} ${panelClassName}`}
+        >
           {opts.length === 0 && (
-            <p className="px-3.5 py-2 text-sm text-gray-400 dark:text-[#7E93AF]">{t.common.noOptions}</p>
+            <p className="px-3 py-2 text-sm text-gray-400 dark:text-[#7E93AF]">{t.common.noOptions}</p>
           )}
           {opts.map((o, i) => (
             <button
@@ -68,7 +112,7 @@ export function Select({
               type="button"
               onClick={() => { onChange(o.value); setOpen(false); }}
               onMouseEnter={() => setHighlight(i)}
-              className={`w-full text-left px-3.5 py-2 text-sm whitespace-nowrap transition-colors ${
+              className={`${DROPDOWN_ROW_CLASS} flex items-center justify-between gap-2 ${
                 o.value === value
                   ? 'font-semibold text-[#0F2854] dark:text-[#E7EEF7] bg-[#EAF4FC] dark:bg-white/10'
                   : i === highlight
@@ -77,9 +121,11 @@ export function Select({
               }`}
             >
               {o.label}
+              {o.value === value && <CheckIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" />}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -95,13 +141,19 @@ export function Combobox({
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const ref = useRef(null);
+  const panelRef = useRef(null);
   const filtered = value.trim()
     ? options.filter((o) => o.toLowerCase().includes(value.toLowerCase()))
     : options;
+  const rect = useAnchoredRect(ref, open && filtered.length > 0);
 
   useEffect(() => {
     if (!open) return undefined;
-    const onDocMouseDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onDocMouseDown = (e) => {
+      if (ref.current?.contains(e.target)) return;
+      if (panelRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener('mousedown', onDocMouseDown);
     return () => document.removeEventListener('mousedown', onDocMouseDown);
   }, [open]);
@@ -128,22 +180,27 @@ export function Combobox({
         autoFocus={autoFocus}
         className={inputClassName}
       />
-      {open && filtered.length > 0 && (
-        <div className={`absolute z-30 mt-1.5 rounded-xl bg-white dark:bg-[#111F35] border border-[#0F2854]/10 dark:border-white/10 shadow-lg py-1 max-h-52 overflow-y-auto ${panelClassName || 'w-full'}`}>
+      {open && filtered.length > 0 && rect && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width }}
+          className={`z-50 max-h-52 ${DROPDOWN_PANEL_CLASS} ${panelClassName}`}
+        >
           {filtered.map((o, i) => (
             <button
               key={o}
               type="button"
               onClick={() => { onChange(o); setOpen(false); }}
               onMouseEnter={() => setHighlight(i)}
-              className={`w-full text-left px-3.5 py-2 text-sm transition-colors ${
+              className={`${DROPDOWN_ROW_CLASS} ${
                 i === highlight ? 'bg-[#F4F7FC] dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7]' : 'text-gray-700 dark:text-[#C3D2E5]'
               }`}
             >
               {o}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -11,7 +11,7 @@ import { fetchAllEquipment } from '../context/equipmentStore.js';
 import { DEFAULT_SETTINGS, fetchSettings, saveSettingsItem } from '../context/settingsStore.js';
 import { useLang } from '../context/languageStore.js';
 import {
-  ShieldIcon, UsersIcon, DollarSignIcon, PencilIcon, TrashIcon, PlusIcon,
+  ShieldIcon, UsersIcon, DollarSignIcon, PencilIcon, TrashIcon, PlusIcon, CloseIcon,
 } from '../components/icons';
 
 // Seed suggestions so the combobox isn't empty before any real position has
@@ -464,7 +464,9 @@ function AdminPanel() {
           >
             <div className="flex items-center justify-between px-6 sm:px-7 pt-6 pb-4 shrink-0">
               <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{editingUserId ? t.settings.editUser : t.settings.addUser}</p>
-              <button type="button" onClick={closeUserModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors font-bold">✕</button>
+              <button type="button" onClick={closeUserModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors">
+                <CloseIcon className="w-4 h-4" />
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-2 flex flex-col gap-4">

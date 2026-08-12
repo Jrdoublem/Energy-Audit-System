@@ -12,7 +12,7 @@ import MeasureSelect from './MeasureSelect';
 import {
   SnowflakeIcon, DropletIcon, FlameIcon, LightningIcon,
   CoolingTowerIcon, CompressorIcon, TrashIcon,
-  ClipboardIcon, EyeIcon, SearchIcon,
+  ClipboardIcon, EyeIcon, SearchIcon, MessageIcon,
 } from '../../components/icons';
 
 const CATEGORY_ICON = {
@@ -221,24 +221,26 @@ function History() {
             <button
               type="button"
               onClick={() => setActiveTab('inspections')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab === 'inspections'
                   ? 'bg-[#0F2854] text-white shadow-sm'
                   : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
               }`}
             >
-              🔍 ประวัติการตรวจวัด ({inspectionsCount})
+              <SearchIcon className="w-3.5 h-3.5 shrink-0" />
+              ประวัติการตรวจวัด ({inspectionsCount})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('comments')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab === 'comments'
                   ? 'bg-[#0F2854] text-white shadow-sm'
                   : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
               }`}
             >
-              💬 บันทึกข้อความ & การซ่อมบำรุง ({commentsCount})
+              <MessageIcon className="w-3.5 h-3.5 shrink-0" />
+              บันทึกข้อความ & การซ่อมบำรุง ({commentsCount})
             </button>
           </div>
         </div>
@@ -336,7 +338,10 @@ function History() {
                             {/* Inspection Note Box */}
                             {item.note && (
                               <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/20 flex items-start gap-2">
-                                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 shrink-0">💬 บันทึกข้อความ:</span>
+                                <span className="flex items-center gap-1 text-xs font-bold text-amber-800 dark:text-amber-300 shrink-0">
+                                  <MessageIcon className="w-3.5 h-3.5 shrink-0" />
+                                  บันทึกข้อความ:
+                                </span>
                                 <p className="text-xs text-amber-900 dark:text-amber-200 font-medium leading-relaxed">{item.note}</p>
                               </div>
                             )}

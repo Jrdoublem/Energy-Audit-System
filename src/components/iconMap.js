@@ -1,6 +1,8 @@
 import {
   ClipboardIcon, SnowflakeIcon, CompressorIcon, DropletIcon, FlameIcon,
   CoolingTowerIcon, LightningIcon, GearIcon,
+  FanIcon, WindIcon, ThermometerIcon, GaugeIcon, WrenchIcon,
+  BatteryIcon, WavesIcon, FilterIcon, PlugZapIcon, ContainerIcon,
 } from './icons';
 
 // Equipment categories are persisted with an iconKey string (component
@@ -9,4 +11,6 @@ import {
 export const ICON_MAP = {
   ClipboardIcon, SnowflakeIcon, CompressorIcon, DropletIcon, FlameIcon,
   CoolingTowerIcon, LightningIcon, GearIcon,
+  FanIcon, WindIcon, ThermometerIcon, GaugeIcon, WrenchIcon,
+  BatteryIcon, WavesIcon, FilterIcon, PlugZapIcon, ContainerIcon,
 };

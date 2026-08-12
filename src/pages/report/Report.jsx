@@ -16,6 +16,9 @@ import {
   TrashIcon,
   CloseIcon,
   ActivityIcon,
+  EyeIcon,
+  PencilIcon,
+  FactoryIcon,
 } from '../../components/icons';
 import { fetchAllReports, saveReportItem, deleteReportItem } from '../../context/reportsStore.js';
 import ReportPrintPreview from './ReportPrintPreview.jsx';
@@ -72,6 +75,12 @@ export default function Report() {
 
   const handleOpenReport = (r) => {
     setEditingReport(r);
+  };
+
+  const handleViewReport = (r, e) => {
+    if (e) e.stopPropagation();
+    setEditingReport(r);
+    setShowPreview(true);
   };
 
   const handleNewReport = () => {
@@ -514,50 +523,76 @@ export default function Report() {
               </button>
             </div>
 
-            {/* Reports Grid */}
+            {/* Reports List */}
             {filteredReports.length === 0 ? (
               <Panel className="p-12 text-center text-sm text-gray-400 dark:text-[#7E93AF] rounded-3xl">
                 {search ? 'ไม่พบรายงานที่ตรงกับการค้นหา' : 'ยังไม่มีรายงานผลการตรวจวิเคราะห์พลังงานในระบบ กดปุ่ม "สร้างรายงานใหม่" ด้านบนเพื่อเริ่มสร้าง'}
               </Panel>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="flex flex-col gap-3">
                 {filteredReports.map((r) => (
                   <Panel
                     key={r.id}
-                    className="p-5 flex flex-col justify-between space-y-4 hover:shadow-lg transition-all group cursor-pointer"
+                    className="p-4 sm:p-5 flex items-center gap-4 hover:shadow-lg hover:border-[#4988C4]/30 dark:hover:border-[#4988C4]/30 transition-all group cursor-pointer"
                     onClick={() => handleOpenReport(r)}
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#EAF4FC] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
+                      <ClipboardIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm sm:text-base font-extrabold text-[#0F2854] dark:text-[#E7EEF7] group-hover:text-[#4988C4] transition-colors truncate">
+                          {r.form?.reportTitle || r.form?.equipmentId || 'รายงานตรวจวิเคราะห์พลังงาน'}
+                        </h3>
+                        <span className={`shrink-0 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                           r.status === 'done'
                             ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
                             : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20'
                         }`}>
                           {r.status === 'done' ? 'เสร็จสมบูรณ์' : 'กำลังดำเนินการ'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteReport(r.id, e)}
-                          title="ลบรายงาน"
-                          className="w-7 h-7 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-rose-500 hover:text-white text-gray-400 flex items-center justify-center transition-colors"
-                        >
-                          <TrashIcon className="w-3.5 h-3.5" />
-                        </button>
                       </div>
-
-                      <h3 className="text-base font-extrabold text-[#0F2854] dark:text-[#E7EEF7] group-hover:text-[#4988C4] transition-colors line-clamp-2">
-                        {r.form?.reportTitle || r.form?.equipmentId || 'รายงานตรวจวิเคราะห์พลังงาน'}
-                      </h3>
-
-                      <p className="text-xs text-gray-400 dark:text-[#7E93AF]">
-                        รหัสอุปกรณ์: <span className="font-bold text-gray-600 dark:text-[#C3D2E5]">{r.form?.equipmentId || '-'}</span>
-                      </p>
+                      <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-gray-400 dark:text-[#7E93AF]">
+                        <span className="flex items-center gap-1 min-w-0">
+                          <FactoryIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" />
+                          <span className="truncate">{r.form?.factory || '-'}</span>
+                        </span>
+                        <span className="shrink-0">อัปเดต: {formatThaiDate(r.updatedAt)}</span>
+                        {r.form?.equipmentId && (
+                          <span className="shrink-0 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F4F7FC] dark:bg-white/5 text-gray-500 dark:text-[#8CA3C0]">
+                            {r.form.equipmentId}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="pt-3 border-t border-gray-100 dark:border-white/8 flex items-center justify-between text-xs text-gray-400 dark:text-[#7E93AF]">
-                      <span>{r.form?.factory || '-'}</span>
-                      <span>{formatThaiDate(r.updatedAt)}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleViewReport(r, e)}
+                        title="ดูรายงาน"
+                        className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#EAF4FC] dark:hover:bg-white/10 hover:text-[#4988C4] text-gray-400 flex items-center justify-center transition-colors"
+                      >
+                        <EyeIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleOpenReport(r); }}
+                        title="แก้ไขรายงาน"
+                        className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#EAF4FC] dark:hover:bg-white/10 hover:text-[#4988C4] text-gray-500 dark:text-[#8CA3C0] text-xs font-bold transition-colors"
+                      >
+                        <PencilIcon className="w-3.5 h-3.5" />
+                        แก้ไข
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteReport(r.id, e)}
+                        title="ลบรายงาน"
+                        className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-rose-500 hover:text-white text-gray-400 flex items-center justify-center transition-colors"
+                      >
+                        <TrashIcon className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </Panel>
                 ))}

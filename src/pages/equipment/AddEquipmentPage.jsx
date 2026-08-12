@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Panel } from '../../components/ui';
+import { Select } from '../../components/Dropdown.jsx';
 import { useLang } from '../../context/languageStore.js';
 import { fetchAllHistory } from '../../context/historyStore.js';
 import { getSession } from '../../context/authStore.js';
@@ -107,7 +108,10 @@ export default function AddEquipmentPage({
     setNewCommentText('');
   };
 
+  const [catalogPick, setCatalogPick] = useState('');
+
   const handleCatalogSelect = (catId) => {
+    setCatalogPick(catId);
     const item = catalogItems.find((c) => c.id === catId);
     if (!item) return;
     setForm((prev) => ({
@@ -250,37 +254,30 @@ export default function AddEquipmentPage({
               <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                 โรงงาน / บริษัท (Factory) <span className="text-rose-500">*</span>
               </label>
-              <select
+              <Select
                 value={form.factory}
-                onChange={(e) => setForm({ ...form, factory: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
-              >
-                {factoriesList.map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
+                onChange={(v) => setForm({ ...form, factory: v })}
+                options={factoriesList}
+                triggerClassName="flex items-center w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+              />
             </div>
 
             <div>
               <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                 หมวดหมู่อุปกรณ์ (Category) <span className="text-rose-500">*</span>
               </label>
-              <select
+              <Select
                 value={form.category}
-                onChange={(e) => {
-                  const nextCategory = e.target.value;
+                onChange={(nextCategory) => {
                   // Adding new equipment: keep the equipment tag in sync with
                   // its category (e.g. CH-01 -> AC-01) so it doesn't silently
                   // keep a stale prefix from the previously selected category.
                   const nextId = !isEditing && getNextId ? getNextId(nextCategory) : form.id;
                   setForm({ ...form, category: nextCategory, id: nextId });
                 }}
-                className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
-              >
-                {categoriesList.map((c) => (
-                  <option key={c.key} value={c.key}>{c.label || c.key}</option>
-                ))}
-              </select>
+                options={categoriesList.map((c) => ({ value: c.key, label: c.label || c.key }))}
+                triggerClassName="flex items-center w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+              />
             </div>
           </div>
 
@@ -336,16 +333,14 @@ export default function AddEquipmentPage({
           {catalogItems.length > 0 && (
             <div className="flex items-center gap-2">
               <SparkleIcon className="w-3.5 h-3.5 text-amber-500" />
-              <select
-                onChange={(e) => handleCatalogSelect(e.target.value)}
-                defaultValue=""
-                className="text-xs lg:text-sm font-bold px-3 py-1.5 rounded-xl bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] dark:text-[#E7EEF7] border border-[#D0E4F7] dark:border-white/10 focus:outline-none"
-              >
-                <option value="" disabled>-- เลือกจากแคตตาล็อกเพื่อเติมอัตโนมัติ --</option>
-                {catalogItems.map((c) => (
-                  <option key={c.id} value={c.id}>{c.brand} {c.model} ({c.id})</option>
-                ))}
-              </select>
+              <Select
+                value={catalogPick}
+                onChange={handleCatalogSelect}
+                placeholder="-- เลือกจากแคตตาล็อกเพื่อเติมอัตโนมัติ --"
+                options={catalogItems.map((c) => ({ value: c.id, label: `${c.brand} ${c.model} (${c.id})` }))}
+                triggerClassName="flex items-center gap-1.5 text-xs lg:text-sm font-bold px-3 py-1.5 rounded-xl bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] dark:text-[#E7EEF7] border border-[#D0E4F7] dark:border-white/10 focus:outline-none"
+                panelClassName="min-w-[16rem]"
+              />
             </div>
           )}
         </div>

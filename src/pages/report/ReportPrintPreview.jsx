@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import companyLogo from '../../assets/Logo.png';
 import { useLang } from '../../context/languageStore.js';
-import { PrinterIcon } from '../../components/icons';
+import { PrinterIcon, CloseIcon } from '../../components/icons';
 
 function fmtNum(n, digits = 0) {
   const v = parseFloat(n);
@@ -98,7 +98,7 @@ function ReportPrintPreview({ item, result, measures, form, onClose }) {
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/15 flex items-center justify-center text-white transition-colors shrink-0"
             >
-              ✕
+              <CloseIcon className="w-4 h-4" />
             </button>
           </div>
         </div>

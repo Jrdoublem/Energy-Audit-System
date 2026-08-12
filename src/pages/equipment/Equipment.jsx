@@ -37,6 +37,17 @@ import {
   LayoutGridIcon,
   CloseIcon,
   FactoryIcon,
+  CheckIcon,
+  FanIcon,
+  WindIcon,
+  ThermometerIcon,
+  GaugeIcon,
+  WrenchIcon,
+  BatteryIcon,
+  WavesIcon,
+  FilterIcon,
+  PlugZapIcon,
+  ContainerIcon,
 } from '../../components/icons';
 import { ICON_MAP } from '../../components/iconMap.js';
 
@@ -49,6 +60,16 @@ const ICON_OPTIONS = [
   { key: 'CompressorIcon', label: 'Compressor', icon: CompressorIcon },
   { key: 'CoolingTowerIcon', label: 'Cooling Tower', icon: CoolingTowerIcon },
   { key: 'ClipboardIcon', label: 'Clipboard', icon: ClipboardIcon },
+  { key: 'FanIcon', label: 'Fan', icon: FanIcon },
+  { key: 'WindIcon', label: 'Wind', icon: WindIcon },
+  { key: 'ThermometerIcon', label: 'Thermometer', icon: ThermometerIcon },
+  { key: 'GaugeIcon', label: 'Gauge', icon: GaugeIcon },
+  { key: 'WrenchIcon', label: 'Wrench', icon: WrenchIcon },
+  { key: 'BatteryIcon', label: 'Battery', icon: BatteryIcon },
+  { key: 'WavesIcon', label: 'Waves', icon: WavesIcon },
+  { key: 'FilterIcon', label: 'Filter', icon: FilterIcon },
+  { key: 'PlugZapIcon', label: 'Plug', icon: PlugZapIcon },
+  { key: 'ContainerIcon', label: 'Container', icon: ContainerIcon },
 ];
 
 const BRAND_OPTIONS = {
@@ -131,6 +152,7 @@ function Equipment() {
   const [sortOrder, setSortOrder] = useState('newest');
   const [saving, setSaving] = useState(false);
   const [catalogItems, setCatalogItems] = useState([]);
+  const [savedToast, setSavedToast] = useState(false);
   const catScrollRef = useRef(null);
 
   useEffect(() => {
@@ -198,6 +220,7 @@ function Equipment() {
         return true;
       })
       .sort((a, b) => {
+        if (sortOrder === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
         if (sortOrder === 'az') return (a.id || '').localeCompare(b.id || '', 'th');
         if (sortOrder === 'za') return (b.id || '').localeCompare(a.id || '', 'th');
         if (sortOrder === 'num') {
@@ -267,14 +290,20 @@ function Equipment() {
     }
     setSaving(true);
     try {
-      await saveEquipmentItem(formData);
-      if (editingId && formData.id !== editingId) {
+      // Stamp createdAt once, on first save, and carry it forward unchanged
+      // on every later edit — this is what "เรียงตามล่าสุด" (sort by newest
+      // added) sorts on, since Firestore itself has no reliable insert order.
+      const existingItem = editingId ? equipment.find((e) => e.id === editingId) : null;
+      const record = { ...formData, createdAt: existingItem?.createdAt || formData.createdAt || new Date().toISOString() };
+
+      await saveEquipmentItem(record);
+      if (editingId && record.id !== editingId) {
         await deleteEquipmentItem(editingId);
       }
       setEquipment((prev) => {
-        if (!editingId) return [{ ...formData }, ...prev];
-        if (formData.id !== editingId) return [{ ...formData }, ...prev.filter((e) => e.id !== editingId)];
-        return prev.map((e) => (e.id === editingId ? { ...formData } : e));
+        if (!editingId) return [{ ...record }, ...prev];
+        if (record.id !== editingId) return [{ ...record }, ...prev.filter((e) => e.id !== editingId)];
+        return prev.map((e) => (e.id === editingId ? { ...record } : e));
       });
       await refreshFactories();
       closeModal();
@@ -340,6 +369,18 @@ function Equipment() {
       }
       factoryRowBelowTitle
     >
+      {savedToast && (
+        <div
+          className="fixed top-5 left-1/2 z-50 flex items-center gap-2.5 bg-[#0F2854] dark:bg-[#111F35] text-white pl-3 pr-5 py-3 rounded-full shadow-xl border border-white/10"
+          style={{ animation: 'toastIn 0.3s ease-out' }}
+        >
+          <span className="w-6 h-6 rounded-full bg-emerald-400 flex items-center justify-center shrink-0">
+            <CheckIcon className="w-4 h-4 text-[#0F2854]" />
+          </span>
+          <span className="text-sm font-bold whitespace-nowrap">บันทึกอุปกรณ์สำเร็จ</span>
+        </div>
+      )}
+
       <div className="flex flex-col gap-6 w-full">
         {modal === 'calc' && calcItem ? (
           <CalcModal item={calcItem} onClose={closeModal} />
@@ -353,8 +394,19 @@ function Equipment() {
             getNextId={getNextId}
             onCancel={closeModal}
             onSave={async (data) => {
+              const isNewEquipment = !editingId;
               setForm(data);
               await handleSave(data);
+              // Registering a brand-new item: skip back to the list and go
+              // straight to its calculator instead of making the user find
+              // and click it again. Editing an existing item still just
+              // returns to the list, since that's the flow being resumed.
+              if (isNewEquipment) {
+                openCalcModal(data);
+                window.scrollTo(0, 0);
+                setSavedToast(true);
+                setTimeout(() => setSavedToast(false), 2500);
+              }
             }}
           />
         ) : (
@@ -470,7 +522,7 @@ function Equipment() {
 
         {/* Toolbar Header (Search, Sort, Add) */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-md">
+          <div className="flex items-center gap-3 flex-1 min-w-[240px]">
             <div className="relative w-full">
               <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -491,17 +543,19 @@ function Equipment() {
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-gray-400 dark:text-[#7E93AF] font-medium hidden sm:inline">เรียงตาม:</span>
-              <select
+              <Select
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-xs font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-              >
-                <option value="newest">{t.equipment.sortNewest}</option>
-                <option value="az">A-Z</option>
-                <option value="za">Z-A</option>
-                <option value="num">{t.equipment.sortNumAsc}</option>
-                <option value="numd">{t.equipment.sortNumDesc}</option>
-              </select>
+                onChange={setSortOrder}
+                options={[
+                  { value: 'newest', label: t.equipment.sortNewest },
+                  { value: 'az', label: 'A-Z' },
+                  { value: 'za', label: 'Z-A' },
+                  { value: 'num', label: t.equipment.sortNumAsc },
+                  { value: 'numd', label: t.equipment.sortNumDesc },
+                ]}
+                triggerClassName="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-xs font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                panelClassName="min-w-[11rem]"
+              />
             </div>
 
             {isAdmin && (
@@ -622,7 +676,7 @@ function Equipment() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:px-4" onClick={closeModal}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div
-            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-sm lg:max-w-lg flex flex-col"
+            className="relative bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-sm lg:max-w-2xl flex flex-col"
             style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -634,7 +688,9 @@ function Equipment() {
                 </div>
                 <p className="text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.addCategoryTitle}</p>
               </div>
-              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#8CA3C0] transition-colors font-bold">✕</button>
+              <button type="button" onClick={closeModal} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#8CA3C0] transition-colors">
+                <CloseIcon className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Scrollable body */}
@@ -650,14 +706,14 @@ function Equipment() {
               </div>
               <div>
                 <label className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] mb-2 block">{t.equipment.chooseIcon}</label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb]:rounded-full">
                   {ICON_OPTIONS.map(({ key, label, icon: Icon }) => (
                     <button
                       key={key}
                       type="button"
                       title={label}
                       onClick={() => setForm((p) => ({ ...p, iconKey: key, iconComponent: Icon }))}
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-colors ${
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-colors shrink-0 ${
                         form.iconKey === key
                           ? 'border-[#0F2854] bg-[#0F2854] text-white'
                           : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'

@@ -285,15 +285,16 @@ function EvalSection({ basePower, category, evalData, onChange, onSave, appDefau
             <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
               ประเภทมาตรการ (Category Level)
             </label>
-            <select
+            <Select
               value={measureCategory}
-              onChange={(e) => onChange('category', e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-            >
-              <option value="Housekeeping">Housekeeping (No/Low Cost - ไม่ต้องลงทุน/ลงทุนต่ำ)</option>
-              <option value="Minor">Minor (Medium Cost - ลงทุนปานกลาง)</option>
-              <option value="Major">Major (High Cost - ลงทุนสูง/เปลี่ยนเครื่องจักร)</option>
-            </select>
+              onChange={(v) => onChange('category', v)}
+              options={[
+                { value: 'Housekeeping', label: 'Housekeeping (No/Low Cost - ไม่ต้องลงทุน/ลงทุนต่ำ)' },
+                { value: 'Minor', label: 'Minor (Medium Cost - ลงทุนปานกลาง)' },
+                { value: 'Major', label: 'Major (High Cost - ลงทุนสูง/เปลี่ยนเครื่องจักร)' },
+              ]}
+              triggerClassName="flex items-center w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+            />
           </div>
 
           <div>

@@ -86,7 +86,7 @@ export function GlassSelect({ value, onChange, className = '', children }) {
       options={options}
       className={`shrink-0 ${className}`}
       triggerClassName="flex items-center gap-1.5 bg-white dark:bg-[#111F35] hover:bg-[#F4F7FC] dark:hover:bg-white/5 border border-[#0F2854]/10 dark:border-white/10 shadow-sm text-[#0F2854] dark:text-[#E7EEF7] text-xs font-semibold pl-3.5 pr-3 py-2.5 rounded-full transition-colors"
-      panelClassName="min-w-full whitespace-nowrap"
+      panelClassName="min-w-[11rem]"
     />
   );
 }

@@ -57,6 +57,11 @@ body {
   animation: gridPan 4s linear infinite;
 }
 
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 @media (min-width: 1024px) {
   .animate-grid-pan {
     animation: none;
