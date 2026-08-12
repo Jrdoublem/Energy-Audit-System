@@ -185,7 +185,10 @@ const DEFAULT_FIELDS = [
   { key: 'duration',  label: 'ระยะเวลา (วัน)',       type: 'number' },
 ];
 
-const FALLBACK_GRID_GHG_FACTOR_KG_PER_KWH = 0.4999;
+// Must match the fallback used in SavingsCalculator.jsx/FactoryDetail.jsx and
+// the canonical admin default in settingsStore.js (TGO 2024 grid factor) —
+// keep all four in sync if this value is ever recalibrated.
+const FALLBACK_GRID_GHG_FACTOR_KG_PER_KWH = 0.5561;
 const FALLBACK_FUEL_GHG_FACTOR_KG_PER_KWH = 0.2664;
 
 /* ── General Measure Evaluation Section (สูตรคำนวณมาตรฐานวิศวกรรมพลังงาน) ── */

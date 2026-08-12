@@ -12,16 +12,21 @@ export function FactoryProvider({ children }) {
   // Read once per session — role/assignment only change on the next login.
   const [allowedFactories] = useState(readAllowedFactories);
   const [factories, setFactories] = useState([]);
+  const [factoryRecords, setFactoryRecords] = useState([]);
   const [selectedFactory, setSelectedFactoryState] = useState(() => localStorage.getItem(SELECTED_KEY) || '');
 
   const refreshFactories = useCallback(async () => {
-    const [equipment, factoryRecords] = await Promise.all([fetchAllEquipment(), fetchAllFactoryRecords()]);
-    setFactories(readFactories(allowedFactories, equipment, factoryRecords));
+    const [equipment, records] = await Promise.all([fetchAllEquipment(), fetchAllFactoryRecords()]);
+    setFactoryRecords(records);
+    setFactories(readFactories(allowedFactories, equipment, records));
   }, [allowedFactories]);
 
   useEffect(() => {
     Promise.all([fetchAllEquipment(), fetchAllFactoryRecords()])
-      .then(([equipment, factoryRecords]) => setFactories(readFactories(allowedFactories, equipment, factoryRecords)));
+      .then(([equipment, records]) => {
+        setFactoryRecords(records);
+        setFactories(readFactories(allowedFactories, equipment, records));
+      });
   }, [allowedFactories]);
 
   const setSelectedFactory = useCallback((factory) => {
@@ -31,8 +36,8 @@ export function FactoryProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ factories, selectedFactory, setSelectedFactory, refreshFactories, allowedFactories }),
-    [factories, selectedFactory, setSelectedFactory, refreshFactories, allowedFactories]
+    () => ({ factories, factoryRecords, selectedFactory, setSelectedFactory, refreshFactories, allowedFactories }),
+    [factories, factoryRecords, selectedFactory, setSelectedFactory, refreshFactories, allowedFactories]
   );
 
   return <FactoryContext.Provider value={value}>{children}</FactoryContext.Provider>;

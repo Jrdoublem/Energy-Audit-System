@@ -431,7 +431,7 @@ function History() {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm hidden lg:block"
             onClick={() => setViewing(null)}
           />
-          <div className="relative z-10 w-full h-full lg:h-auto lg:max-h-[90vh] lg:max-w-xl lg:rounded-3xl lg:shadow-2xl overflow-hidden">
+          <div className="relative z-10 w-full h-full lg:h-auto lg:max-h-[90vh] lg:max-w-xl lg:rounded-3xl lg:shadow-2xl overflow-y-auto overflow-x-hidden">
             <CalcResult
               item={viewing.item}
               result={viewing.result}

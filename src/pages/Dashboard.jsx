@@ -673,6 +673,12 @@ function Dashboard() {
   const [defaultOperatingHours, setDefaultOperatingHours] = useState('8000');
   useEffect(() => { fetchSettings().then((s) => setDefaultOperatingHours(s.defaultOperatingHours)).catch(() => {}); }, []);
 
+  const equipmentCountByFactory = useMemo(() => {
+    const counts = new Map();
+    equipment.forEach((e) => counts.set(e.factory, (counts.get(e.factory) || 0) + 1));
+    return counts;
+  }, [equipment]);
+
   const factoryOverviewRows = useMemo(() => {
     return factories.map((name) => {
       const stats = computeFactoryStats(name, equipment, measures, history, defaultOperatingHours);
@@ -886,7 +892,7 @@ function Dashboard() {
 
           {factories.map((name) => {
             const active = selectedFactory === name;
-            const equipCount = equipment.filter((e) => e.factory === name).length;
+            const equipCount = equipmentCountByFactory.get(name) || 0;
             return (
               <button
                 key={name}
@@ -928,7 +934,7 @@ function Dashboard() {
               <div>
                 <p className="text-base font-extrabold text-white">{selectedFactory}</p>
                 <p className="text-xs text-white/70">
-                  {getFactoryMeta(selectedFactory, factoryRecords).province || 'ประเทศไทย'} · อุปกรณ์ลงทะเบียน {equipment.filter((e) => e.factory === selectedFactory).length} เครื่อง
+                  {getFactoryMeta(selectedFactory, factoryRecords).province || 'ประเทศไทย'} · อุปกรณ์ลงทะเบียน {equipmentCountByFactory.get(selectedFactory) || 0} เครื่อง
                 </p>
               </div>
             </div>
@@ -940,7 +946,7 @@ function Dashboard() {
               </div>
               <div>
                 <span className="text-white/60 block text-[11px]">ผลประหยัดรวม</span>
-                <span className="font-extrabold text-emerald-400 text-sm">฿{(dashboardStats.costMillionBaht * 100).toFixed(2)} แสน</span>
+                <span className="font-extrabold text-emerald-400 text-sm">฿{(dashboardStats.costMillionBaht * 10).toFixed(2)} แสน</span>
               </div>
             </div>
           </div>

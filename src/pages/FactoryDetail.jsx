@@ -216,8 +216,14 @@ function FactoryDetail() {
 
   // Settings emission factor and carbon tax
   const emissionFactor = useMemo(() => getEmissionFactorValue(settings, 'electricity', 0.5561), [settings]);
-  const carbonTaxRate = useMemo(() => parseFloat(settings.defaultCarbonPrice) || 200, [settings]);
-  const electricityRate = useMemo(() => parseFloat(settings.defaultElectricityRate) || 4.5, [settings]);
+  const carbonTaxRate = useMemo(() => {
+    const parsed = parseFloat(settings.defaultCarbonPrice);
+    return Number.isFinite(parsed) ? parsed : 200;
+  }, [settings]);
+  const electricityRate = useMemo(() => {
+    const parsed = parseFloat(settings.defaultElectricityRate);
+    return Number.isFinite(parsed) ? parsed : 4.5;
+  }, [settings]);
 
   // Current year monthly usage
   const currentYear = new Date().getFullYear();

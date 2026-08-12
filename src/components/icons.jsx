@@ -48,4 +48,5 @@ export {
   LayoutGrid as LayoutGridIcon,
   Check as CheckIcon,
   X as CloseIcon,
+  MessageSquare as MessageIcon,
 } from 'lucide-react';

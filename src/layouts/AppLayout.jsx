@@ -243,10 +243,12 @@ function AppLayout({
             collapsed ? 'justify-center' : ''
           }`}
         >
-          <span className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-sm font-bold shrink-0 font-mono shadow-md ring-1 ring-white/10 overflow-hidden">
-            {session.photoURL ? (
-              <img src={session.photoURL} alt="" className="w-full h-full object-cover" />
-            ) : initialsOf(session.name)}
+          <span className="relative w-9 h-9 shrink-0">
+            <span className="w-full h-full rounded-xl bg-gradient-to-br from-[#4988C4] to-[#1C4D8D] flex items-center justify-center text-sm font-bold font-mono shadow-md ring-1 ring-white/10 overflow-hidden">
+              {session.photoURL ? (
+                <img src={session.photoURL} alt="" className="w-full h-full object-cover" />
+              ) : initialsOf(session.name)}
+            </span>
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0F2854]" />
           </span>
           {!collapsed && (

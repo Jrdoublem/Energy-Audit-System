@@ -34,7 +34,13 @@ export default function Report() {
   const { selectedFactory, allowedFactories } = useFactory();
 
   const [reports, setReports] = useState([]);
-  const [editingReport, setEditingReport] = useState(state ? { ...state } : null);
+  // Any editingReport lacking a saved `id` (a report opened straight from a
+  // fresh measure evaluation, or a brand-new blank report) gets one assigned
+  // once here — never derived lazily during render/useMemo, which would call
+  // the impure Date.now() on every recompute.
+  const [editingReport, setEditingReport] = useState(() => (
+    state ? { ...state, id: state.id || `rpt-${Date.now()}` } : null
+  ));
   const [search, setSearch] = useState('');
   const [showPreview, setShowPreview] = useState(false);
 
@@ -69,14 +75,18 @@ export default function Report() {
   };
 
   const handleNewReport = () => {
-    setEditingReport({});
+    setEditingReport({ id: `rpt-${Date.now()}` });
   };
 
-  // Form State
-  const item = editingReport?.item || {};
-  const result = editingReport?.result || {};
-  const measures = editingReport?.measures || [];
-  const reportId = editingReport?.id || `rpt-${Date.now()}`;
+  // Form State — memoized so these stay referentially stable across re-renders
+  // that don't actually change `editingReport` (e.g. typing in the form).
+  // Without this, the `|| {}` / `|| []` fallbacks below would create a new
+  // object/array every render, and the load-effect further down (which
+  // depends on them) would never stop re-firing.
+  const item = useMemo(() => editingReport?.item || {}, [editingReport]);
+  const result = useMemo(() => editingReport?.result || {}, [editingReport]);
+  const measures = useMemo(() => editingReport?.measures || [], [editingReport]);
+  const reportId = editingReport?.id;
 
   const CATEGORY_LABEL = {
     chiller: t.report?.categoryChiller || 'เครื่องทำน้ำเย็น (Chiller)',
@@ -87,73 +97,69 @@ export default function Report() {
     electrical: t.report?.categoryElectrical || 'ระบบไฟฟ้า (Electrical)',
   };
 
-  const [form, setForm] = useState(() => {
-    if (editingReport?.form) return editingReport.form;
-    return {
-      equipmentId: item.id || '',
-      measureName: measures.map((m) => m.name).join(', '),
-      reportTitle: '',
-      brandModel: item.brandModel || '',
-      factory: item.factory || '',
-      department: item.building || '',
-      measureOrigin: '',
-      measureType: CATEGORY_LABEL[item.category] || '',
-      objective: '',
-      responsible: item.owner || '',
-      consultant: '',
-      approver: '',
-      summary: '',
-      additionalNotes: '',
-    };
+  const buildBlankForm = (forItem, forMeasures) => ({
+    equipmentId: forItem.id || '',
+    measureName: forMeasures.map((m) => m.name).join(', '),
+    reportTitle: '',
+    brandModel: forItem.brandModel || '',
+    factory: forItem.factory || '',
+    department: forItem.building || '',
+    measureOrigin: '',
+    measureType: CATEGORY_LABEL[forItem.category] || '',
+    objective: '',
+    responsible: forItem.owner || '',
+    consultant: '',
+    approver: '',
+    summary: '',
+    additionalNotes: '',
   });
 
-  useEffect(() => {
-    if (editingReport?.form) {
-      setForm(editingReport.form);
-    } else if (editingReport) {
-      setForm({
-        equipmentId: item.id || '',
-        measureName: measures.map((m) => m.name).join(', '),
-        reportTitle: '',
-        brandModel: item.brandModel || '',
-        factory: item.factory || '',
-        department: item.building || '',
-        measureOrigin: '',
-        measureType: CATEGORY_LABEL[item.category] || '',
-        objective: '',
-        responsible: item.owner || '',
-        consultant: '',
-        approver: '',
-        summary: '',
-        additionalNotes: '',
-      });
-    }
-  }, [editingReport, item, measures]);
+  const [form, setForm] = useState(() => (editingReport?.form ? editingReport.form : buildBlankForm(item, measures)));
+
+  // Tracks the exact form object reference that was just loaded (vs. typed
+  // by the user) so the autosave effect below can tell the two apart.
+  const [loadedForm, setLoadedForm] = useState(form);
+
+  // Reset `form` when `editingReport` changes (opening a different report,
+  // or starting a new one) — adjusted during render rather than in an effect
+  // so it takes effect in the same commit instead of an extra render pass.
+  const [prevEditingReport, setPrevEditingReport] = useState(editingReport);
+  if (editingReport !== prevEditingReport) {
+    setPrevEditingReport(editingReport);
+    const nextForm = editingReport?.form ? editingReport.form : buildBlankForm(item, measures);
+    setLoadedForm(nextForm);
+    setForm(nextForm);
+  }
 
   const [saving, setSaving] = useState(false);
+
+  const saveReportRecord = async (status) => {
+    const record = {
+      id: reportId,
+      status,
+      updatedAt: new Date().toISOString(),
+      item,
+      result,
+      measures,
+      form,
+    };
+    await saveReportItem(record);
+    setReports((prev) => {
+      const existingIdx = prev.findIndex((r) => r.id === reportId);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = record;
+        return updated;
+      }
+      return [record, ...prev];
+    });
+    return record;
+  };
 
   const handleSaveReport = async () => {
     setSaving(true);
     try {
-      const record = {
-        id: reportId,
-        status: 'done',
-        updatedAt: new Date().toISOString(),
-        item,
-        result,
-        measures,
-        form,
-      };
-      await saveReportItem(record);
-      setReports((prev) => {
-        const existingIdx = prev.findIndex((r) => r.id === reportId);
-        if (existingIdx >= 0) {
-          const updated = [...prev];
-          updated[existingIdx] = record;
-          return updated;
-        }
-        return [record, ...prev];
-      });
+      await saveReportRecord('done');
       setEditingReport(null);
     } catch (err) {
       console.error('Save report failed:', err);
@@ -161,6 +167,17 @@ export default function Report() {
       setSaving(false);
     }
   };
+
+  // Debounced draft autosave — skips the render where `form` was just loaded
+  // (programmatic reset, not a real edit) by comparing against loadedForm.
+  useEffect(() => {
+    if (!editingReport || form === loadedForm) return undefined;
+    const timer = setTimeout(() => {
+      saveReportRecord('draft').catch((err) => console.error('Autosave draft failed:', err));
+    }, 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, loadedForm, editingReport]);
 
   return (
     <AppLayout

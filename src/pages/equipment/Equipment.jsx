@@ -256,22 +256,25 @@ function Equipment() {
     setModal(null);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (formData = form) => {
     const errors = {};
-    if (!form.id) errors.id = true;
-    if (!form.factory) errors.factory = true;
-    if (!form.category) errors.category = true;
-    if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
+    if (!formData.id) errors.id = true;
+    if (!formData.factory) errors.factory = true;
+    if (!formData.category) errors.category = true;
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      throw new Error(t.equipment.fieldRequired);
+    }
     setSaving(true);
     try {
-      await saveEquipmentItem(form);
-      if (editingId && form.id !== editingId) {
+      await saveEquipmentItem(formData);
+      if (editingId && formData.id !== editingId) {
         await deleteEquipmentItem(editingId);
       }
       setEquipment((prev) => {
-        if (!editingId) return [{ ...form }, ...prev];
-        if (form.id !== editingId) return [{ ...form }, ...prev.filter((e) => e.id !== editingId)];
-        return prev.map((e) => (e.id === editingId ? { ...form } : e));
+        if (!editingId) return [{ ...formData }, ...prev];
+        if (formData.id !== editingId) return [{ ...formData }, ...prev.filter((e) => e.id !== editingId)];
+        return prev.map((e) => (e.id === editingId ? { ...formData } : e));
       });
       await refreshFactories();
       closeModal();
@@ -347,10 +350,11 @@ function Equipment() {
             categoriesList={categories}
             factoriesList={factoryNames}
             catalogItems={catalogItems}
+            getNextId={getNextId}
             onCancel={closeModal}
             onSave={async (data) => {
               setForm(data);
-              await handleSave();
+              await handleSave(data);
             }}
           />
         ) : (
