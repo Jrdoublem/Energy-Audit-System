@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
-import { matchesFactory, useFactory, computeFactoryStats } from '../context/factoryStore.js';
+import { matchesFactory, useFactory, computeFactoryStats, getFactoryMeta } from '../context/factoryStore.js';
 import { fetchAllEquipment } from '../context/equipmentStore.js';
 import { fetchAllMeasures } from '../context/measuresStore.js';
 import { fetchAllHistory } from '../context/historyStore.js';
@@ -34,32 +34,32 @@ function StatCard({ label, value, unit, onClick, trend, accentColor, vsLabel }) 
     <button
       type="button"
       onClick={onClick}
-      className="relative bg-white dark:bg-[#111F35] rounded-2xl p-5 text-left shadow-[0_2px_10px_rgba(15,40,84,0.07)] hover:shadow-[0_10px_28px_rgba(15,40,84,0.14)] hover:-translate-y-0.5 transition-all border border-[#E4EBF6] dark:border-white/8 flex flex-col gap-2 overflow-hidden"
+      className="relative bg-white dark:bg-[#111F35] rounded-2xl p-3.5 sm:p-5 text-left shadow-[0_2px_10px_rgba(15,40,84,0.07)] hover:shadow-[0_10px_28px_rgba(15,40,84,0.14)] hover:-translate-y-0.5 transition-all border border-[#E4EBF6] dark:border-white/8 flex flex-col gap-1.5 sm:gap-2 overflow-hidden w-full"
     >
       {accentColor && <span className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl" style={{ background: accentColor }} />}
-      <p className="text-sm text-gray-600 dark:text-[#8CA3C0] font-medium leading-tight">{label}</p>
-      <p className="text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] leading-none tracking-tight whitespace-nowrap">
+      <p className="text-xs sm:text-sm text-gray-600 dark:text-[#8CA3C0] font-medium leading-tight truncate">{label}</p>
+      <p className="text-xl sm:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] leading-none tracking-tight truncate">
         {value}
-        {unit && <span className="text-sm font-semibold text-gray-400 dark:text-[#7E93AF] ml-1.5 tracking-normal">{unit}</span>}
+        {unit && <span className="text-xs sm:text-sm font-semibold text-gray-400 dark:text-[#7E93AF] ml-1 sm:ml-1.5 tracking-normal">{unit}</span>}
       </p>
       {trend !== undefined && (
-        <div className={`flex items-center gap-1 text-[11px] sm:text-sm font-semibold mt-0.5 ${
+        <div className={`flex items-center gap-1 text-[10px] sm:text-xs font-semibold mt-0.5 ${
           trendUp ? 'text-emerald-500' : trendDown ? 'text-red-400' : 'text-gray-400 dark:text-[#7E93AF]'
         }`}>
           {trendUp ? (
-            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
               <polyline points="17 6 23 6 23 12"/>
             </svg>
           ) : trendDown ? (
-            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
               <polyline points="17 18 23 18 23 12"/>
             </svg>
           ) : (
-            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14"/></svg>
+            <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14"/></svg>
           )}
-          <span className="whitespace-nowrap">{trendUp ? '+' : ''}{trend.toFixed(1)}% {vsLabel}</span>
+          <span className="truncate">{trendUp ? '+' : ''}{trend.toFixed(1)}% {vsLabel}</span>
         </div>
       )}
     </button>
@@ -72,15 +72,15 @@ function QuickStat({ icon, label, sublabel, value, unit, onClick, border }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-3 p-5 text-left hover:bg-[#F4F7FC] dark:hover:bg-white/5 transition-colors ${border}`}
+      className={`flex items-center gap-2.5 sm:gap-3 p-3.5 sm:p-5 text-left hover:bg-[#F4F7FC] dark:hover:bg-white/5 transition-colors w-full min-w-0 ${border}`}
     >
-      <div className="w-10 h-10 rounded-xl bg-[#EEF3FB] dark:bg-white/5 flex items-center justify-center shrink-0">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-xs tracking-[0.12em] text-[#4988C4] font-semibold uppercase leading-tight">{label}</p>
-        {sublabel && <p className="text-[10px] tracking-[0.08em] text-gray-400 dark:text-[#7E93AF] uppercase leading-tight mb-1">{sublabel}</p>}
-        <p className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] leading-tight mt-1 tracking-tight whitespace-nowrap">
+      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#EEF3FB] dark:bg-white/5 flex items-center justify-center shrink-0">{icon}</div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] sm:text-xs tracking-[0.1em] sm:tracking-[0.12em] text-[#4988C4] font-semibold uppercase leading-tight truncate">{label}</p>
+        {sublabel && <p className="text-[9px] sm:text-[10px] tracking-[0.08em] text-gray-400 dark:text-[#7E93AF] uppercase leading-tight mb-0.5 truncate">{sublabel}</p>}
+        <p className="text-lg sm:text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] leading-tight mt-0.5 sm:mt-1 tracking-tight truncate">
           {value}
-          {unit && <span className="text-xs font-semibold text-gray-400 dark:text-[#7E93AF] ml-1 tracking-normal">{unit}</span>}
+          {unit && <span className="text-[10px] sm:text-xs font-semibold text-gray-400 dark:text-[#7E93AF] ml-1 tracking-normal">{unit}</span>}
         </p>
       </div>
     </button>
@@ -149,7 +149,7 @@ function SavingsTrendChart({ series }) {
   const CARBON_Y_TICKS = niceTicks(CARBON_Y_MAX);
 
   const W = isMobile ? 320 : 740; const H = isMobile ? 190 : 240;
-  const padL = isMobile ? 34 : 70; const padR = isMobile ? 34 : 70;
+  const padL = isMobile ? 42 : 70; const padR = isMobile ? 42 : 70;
   const padT = isMobile ? 14 : 18; const padB = isMobile ? 6 : 8;
   const axisFontSize = isMobile ? 10 : 11;
   const cW = W - padL - padR; const cH = H - padT - padB;
@@ -647,7 +647,7 @@ function Dashboard() {
   const { t } = useLang();
   const isAdmin = getSession().role === 'admin';
 
-  const { factories, selectedFactory, allowedFactories } = useFactory();
+  const { factories, selectedFactory, setSelectedFactory, allowedFactories, factoryRecords = [] } = useFactory();
 
   const [presenting, setPresenting] = useState(false);
   const enterPresentation = () => {
@@ -839,6 +839,7 @@ function Dashboard() {
   return (
     <AppLayout
       factoryRowBelowTitle
+      hideFactorySelect
       actions={
         <button
           type="button"
@@ -867,6 +868,85 @@ function Dashboard() {
         </>
       }
     >
+      {/* Quick Factory Selector Bar */}
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+        <div className="flex items-center gap-2 flex-nowrap shrink-0">
+          <button
+            type="button"
+            onClick={() => setSelectedFactory(null)}
+            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
+              !selectedFactory
+                ? 'bg-[#0F2854] text-white shadow-md'
+                : 'bg-white dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-gray-600 dark:text-[#C3D2E5] hover:bg-gray-50'
+            }`}
+          >
+            <FactoryIcon className="w-3.5 h-3.5" />
+            ทุกโรงงาน ({factories.length})
+          </button>
+
+          {factories.map((name) => {
+            const active = selectedFactory === name;
+            const equipCount = equipment.filter((e) => e.factory === name).length;
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setSelectedFactory(name)}
+                className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
+                  active
+                    ? 'bg-[#0F2854] text-white shadow-md'
+                    : 'bg-white dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-gray-600 dark:text-[#C3D2E5] hover:bg-gray-50'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${active ? 'bg-emerald-400' : 'bg-gray-300'}`} />
+                {name} ({equipCount})
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedFactory && (
+          <button
+            type="button"
+            onClick={() => navigate(`/factories/${encodeURIComponent(selectedFactory)}`)}
+            className="flex items-center gap-1 text-xs font-bold text-[#4988C4] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors shrink-0 ml-auto pl-2"
+          >
+            รายละเอียดโรงงาน
+            <ArrowRightIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Selected Factory Info Card */}
+      {selectedFactory && (
+        <Panel className="p-4 mb-5 bg-gradient-to-r from-[#0F2854] to-[#1C4D8D] text-white rounded-3xl shadow-md">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-white shrink-0">
+                <FactoryIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-base font-extrabold text-white">{selectedFactory}</p>
+                <p className="text-xs text-white/70">
+                  {getFactoryMeta(selectedFactory, factoryRecords).province || 'ประเทศไทย'} · อุปกรณ์ลงทะเบียน {equipment.filter((e) => e.factory === selectedFactory).length} เครื่อง
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs border-t sm:border-t-0 sm:border-l border-white/15 pt-2 sm:pt-0 sm:pl-4">
+              <div>
+                <span className="text-white/60 block text-[11px]">มาตรการดำเนินการ</span>
+                <span className="font-extrabold text-white text-sm">{scopedMeasures.length} รายการ</span>
+              </div>
+              <div>
+                <span className="text-white/60 block text-[11px]">ผลประหยัดรวม</span>
+                <span className="font-extrabold text-emerald-400 text-sm">฿{(dashboardStats.costMillionBaht * 100).toFixed(2)} แสน</span>
+              </div>
+            </div>
+          </div>
+        </Panel>
+      )}
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <StatCard

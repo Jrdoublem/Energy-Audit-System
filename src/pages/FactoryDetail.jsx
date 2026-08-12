@@ -902,19 +902,49 @@ function FactoryDetail() {
               <h3 className="text-base font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
                 {t.factories.equipmentInFactory} ({filteredEquipment.length})
               </h3>
-              <button
-                type="button"
-                onClick={() => navigate('/equipment')}
-                className="text-xs font-bold text-[#4988C4] hover:underline"
-              >
-                {t.factories.viewDetails} &rarr;
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/equipment', { state: { openAdd: true, factory: name } })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-xs font-bold shadow-sm transition-all active:scale-95"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  เพิ่มอุปกรณ์
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/equipment')}
+                  className="text-xs font-bold text-[#4988C4] hover:underline"
+                >
+                  {t.factories.viewDetails} &rarr;
+                </button>
+              </div>
             </div>
 
             {filteredEquipment.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-[#7E93AF] text-center py-10">
-                {t.factories.noEquipmentInFactory}
-              </p>
+              <div className="flex flex-col items-center gap-4 py-12 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#EAF4FC] dark:bg-white/5 flex items-center justify-center">
+                  <svg className="w-7 h-7 text-[#4988C4]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9M9 3l6 6M9 3v6h6" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.factories.noEquipmentInFactory}</p>
+                  <p className="text-xs text-gray-400 dark:text-[#7E93AF] mt-1">กดปุ่มด้านล่างเพื่อลงทะเบียนอุปกรณ์เครื่องแรกในโรงงานนี้</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/equipment', { state: { openAdd: true, factory: name } })}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md transition-all active:scale-95"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  เพิ่มอุปกรณ์ใน {name}
+                </button>
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">

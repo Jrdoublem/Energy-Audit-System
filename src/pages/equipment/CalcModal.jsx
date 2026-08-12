@@ -219,16 +219,13 @@ export default function CalcModal({ item, onClose }) {
     />
   );
 
+  // When we have a result, render CalcResult directly in the same full-page layout
+  if (calcResult) {
+    return <CalcResult item={item} result={calcResult} onBack={resetCalc} />;
+  }
+
   return (
     <div className="max-w-4xl mx-auto w-full py-6 space-y-6 font-sans">
-      {/* Result screen overlay */}
-      {calcResult && (
-        <div className="fixed inset-0 z-50 bg-[#F4F7FC] dark:bg-[#0B1B33] overflow-y-auto p-4 sm:p-8">
-          <div className="max-w-3xl mx-auto">
-            <CalcResult item={item} result={calcResult} onBack={resetCalc} />
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">

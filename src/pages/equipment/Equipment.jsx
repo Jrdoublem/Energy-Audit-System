@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AppLayout from '../../layouts/AppLayout';
 import { Panel } from '../../components/ui';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
@@ -113,6 +113,7 @@ function StatCard({ label, value, unit, icon: Icon, accentColor }) {
 function Equipment() {
   const { t } = useLang();
   const navigate = useNavigate();
+  const location = useLocation();
   const formFields = getFormFields(t);
   const { selectedFactory, allowedFactories, refreshFactories, factories: factoryNames } = useFactory();
   const session = getSession();
@@ -137,6 +138,28 @@ function Equipment() {
     fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
     fetchAllCatalogItems().then(setCatalogItems).catch(() => setCatalogItems([]));
   }, []);
+
+  // Auto-open add form when navigated from a factory page with state.openAdd
+  const autoOpenDone = useRef(false);
+  useEffect(() => {
+    if (autoOpenDone.current) return;
+    const state = location.state;
+    if (!state?.openAdd) return;
+    autoOpenDone.current = true;
+    const initCat = 'chiller';
+    const preFactory = state.factory || '';
+    const base = {
+      category: initCat,
+      id: '',
+      factory: preFactory,
+      installYear: String(CURRENT_YEAR),
+    };
+    setForm({ ...base, ...CHILLER_DEFAULTS });
+    setFormErrors({});
+    setModal('add');
+    // Clear the state so navigating back doesn't re-open
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state]);
 
   const catalogOptionsForCategory = catalogItems
     .filter((c) => c.catId === form.category)
@@ -658,9 +681,8 @@ function Equipment() {
         </div>
       , document.body)}
 
-      {modal === 'calc' && calcItem && (
-        <CalcModal item={calcItem} onClose={closeModal} />
-      )}
+
+
 
       {/* Confirm delete dialog */}
       {confirmDeleteId !== null && createPortal(

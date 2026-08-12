@@ -206,22 +206,31 @@ function AppLayout({
         </button>
 
         {/* Logo */}
-        <div className={`flex items-center gap-3 mb-5 ${collapsed ? 'justify-center px-0' : 'px-1'}`}>
-          <div className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          title="ENGINSPECT Dashboard"
+          className={`flex items-center gap-3 mb-5 text-left group transition-all active:scale-95 cursor-pointer w-full ${
+            collapsed ? 'justify-center px-0' : 'px-1'
+          }`}
+        >
+          <div className="relative shrink-0 group-hover:scale-105 transition-transform">
             <img src={companyLogo} alt="Logo" className="w-12 h-12 object-contain drop-shadow" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-base font-extrabold tracking-[0.2em] leading-tight"
-                style={{ fontFamily: "'Courier New', monospace" }}>
+              <div
+                className="text-base font-extrabold tracking-[0.2em] leading-tight group-hover:text-[#38BDF8] transition-colors"
+                style={{ fontFamily: "'Courier New', monospace" }}
+              >
                 ENGINSPECT
               </div>
-              <div className="text-xs text-[#38BDF8]/50 leading-tight tracking-[0.05em] uppercase mt-0.5 whitespace-nowrap">
+              <div className="text-xs text-[#38BDF8]/50 group-hover:text-[#38BDF8]/80 leading-tight tracking-[0.05em] uppercase mt-0.5 whitespace-nowrap transition-colors">
                 Energy Audit System
               </div>
             </div>
           )}
-        </div>
+        </button>
 
         {/* User account card — desktop: jumps straight to Profile (logout
             already has its own dedicated button lower in the sidebar, so no
