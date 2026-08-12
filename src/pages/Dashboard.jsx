@@ -846,6 +846,8 @@ function Dashboard() {
     <AppLayout
       factoryRowBelowTitle
       hideFactorySelect
+      hideRoleBadgeMobile
+      roleBadgeByAvatar
       actions={
         <button
           type="button"

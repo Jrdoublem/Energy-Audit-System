@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import AppLayout from '../../layouts/AppLayout';
+import AppLayout, { RoleBadge, FactorySelect } from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { fetchAllMeasures } from '../../context/measuresStore.js';
 import { fetchAllHistory, deleteHistoryItem } from '../../context/historyStore.js';
 import { fetchAllEquipment } from '../../context/equipmentStore.js';
+import { getSession } from '../../context/authStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { GlassSearchInput, GlassSelect, PageHeader, Panel } from '../../components/ui';
 import CalcResult from '../equipment/CalcResult';
@@ -58,7 +59,9 @@ function groupByMonth(items, months) {
 
 function History() {
   const { t } = useLang();
-  const { selectedFactory, allowedFactories } = useFactory();
+  const { factories, selectedFactory, setSelectedFactory, refreshFactories, allowedFactories } = useFactory();
+  const session = getSession();
+  const roleLabel = session.role === 'admin' ? t.nav.roleAdmin : t.nav.roleUser;
   const [viewing, setViewing] = useState(null);
   const [viewingMeasure, setViewingMeasure] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
@@ -177,9 +180,68 @@ function History() {
   const commentsCount = useMemo(() => combinedHistory.filter((it) => it.type === 'comment').length, [combinedHistory]);
 
   return (
-    <AppLayout hideHeader fullBleed mobileHeaderCenter>
+    <AppLayout hideHeader fullBleed mobileHeaderCenter hideRoleBadge hideFactorySelect>
       <div className="flex flex-col min-h-screen">
         <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-[2px]">
+          <div className="w-full flex justify-center lg:justify-start items-center gap-2">
+            <RoleBadge role={roleLabel} stretch />
+            <FactorySelect
+              selectedFactory={selectedFactory}
+              setSelectedFactory={setSelectedFactory}
+              refreshFactories={refreshFactories}
+              factories={factories}
+              role={session.role}
+              t={t}
+              stretch
+            />
+          </div>
+
+          {/* ── Filter Tabs — same width as the search row below ── */}
+          <div className="w-full flex items-stretch gap-1.5 bg-white dark:bg-[#111F35] p-1.5 rounded-2xl border border-[#E4EBF6] dark:border-white/10 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-xl text-xs font-bold text-center transition-all ${
+                activeTab === 'all'
+                  ? 'bg-[#0F2854] text-white shadow-sm'
+                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
+              }`}
+            >
+              <span className="whitespace-nowrap">ทั้งหมด</span>
+              <span className="text-[10px] font-mono opacity-70">({combinedHistory.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('inspections')}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-xl text-xs font-bold text-center transition-all ${
+                activeTab === 'inspections'
+                  ? 'bg-[#0F2854] text-white shadow-sm'
+                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <SearchIcon className="w-3.5 h-3.5 shrink-0" />
+                ประวัติ
+              </span>
+              <span className="whitespace-nowrap">ตรวจวัด ({inspectionsCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('comments')}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-xl text-xs font-bold text-center transition-all ${
+                activeTab === 'comments'
+                  ? 'bg-[#0F2854] text-white shadow-sm'
+                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <MessageIcon className="w-3.5 h-3.5 shrink-0" />
+                บันทึกข้อความ
+              </span>
+              <span className="whitespace-nowrap">การซ่อมบำรุง ({commentsCount})</span>
+            </button>
+          </div>
+
           <GlassSelect value={filterMonth} onChange={setFilterMonth}>
             <option value="" className="text-gray-800">{t.history.allMonths}</option>
             {t.history.months.map((m, i) => (
@@ -203,47 +265,6 @@ function History() {
           )}
           <GlassSearchInput value={search} onChange={setSearch} placeholder={t.history.searchPlaceholder} className="w-full" />
         </PageHeader>
-
-        {/* ── Filter Tabs ── */}
-        <div className="px-5 pt-3 pb-2 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-1.5 bg-white dark:bg-[#111F35] p-1.5 rounded-2xl border border-[#E4EBF6] dark:border-white/10 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'all'
-                  ? 'bg-[#0F2854] text-white shadow-sm'
-                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
-              }`}
-            >
-              ทั้งหมด ({combinedHistory.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('inspections')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'inspections'
-                  ? 'bg-[#0F2854] text-white shadow-sm'
-                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
-              }`}
-            >
-              <SearchIcon className="w-3.5 h-3.5 shrink-0" />
-              ประวัติการตรวจวัด ({inspectionsCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('comments')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'comments'
-                  ? 'bg-[#0F2854] text-white shadow-sm'
-                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
-              }`}
-            >
-              <MessageIcon className="w-3.5 h-3.5 shrink-0" />
-              บันทึกข้อความ & การซ่อมบำรุง ({commentsCount})
-            </button>
-          </div>
-        </div>
 
         {/* ── Content ── */}
         <div className="flex-1 px-5 pt-2 pb-28 lg:pb-10">

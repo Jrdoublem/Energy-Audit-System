@@ -30,7 +30,7 @@ function getInitialCollapsed() {
   return localStorage.getItem('sidebarCollapsed') === 'true';
 }
 
-function RoleBadge({ role, stretch = false }) {
+export function RoleBadge({ role, stretch = false }) {
   return (
     <div className={`flex items-center justify-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full pl-3 pr-3.5 py-2 text-sm font-medium text-[#0F2854]/80 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm ${stretch ? 'flex-1 lg:flex-none lg:shrink-0' : 'shrink-0'}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -39,7 +39,7 @@ function RoleBadge({ role, stretch = false }) {
   );
 }
 
-function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role, t, stretch = false }) {
+export function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role, t, stretch = false }) {
   // An engineer assigned to 0-1 factories has nothing to switch between —
   // show it as a plain badge instead of a dropdown with a single option.
   if (role === 'engineer' && factories.length <= 1) {
@@ -119,6 +119,7 @@ function AppLayout({
   title, actions, children, hideHeader = false, fullBleed = false, hideFactorySelect = false,
   mobileHeaderRight = false, mobileHeaderCenter = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
   hideRoleBadge = false, hideRoleBadgeMobile = hideRoleBadge, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
+  roleBadgeByAvatar = false,
 }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -399,6 +400,11 @@ function AppLayout({
             {actions}
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-auto">
+            {roleBadgeByAvatar && (
+              <div className="lg:hidden">
+                <RoleBadge role={roleLabel} />
+              </div>
+            )}
             <div className="relative group lg:hidden">
               <button
                 type="button"

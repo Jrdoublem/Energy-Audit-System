@@ -196,7 +196,6 @@ export default function Report() {
           {t.report?.pageTitle || 'รายงานผลการตรวจวิเคราะห์พลังงาน'}
         </span>
       }
-      hideFactorySelect
       factoryRowBelowTitle
     >
       <div className="flex flex-col gap-6 w-full">

@@ -126,7 +126,7 @@ export const TRANSLATIONS = {
     equipment: {
       pageTitle: 'ทะเบียนอุปกรณ์',
       searchPlaceholder: 'ค้นหา เช่น รหัสอุปกรณ์ ...',
-      addEquipment: 'เพิ่มทะเบียนอุปกรณ์',
+      addEquipment: 'เพิ่มอุปกรณ์',
       editEquipment: 'แก้ไขทะเบียนอุปกรณ์',
       allEquipment: 'อุปกรณ์ทั้งหมด',
       categoryList: 'รายการ',

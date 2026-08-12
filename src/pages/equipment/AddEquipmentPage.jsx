@@ -203,8 +203,8 @@ export default function AddEquipmentPage({
   return (
     <div className="max-w-4xl mx-auto w-full py-6 space-y-6 font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
             {isEditing ? 'แก้ไขรายละเอียดอุปกรณ์' : 'เพิ่มอุปกรณ์ใหม่'}
           </h2>
@@ -215,7 +215,7 @@ export default function AddEquipmentPage({
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm shrink-0"
         >
           <ArrowLeftIcon className="w-4 h-4" />
           ยกเลิก
@@ -325,20 +325,21 @@ export default function AddEquipmentPage({
 
       {/* SECTION 2: SPECIFICATIONS & CATALOG PRESET */}
       <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-[#4988C4]">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2 text-xs lg:text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
-            <GearIcon className="w-4 h-4 text-[#4988C4]" />
+            <GearIcon className="w-4 h-4 text-[#4988C4] shrink-0" />
             คุณสมบัติทางเทคนิค (SPECIFICATIONS)
           </div>
           {catalogItems.length > 0 && (
-            <div className="flex items-center gap-2">
-              <SparkleIcon className="w-3.5 h-3.5 text-amber-500" />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <SparkleIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <Select
                 value={catalogPick}
                 onChange={handleCatalogSelect}
                 placeholder="-- เลือกจากแคตตาล็อกเพื่อเติมอัตโนมัติ --"
                 options={catalogItems.map((c) => ({ value: c.id, label: `${c.brand} ${c.model} (${c.id})` }))}
-                triggerClassName="flex items-center gap-1.5 text-xs lg:text-sm font-bold px-3 py-1.5 rounded-xl bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] dark:text-[#E7EEF7] border border-[#D0E4F7] dark:border-white/10 focus:outline-none"
+                className="w-full sm:w-auto"
+                triggerClassName="flex items-center gap-1.5 w-full sm:w-auto text-xs lg:text-sm font-bold px-3 py-1.5 rounded-xl bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] dark:text-[#E7EEF7] border border-[#D0E4F7] dark:border-white/10 focus:outline-none"
                 panelClassName="min-w-[16rem]"
               />
             </div>

@@ -359,6 +359,17 @@ function Equipment() {
     return (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1);
   }, [factoryScopedEquipment]);
 
+  // Rendered twice (once alongside search on mobile, once alongside catalog/add
+  // on desktop) so the sort control can sit next to a different neighbor per
+  // breakpoint — keep the options list in one place either way.
+  const sortOptions = [
+    { value: 'newest', label: t.equipment.sortNewest },
+    { value: 'az', label: 'A-Z' },
+    { value: 'za', label: 'Z-A' },
+    { value: 'num', label: t.equipment.sortNumAsc },
+    { value: 'numd', label: t.equipment.sortNumDesc },
+  ];
+
   return (
     <AppLayout
       title={
@@ -462,12 +473,12 @@ function Equipment() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="flex overflow-x-auto scrollbar-none -mx-1 px-1 pb-1 gap-3 sm:grid sm:grid-cols-4 lg:grid-cols-7 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
             {/* ALL filter card */}
             <button
               type="button"
               onClick={() => setCategory('all')}
-              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+              className={`shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
                 category === 'all'
                   ? 'border-[#4988C4] bg-[#EAF4FC] dark:bg-[#4988C4]/20 shadow-sm ring-2 ring-[#4988C4]/30'
                   : 'border-[#E4EBF6] dark:border-white/10 bg-white dark:bg-[#111F35] hover:border-[#4988C4]/40'
@@ -495,7 +506,7 @@ function Equipment() {
                   key={c.key}
                   type="button"
                   onClick={() => setCategory(c.key)}
-                  className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+                  className={`shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
                     c.count === 0 ? 'opacity-50 hover:opacity-100' : ''
                   } ${
                     isSelected
@@ -520,10 +531,11 @@ function Equipment() {
           </div>
         </div>
 
-        {/* Toolbar Header (Search, Sort, Add) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          <div className="flex items-center gap-3 flex-1 min-w-[240px]">
-            <div className="relative w-full">
+        {/* Toolbar Header (Search, Sort, Catalog, Add) */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 -mt-3">
+          {/* Row 1: search — pairs with sort on mobile, stretches alone on desktop */}
+          <div className="flex items-center gap-3 sm:flex-1 sm:min-w-[240px]">
+            <div className="relative flex-1">
               <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
@@ -538,31 +550,45 @@ function Equipment() {
                 </button>
               )}
             </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-400 dark:text-[#7E93AF] font-medium hidden sm:inline">เรียงตาม:</span>
+            {/* Sort — shown here (next to search) on mobile only */}
+            <div className="flex sm:hidden items-center shrink-0">
               <Select
                 value={sortOrder}
                 onChange={setSortOrder}
-                options={[
-                  { value: 'newest', label: t.equipment.sortNewest },
-                  { value: 'az', label: 'A-Z' },
-                  { value: 'za', label: 'Z-A' },
-                  { value: 'num', label: t.equipment.sortNumAsc },
-                  { value: 'numd', label: t.equipment.sortNumDesc },
-                ]}
+                options={sortOptions}
+                triggerClassName="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-xs font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                panelClassName="min-w-[11rem]"
+              />
+            </div>
+          </div>
+
+          {/* Row 2: catalog + add — paired together on mobile; sort rejoins here on desktop */}
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+              <span className="text-xs text-gray-400 dark:text-[#7E93AF] font-medium">เรียงตาม:</span>
+              <Select
+                value={sortOrder}
+                onChange={setSortOrder}
+                options={sortOptions}
                 triggerClassName="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-xs font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 panelClassName="min-w-[11rem]"
               />
             </div>
 
+            <button
+              type="button"
+              onClick={() => navigate('/catalog')}
+              className="flex sm:hidden flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 text-sm font-bold transition-colors"
+            >
+              <BoxIcon className="w-4 h-4" />
+              แคตตาล็อก
+            </button>
+
             {isAdmin && (
               <button
                 type="button"
                 onClick={openAddModal}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
+                className="flex flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95"
               >
                 <PlusIcon className="w-4 h-4" />
                 {t.equipment.addEquipment}
