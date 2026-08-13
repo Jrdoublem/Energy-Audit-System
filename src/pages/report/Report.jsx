@@ -253,7 +253,12 @@ export default function Report() {
                 </button>
                 <div className="min-w-0">
                   <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
-                    {form.reportTitle || 'รายละเอียดรายงานผลการตรวจวิเคราะห์'}
+                    {form.reportTitle || (
+                      <>
+                        <span className="block sm:inline">รายละเอียดรายงาน</span>{' '}
+                        <span className="block sm:inline">ผลการตรวจวิเคราะห์</span>
+                      </>
+                    )}
                   </h2>
                   <p className="text-sm text-gray-400 dark:text-[#7E93AF] mt-0.5">
                     กรอกข้อมูลรายละเอียดการตรวจวิเคราะห์ มาตรการประหยัดพลังงาน และข้อเสนอแนะด้านล่าง
