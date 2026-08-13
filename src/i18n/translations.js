@@ -243,6 +243,7 @@ export const TRANSLATIONS = {
       selectCorrectiveMeasure: 'เลือกมาตรการแก้ไข',
       wantMoreSavings: 'ต้องการประหยัดพลังงานเพิ่ม?',
       selectMeasure: 'เลือกมาตรการ',
+      recommendedMeasures: 'มาตรการแนะนำสำหรับอุปกรณ์นี้',
     },
 
     history: {
@@ -638,6 +639,33 @@ export const TRANSLATIONS = {
       yearsOld: 'ปี',
     },
 
+    units: {
+      pageTitle: 'หน่วยตรวจวัด',
+      subtitle: 'จัดการรายการหน่วยที่ใช้อ้างอิงในการตรวจวัดและคำนวณทั่วทั้งระบบ',
+      addUnit: 'เพิ่มหน่วย',
+      editUnit: 'แก้ไขหน่วย',
+      unitName: 'ชื่อหน่วย',
+      egUnitName: 'เช่น กิโลวัตต์',
+      unitSymbol: 'สัญลักษณ์',
+      egUnitSymbol: 'เช่น kW',
+      unitCategory: 'หมวดหมู่',
+      categoryElectrical: 'ไฟฟ้า',
+      categoryTemperature: 'อุณหภูมิ',
+      categoryFlow: 'อัตราการไหล',
+      categoryPressure: 'ความดัน',
+      categoryMass: 'มวล / น้ำหนัก',
+      categoryLength: 'ระยะ / ขนาด',
+      categoryEnergy: 'พลังงาน',
+      categoryOther: 'อื่นๆ',
+      errName: 'กรุณากรอกชื่อหน่วย',
+      errSymbol: 'กรุณากรอกสัญลักษณ์',
+      deleteConfirm: 'ลบหน่วยนี้ออกจากระบบ?',
+      noUnitsYet: 'ยังไม่มีหน่วยตรวจวัดในระบบ กด "เพิ่มหน่วย" เพื่อเริ่มเก็บข้อมูล',
+      noSearchResults: 'ไม่พบหน่วยที่ตรงกับการค้นหา',
+      searchPlaceholder: 'ค้นหาชื่อหน่วย / สัญลักษณ์...',
+      itemCount: 'รายการ',
+    },
+
     catalog: {
       pageTitle: 'แคตตาล็อกอุปกรณ์',
       subtitle: 'เก็บข้อมูลรุ่นอุปกรณ์ต่าง ๆ ในตลาด ไว้อ้างอิงเวลาเลือกซื้อหรือเทียบสเปก',
@@ -970,6 +998,7 @@ export const TRANSLATIONS = {
       selectCorrectiveMeasure: 'Select Corrective Measure',
       wantMoreSavings: 'Want to save more energy?',
       selectMeasure: 'Select Measure',
+      recommendedMeasures: 'Recommended measures for this equipment',
     },
 
     history: {
@@ -1359,6 +1388,33 @@ export const TRANSLATIONS = {
       addNewEquipment: 'Add Equipment',
       backToFactories: 'Back to Factories',
       yearsOld: 'yr old',
+    },
+
+    units: {
+      pageTitle: 'Measurement Units',
+      subtitle: 'Manage the list of units used for reference across measurements and calculations system-wide.',
+      addUnit: 'Add Unit',
+      editUnit: 'Edit Unit',
+      unitName: 'Unit Name',
+      egUnitName: 'e.g. Kilowatt',
+      unitSymbol: 'Symbol',
+      egUnitSymbol: 'e.g. kW',
+      unitCategory: 'Category',
+      categoryElectrical: 'Electrical',
+      categoryTemperature: 'Temperature',
+      categoryFlow: 'Flow Rate',
+      categoryPressure: 'Pressure',
+      categoryMass: 'Mass / Weight',
+      categoryLength: 'Length / Size',
+      categoryEnergy: 'Energy',
+      categoryOther: 'Other',
+      errName: 'Please enter a unit name',
+      errSymbol: 'Please enter a symbol',
+      deleteConfirm: 'Remove this unit from the system?',
+      noUnitsYet: 'No measurement units yet — click "Add Unit" to start.',
+      noSearchResults: 'No units match your search',
+      searchPlaceholder: 'Search unit name / symbol...',
+      itemCount: 'items',
     },
 
     catalog: {

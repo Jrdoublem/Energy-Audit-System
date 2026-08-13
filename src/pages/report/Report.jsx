@@ -46,6 +46,11 @@ export default function Report() {
   ));
   const [search, setSearch] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  // Tracks whether we're in the "just viewing" flow (eye icon) vs. inside
+  // the edit form's own preview button — closing the preview should land
+  // back on the report list for the former, but stay on the form for the
+  // latter.
+  const [viewOnly, setViewOnly] = useState(false);
 
   useEffect(() => {
     fetchAllReports()
@@ -74,16 +79,29 @@ export default function Report() {
   };
 
   const handleOpenReport = (r) => {
+    setViewOnly(false);
+    setShowPreview(false);
     setEditingReport(r);
   };
 
   const handleViewReport = (r, e) => {
     if (e) e.stopPropagation();
+    setViewOnly(true);
     setEditingReport(r);
     setShowPreview(true);
   };
 
+  const handleClosePreview = () => {
+    if (viewOnly) {
+      setViewOnly(false);
+      setEditingReport(null);
+    }
+    setShowPreview(false);
+  };
+
   const handleNewReport = () => {
+    setViewOnly(false);
+    setShowPreview(false);
     setEditingReport({ id: `rpt-${Date.now()}` });
   };
 
@@ -197,9 +215,20 @@ export default function Report() {
         </span>
       }
       factoryRowBelowTitle
+      hideHeaderMobile={!!editingReport && !viewOnly}
     >
       <div className="flex flex-col gap-6 w-full">
-        {editingReport ? (
+        {editingReport && viewOnly ? (
+          /* Print-preview-only flow (eye icon) — closing it returns to the list */
+          <ReportPrintPreview
+            item={item}
+            result={result}
+            measures={measures}
+            form={form}
+            onClose={handleClosePreview}
+            onEdit={() => { setViewOnly(false); setShowPreview(false); }}
+          />
+        ) : editingReport ? (
           /* Full Page Report Edit Form */
           <div className="max-w-4xl mx-auto w-full py-6 space-y-6 font-sans">
             {showPreview && (
@@ -208,25 +237,34 @@ export default function Report() {
                 result={result}
                 measures={measures}
                 form={form}
-                onClose={() => setShowPreview(false)}
+                onClose={handleClosePreview}
               />
             )}
 
             {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <h2 className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
-                  {form.reportTitle || 'รายละเอียดรายงานผลการตรวจวิเคราะห์'}
-                </h2>
-                <p className="text-sm text-gray-400 dark:text-[#7E93AF] mt-0.5">
-                  กรอกข้อมูลรายละเอียดการตรวจวิเคราะห์ มาตรการประหยัดพลังงาน และข้อเสนอแนะด้านล่าง
-                </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingReport(null)}
+                  className="flex sm:hidden items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm shrink-0"
+                >
+                  <ArrowLeftIcon className="w-4 h-4" />
+                </button>
+                <div className="min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
+                    {form.reportTitle || 'รายละเอียดรายงานผลการตรวจวิเคราะห์'}
+                  </h2>
+                  <p className="text-sm text-gray-400 dark:text-[#7E93AF] mt-0.5">
+                    กรอกข้อมูลรายละเอียดการตรวจวิเคราะห์ มาตรการประหยัดพลังงาน และข้อเสนอแนะด้านล่าง
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setShowPreview(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#EAF4FC] dark:bg-white/10 text-sm font-bold text-[#4988C4] hover:bg-[#D8EBFA] transition-colors shadow-sm"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-[#EAF4FC] dark:bg-white/10 text-sm font-bold text-[#4988C4] hover:bg-[#D8EBFA] transition-colors shadow-sm"
                 >
                   <PrinterIcon className="w-4 h-4" />
                   แสดงตัวอย่างรายงาน (Print)
@@ -234,7 +272,7 @@ export default function Report() {
                 <button
                   type="button"
                   onClick={() => setEditingReport(null)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
                 >
                   <ArrowLeftIcon className="w-4 h-4" />
                   ย้อนกลับ
@@ -493,34 +531,44 @@ export default function Report() {
           /* Report List View */
           <>
             {/* Toolbar Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-md">
-                <div className="relative w-full">
-                  <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="ค้นหาชื่อรายงาน / รหัสอุปกรณ์ / โรงงาน..."
-                    className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
-                  />
-                  {search && (
-                    <button type="button" onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      <CloseIcon className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="ค้นหาชื่อรายงาน / รหัสอุปกรณ์ / โรงงาน..."
+                  className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                />
+                {search && (
+                  <button type="button" onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <CloseIcon className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               <button
                 type="button"
                 onClick={handleNewReport}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
+                className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
               >
                 <PlusIcon className="w-4 h-4" />
                 สร้างรายงานใหม่
               </button>
             </div>
+
+            {/* Mobile-only floating "new report" button — replaces the text
+                button above (sm:hidden), positioned above the bottom nav bar */}
+            <button
+              type="button"
+              onClick={handleNewReport}
+              title="สร้างรายงานใหม่"
+              className="sm:hidden fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full text-white shadow-lg hover:opacity-90 active:scale-95 transition-all flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
+            >
+              <PlusIcon className="w-6 h-6" />
+            </button>
 
             {/* Reports List */}
             {filteredReports.length === 0 ? (

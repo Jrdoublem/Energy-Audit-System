@@ -5,12 +5,13 @@ import { useLang } from '../../context/languageStore.js';
 import { fetchAllHistory } from '../../context/historyStore.js';
 import { getSession } from '../../context/authStore.js';
 import { fileToResizedDataUrl } from '../../utils/image.js';
-import { uploadImage } from '../../context/storageStore.js';
+import { uploadImage, deleteImage } from '../../context/storageStore.js';
 import {
   ArrowLeftIcon,
   CameraIcon,
   CheckIcon,
   ClipboardIcon,
+  CloseIcon,
   GearIcon,
   LightningIcon,
   SparkleIcon,
@@ -22,6 +23,7 @@ import {
 } from '../../components/icons';
 
 const CURRENT_YEAR = new Date().getFullYear();
+const MAX_EQUIPMENT_IMAGES = 6;
 
 function formatThaiDate(isoString) {
   if (!isoString) return '';
@@ -70,28 +72,37 @@ export default function AddEquipmentPage({
     operatingHours: initialData.operatingHours || '8000',
     loadFactor: initialData.loadFactor || '0.8',
     owner: initialData.owner || '',
-    image: initialData.image || '',
+    images: initialData.images || (initialData.image ? [initialData.image] : []),
   });
 
   const [imageError, setImageError] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
 
   const handleImageChange = async (e) => {
-    const file = e.target.files[0];
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
-    if (!file) return;
+    const remaining = MAX_EQUIPMENT_IMAGES - form.images.length;
+    if (!files.length || remaining <= 0) return;
     setImageError('');
     setImageUploading(true);
     try {
-      const dataUrl = await fileToResizedDataUrl(file);
-      const url = await uploadImage(dataUrl, 'equipment');
-      setForm((p) => ({ ...p, image: url }));
+      const urls = [];
+      for (const file of files.slice(0, remaining)) {
+        const dataUrl = await fileToResizedDataUrl(file);
+        urls.push(await uploadImage(dataUrl, 'equipment'));
+      }
+      setForm((p) => ({ ...p, images: [...p.images, ...urls] }));
     } catch (err) {
       console.error('Equipment image upload failed:', err);
       setImageError('อัปโหลดรูปภาพไม่สำเร็จ');
     } finally {
       setImageUploading(false);
     }
+  };
+
+  const handleRemoveImage = (url) => {
+    setForm((p) => ({ ...p, images: p.images.filter((u) => u !== url) }));
+    deleteImage(url);
   };
 
   const [commentsList, setCommentsList] = useState(() => initialData.comments || []);
@@ -228,23 +239,22 @@ export default function AddEquipmentPage({
   return (
     <div className="max-w-4xl mx-auto w-full py-6 space-y-6 font-sans">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
+      <div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm shrink-0"
+          >
+            <ArrowLeftIcon className="w-4 h-4" />
+          </button>
+          <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] min-w-0">
             {isEditing ? 'แก้ไขรายละเอียดอุปกรณ์' : 'เพิ่มอุปกรณ์ใหม่'}
           </h2>
-          <p className="text-sm lg:text-base text-gray-400 dark:text-[#7E93AF] mt-0.5">
-            กรอกรายละเอียดข้อมูลอุปกรณ์ด้านล่างให้ครบถ้วน ข้อมูลทั้งหมดจะถูกบันทึกลงฐานข้อมูล Firestore
-          </p>
         </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm shrink-0"
-        >
-          <ArrowLeftIcon className="w-4 h-4" />
-          ยกเลิก
-        </button>
+        <p className="text-sm lg:text-base text-gray-400 dark:text-[#7E93AF] mt-1.5 ml-[3.25rem]">
+          กรอกรายละเอียดข้อมูลอุปกรณ์ด้านล่างให้ครบถ้วน ข้อมูลทั้งหมดจะถูกบันทึกลงฐานข้อมูล Firestore
+        </p>
       </div>
 
       {error && (
@@ -349,32 +359,39 @@ export default function AddEquipmentPage({
       </Panel>
 
       {/* SECTION 1.5: EQUIPMENT PHOTO */}
-      <Panel className="p-6 space-y-5 rounded-3xl">
+      <Panel className="p-6 space-y-4 rounded-3xl">
         <div className="flex items-center gap-2 text-xs lg:text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
           <CameraIcon className="w-4 h-4 text-[#4988C4]" />
           รูปภาพอุปกรณ์ (EQUIPMENT PHOTO)
         </div>
+        <p className="text-[11px] lg:text-xs text-gray-400 dark:text-[#7E93AF] -mt-2">
+          ถ่ายภาพสภาพอุปกรณ์ที่ตรวจวัด ใช้เป็นภาพก่อนปรับปรุงสำหรับเปรียบเทียบหลังดำเนินมาตรการ (สูงสุด {MAX_EQUIPMENT_IMAGES} รูป)
+        </p>
 
-        <div className="p-4 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 flex flex-col sm:flex-row items-center gap-4">
-          {form.image ? (
-            <img src={form.image} alt="" className="w-24 h-24 rounded-2xl object-cover bg-white dark:bg-white/10 shadow-sm shrink-0" />
-          ) : (
-            <div className="w-24 h-24 rounded-2xl bg-[#EAF4FC] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
-              <CameraIcon className="w-10 h-10" />
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          {form.images.map((url) => (
+            <div key={url} className="relative aspect-square rounded-2xl overflow-hidden bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 shadow-sm">
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => handleRemoveImage(url)}
+                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+              >
+                <CloseIcon className="w-3.5 h-3.5" />
+              </button>
             </div>
-          )}
-          <div className="flex-1 space-y-2 text-center sm:text-left">
-            <p className="text-xs lg:text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">ถ่ายภาพสภาพอุปกรณ์ที่ตรวจวัด</p>
-            <p className="text-[11px] lg:text-xs text-gray-400 dark:text-[#7E93AF]">ใช้เป็นภาพก่อนปรับปรุง สำหรับเปรียบเทียบหลังดำเนินมาตรการ</p>
-            <label className={`inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-xs lg:text-sm font-bold text-[#4988C4] transition-colors ${
-              imageUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-[#EAF4FC] cursor-pointer'
+          ))}
+          {form.images.length < MAX_EQUIPMENT_IMAGES && (
+            <label className={`aspect-square rounded-2xl border-2 border-dashed border-[#D0E4F7] dark:border-white/15 flex flex-col items-center justify-center gap-1 text-[#4988C4] transition-colors ${
+              imageUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-[#EAF4FC] dark:hover:bg-white/5 cursor-pointer'
             }`}>
-              {imageUploading ? 'กำลังอัปโหลด...' : (form.image ? 'เปลี่ยนรูปภาพ' : 'เลือกรูปภาพ')}
-              <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" disabled={imageUploading} />
+              <CameraIcon className="w-6 h-6" />
+              <span className="text-[10px] lg:text-xs font-bold text-center px-1">{imageUploading ? 'กำลังอัปโหลด...' : 'เพิ่มรูป'}</span>
+              <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" disabled={imageUploading} />
             </label>
-            {imageError && <p className="text-xs text-rose-500">{imageError}</p>}
-          </div>
+          )}
         </div>
+        {imageError && <p className="text-xs text-rose-500">{imageError}</p>}
       </Panel>
 
       {/* SECTION 2: SPECIFICATIONS & CATALOG PRESET */}

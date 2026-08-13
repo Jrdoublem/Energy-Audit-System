@@ -16,6 +16,7 @@ import Calculator from './pages/Calculator';
 import Factories from './pages/Factories';
 import FactoryDetail from './pages/FactoryDetail';
 import Settings from './pages/Settings';
+import Units from './pages/Units';
 import Profile from './pages/Profile';
 import AdminPanel from './pages/AdminPanel';
 
@@ -47,6 +48,7 @@ function App() {
               <Route path="/factories" element={<RequireAuth><Factories /></RequireAuth>} />
               <Route path="/factories/:name" element={<RequireAuth><FactoryDetail /></RequireAuth>} />
               <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+              <Route path="/units" element={<RequireAuth><Units /></RequireAuth>} />
               <Route path="/admin" element={<RequireAuth><AdminPanel /></RequireAuth>} />
               <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
               <Route path="*" element={<Navigate to="/login" replace />} />

@@ -49,7 +49,7 @@ function SignatureLine({ label }) {
   );
 }
 
-function ReportPrintPreview({ item, result, measures, form, onClose }) {
+function ReportPrintPreview({ item, result, measures, form, onClose, onEdit }) {
   const { t } = useLang();
   const primaryMeasure = (measures || [])[0] || null;
   const evalData = primaryMeasure?.evalData || {};
@@ -88,7 +88,7 @@ function ReportPrintPreview({ item, result, measures, form, onClose }) {
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={onEdit || onClose}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-white/15 text-xs font-bold text-white transition-colors"
             >
               {t.report.editData}

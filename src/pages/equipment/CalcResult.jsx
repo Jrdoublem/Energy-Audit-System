@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Panel } from '../../components/ui';
 import { useTheme } from '../../context/themeStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { saveHistoryItem } from '../../context/historyStore.js';
 import MeasureSelect from '../history/MeasureSelect';
+import { MEASURES } from '../history/measuresData.js';
 import {
   ArrowLeftIcon,
   CheckIcon,
   ClipboardIcon,
+  SparkleIcon,
 } from '../../components/icons';
 
 function getGradeConfig(t) {
@@ -81,12 +84,23 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [showMeasure, setShowMeasure] = useState(false);
+  const [quickMeasure, setQuickMeasure] = useState('');
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { t } = useLang();
   const isDark = theme === 'dark';
 
   const handleMeasureClick = () => {
+    setQuickMeasure('');
+    if (onMeasure) { onMeasure(); } else { setShowMeasure(true); }
+  };
+
+  // Suggest the first few measures typically used for this equipment
+  // category — clicking one jumps straight into its evaluation form instead
+  // of making the user pick from the full list first.
+  const recommendedMeasures = (MEASURES[item?.category] || []).slice(0, 3);
+  const handleRecommendedClick = (m) => {
+    setQuickMeasure(m);
     if (onMeasure) { onMeasure(); } else { setShowMeasure(true); }
   };
 
@@ -245,6 +259,27 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
               : t.calcResult.wantMoreSavings}
           </p>
 
+          {!onMeasure && recommendedMeasures.length > 0 && (
+            <div className="space-y-2">
+              <p className="flex items-center gap-1.5 text-xs font-bold text-[#4988C4]">
+                <SparkleIcon className="w-3.5 h-3.5" />
+                {t.calcResult.recommendedMeasures}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {recommendedMeasures.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => handleRecommendedClick(m)}
+                    className="px-3.5 py-2 rounded-full bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] text-xs font-bold hover:bg-[#D8EBFA] dark:hover:bg-white/15 transition-colors"
+                  >
+                    {t.measures.names[m] || m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleMeasureClick}
@@ -259,8 +294,19 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
         </Panel>
       </div>
 
-      {showMeasure && (
-        <MeasureSelect item={item} result={result} onClose={() => setShowMeasure(false)} />
+      {showMeasure && createPortal(
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:px-4 font-sans">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowMeasure(false)} />
+          <div className="relative z-10 w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[88vh] bg-[#F8FAFC] dark:bg-[#0B1B33] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-y-auto">
+            <MeasureSelect
+              item={item}
+              result={result}
+              onClose={() => setShowMeasure(false)}
+              initialMeasure={quickMeasure || undefined}
+            />
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -126,7 +126,7 @@ function NavBadge({ count, active }) {
 }
 
 function AppLayout({
-  title, actions, children, hideHeader = false, fullBleed = false, hideFactorySelect = false,
+  title, actions, children, hideHeader = false, hideHeaderMobile = false, fullBleed = false, hideFactorySelect = false,
   mobileHeaderRight = false, mobileHeaderCenter = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
   hideRoleBadge = false, hideRoleBadgeMobile = hideRoleBadge, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
   roleBadgeByAvatar = false,
@@ -323,9 +323,9 @@ function AppLayout({
 
         <button
           type="button"
-          onClick={() => navigate('/equipment')}
+          onClick={() => navigate('/equipment', { state: { openAdd: true } })}
           title={collapsed ? t.nav.newMeasurement : undefined}
-          className={`mt-5 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 hover:bg-[#38BDF8]/8 text-[#38BDF8] text-xs font-semibold transition-all ${
+          className={`mt-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 hover:bg-[#38BDF8]/8 text-[#38BDF8] text-xs font-semibold transition-all ${
             collapsed ? '' : 'mx-1'
           }`}
         >
@@ -391,7 +391,7 @@ function AppLayout({
 
         <div
           className={`w-full max-w-md lg:max-w-none items-center justify-between gap-4 px-6 lg:px-10 ${
-            hideHeader ? 'hidden' : 'flex'
+            hideHeader ? 'hidden' : hideHeaderMobile ? 'hidden lg:flex' : 'flex'
           } ${title ? 'pt-8 pb-4 lg:pt-8 lg:pb-4' : 'pt-5 pb-3 lg:pt-6 lg:pb-3'}`}
         >
           {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] shrink-0">{title}</h1>}
@@ -465,9 +465,9 @@ function AppLayout({
           </div>
         </div>
 
-        {factoryRowBelowTitle && !(hideRoleBadgeMobile && hideFactorySelect) && (
-          <div className="flex lg:hidden justify-center w-full max-w-md items-center gap-2 px-6 pb-2 -mt-[10px]">
-            {!hideRoleBadgeMobile && <RoleBadge role={roleLabel} />}
+        {factoryRowBelowTitle && !hideHeaderMobile && !(hideRoleBadgeMobile && hideFactorySelect) && (
+          <div className="flex lg:hidden w-full max-w-md items-center gap-2 px-6 pb-2 -mt-[10px]">
+            {!hideRoleBadgeMobile && <RoleBadge role={roleLabel} stretch />}
             {!hideFactorySelect && (
               <FactorySelect
                 selectedFactory={selectedFactory}
@@ -476,6 +476,7 @@ function AppLayout({
                 factories={factories}
                 t={t}
                 role={session.role}
+                stretch
               />
             )}
           </div>

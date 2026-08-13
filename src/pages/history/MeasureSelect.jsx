@@ -12,60 +12,11 @@ import {
   LightningIcon,
   TrashIcon,
 } from '../../components/icons';
+import { MEASURES, ALL_MEASURES } from './measuresData.js';
 
 function nextMeasureId() {
   return Date.now();
 }
-
-const MEASURES = {
-  chiller: [
-    'ล้าง Condenser',
-    'ล้าง Evaporator',
-    'เติมน้ำยาทำความเย็น',
-    'ปรับ Setpoint น้ำเย็น',
-    'ปรับแต่ง Refrigerant Charge',
-    'ทำความสะอาดหอผึ่งน้ำ',
-    'ติดตั้ง VFD สำหรับปั๊มน้ำเย็น',
-    'เปลี่ยนเครื่องทำน้ำเย็นประสิทธิภาพสูง',
-  ],
-  compressor: [
-    'ตรวจสอบระบบรั่วซึม',
-    'เปลี่ยนไส้กรองอากาศ',
-    'ปรับความดันใช้งาน',
-    'ติดตั้ง VFD',
-    'เปลี่ยน Compressor ประสิทธิภาพสูง',
-  ],
-  pump: [
-    'ติดตั้ง VFD',
-    'ปรับขนาดปั๊มให้เหมาะสม',
-    'เปลี่ยนปั๊มประสิทธิภาพสูง',
-    'ตรวจสอบและซ่อมแซมระบบท่อ',
-  ],
-  boiler: [
-    'ตรวจสอบฉนวนกันความร้อน',
-    'ปรับอัตราส่วนอากาศต่อเชื้อเพลิง',
-    'ติดตั้งระบบ Heat Recovery',
-    'ทำความสะอาด Boiler Tube',
-    'เปลี่ยนหม้อไอน้ำประสิทธิภาพสูง',
-  ],
-  cooling: [
-    'ทำความสะอาดหอผึ่งน้ำ',
-    'ปรับปรุงระบบกระจายน้ำ',
-    'เปลี่ยนพัดลมประสิทธิภาพสูง',
-    'ติดตั้ง VFD สำหรับพัดลม',
-    'เปลี่ยนหอผึ่งน้ำประสิทธิภาพสูง',
-  ],
-  electrical: [
-    'ติดตั้ง Power Factor Correction',
-    'เปลี่ยนหลอดไฟ LED',
-    'ติดตั้ง Energy Management System',
-    'ปรับปรุงระบบไฟฟ้าแสงสว่าง',
-    'เปลี่ยนหม้อแปลงประสิทธิภาพสูง',
-    'เปลี่ยนมอเตอร์ประสิทธิภาพสูง',
-  ],
-};
-
-const ALL_MEASURES = [...new Set(Object.values(MEASURES).flat())];
 
 const MEASURE_FIELDS = {
   'เปลี่ยนเครื่องทำน้ำเย็นประสิทธิภาพสูง': [
@@ -504,26 +455,14 @@ function EvalSection({ basePower, category, evalData, onChange, onSave, appDefau
 }
 
 /* ── MeasureSelect — full-page inline design ── */
-function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeasures }) {
+function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeasures, initialMeasure }) {
   const { t } = useLang();
   const navigate = useNavigate();
-  const [selected, setSelected]           = useState('');
-  const [step, setStep]                   = useState('select');
-  const [activeMeasure, setActiveMeasure] = useState('');
-  const [formData, setFormData]           = useState({});
-  const [savedMeasures, setSavedMeasures] = useState(initialSavedMeasures || []);
-  const [appDefaults, setAppDefaults]     = useState(DEFAULT_SETTINGS);
-  const [showEval, setShowEval]           = useState(false);
-  const [evalData, setEvalData]           = useState({});
-  const activeMeasureId = useRef(null);
-
-  useEffect(() => { fetchSettings().then(setAppDefaults).catch(() => {}); }, []);
-
-  const grade    = t.common.grade[result?.grade] || '-';
-  const measures = MEASURES[item?.category] || ALL_MEASURES;
 
   const FIELD_DEFAULTS = { specificPowerNew: '5.5' };
 
+  // Pure aside from reading the `result` prop — safe to call from a lazy
+  // state initializer below (initialMeasure jumps straight to the form).
   const autoFill = (measureName) => {
     const fields = MEASURE_FIELDS[measureName] || DEFAULT_FIELDS;
     const auto   = {};
@@ -536,6 +475,37 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
     });
     return auto;
   };
+
+  const buildInitialEvalData = () => ({
+    category: 'Minor',
+    customName: '',
+    currentKW: result?.powerCF || item?.chillerPower || item?.electricalPower || 10,
+    proposedKW: '',
+    percentReduction: '15',
+    operatingHours: DEFAULT_SETTINGS.defaultOperatingHours || 8000,
+    electricityRate: DEFAULT_SETTINGS.defaultElectricityRate || 4.5,
+    investmentCost: '0',
+    note: '',
+  });
+
+  // This component is freshly mounted each time the "select measure" modal
+  // opens (the parent conditionally renders it), so `initialMeasure` is
+  // fixed for its whole lifetime — a lazy initializer is enough to jump
+  // straight to that measure's evaluation form, no effect needed.
+  const [selected, setSelected]           = useState(initialMeasure || '');
+  const [step, setStep]                   = useState(initialMeasure ? 'form' : 'select');
+  const [activeMeasure, setActiveMeasure] = useState(initialMeasure || '');
+  const [formData, setFormData]           = useState(() => (initialMeasure ? autoFill(initialMeasure) : {}));
+  const [savedMeasures, setSavedMeasures] = useState(initialSavedMeasures || []);
+  const [appDefaults, setAppDefaults]     = useState(DEFAULT_SETTINGS);
+  const [showEval, setShowEval]           = useState(!!initialMeasure);
+  const [evalData, setEvalData]           = useState(() => (initialMeasure ? buildInitialEvalData() : {}));
+  const activeMeasureId = useRef(null);
+
+  useEffect(() => { fetchSettings().then(setAppDefaults).catch(() => {}); }, []);
+
+  const grade    = t.common.grade[result?.grade] || '-';
+  const measures = MEASURES[item?.category] || ALL_MEASURES;
 
   const [editEvalData, setEditEvalData] = useState(null);
 

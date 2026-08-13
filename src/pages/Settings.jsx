@@ -6,7 +6,7 @@ import { getSession } from '../context/authStore.js';
 import { fetchAllEquipment, fetchAllCategories } from '../context/equipmentStore.js';
 import { useLang } from '../context/languageStore.js';
 import {
-  ArrowRightIcon, CalculatorIcon, ClipboardIcon, FactoryIcon, GearIcon, ShieldIcon,
+  ArrowRightIcon, CalculatorIcon, ClipboardIcon, FactoryIcon, GaugeIcon, GearIcon, ShieldIcon,
 } from '../components/icons';
 import { ICON_MAP } from '../components/iconMap.js';
 
@@ -50,7 +50,7 @@ function Settings() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-2xl lg:max-w-none lg:items-start">
 
         {/* โปรไฟล์ผู้ใช้งาน */}
-        <Panel className="p-5">
+        <Panel className="p-5 order-1 lg:order-none">
           <SectionHeader title={t.settings.userProfile} />
           <button
             type="button"
@@ -78,7 +78,7 @@ function Settings() {
         </Panel>
 
         {/* เครื่องมือคำนวณ — แบบโทรศัพท์เท่านั้น เพราะแบบคอมยังเข้าได้จาก sidebar อยู่แล้ว */}
-        <Panel className="p-5 lg:hidden">
+        <Panel className="p-5 lg:hidden order-3">
           <SectionHeader title={t.settings.calculatorTool} />
           <button
             type="button"
@@ -97,7 +97,7 @@ function Settings() {
         </Panel>
 
         {/* การตั้งค่าทั่วไป */}
-        <Panel className="p-5 lg:col-span-2">
+        <Panel className="p-5 lg:col-span-2 order-2 lg:order-none">
           <SectionHeader title={t.settings.preferences} />
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-[#0F2854] dark:text-[#E7EEF7]">{t.settings.language}</p>
@@ -126,7 +126,7 @@ function Settings() {
 
         {/* จัดการโรงงาน / Admin Panel — เฉพาะ Admin; ทางเข้าหลักบนมือถือ (ไม่มีในแถบล่างแล้ว) */}
         {isAdmin && (
-          <Panel className="p-5">
+          <Panel className="p-5 order-5 lg:order-none">
             <SectionHeader title={t.settings.manageFactories} />
             <button
               type="button"
@@ -146,7 +146,27 @@ function Settings() {
         )}
 
         {isAdmin && (
-          <Panel className="p-5">
+          <Panel className="p-5 order-4 lg:order-none">
+            <SectionHeader title={t.units.pageTitle} />
+            <button
+              type="button"
+              onClick={() => navigate('/units')}
+              className="w-full flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+            >
+              <div className="w-9 h-9 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">
+                <GaugeIcon className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.units.pageTitle}</p>
+                <p className="text-xs text-gray-400 dark:text-[#7E93AF]">{t.units.subtitle}</p>
+              </div>
+              <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0" />
+            </button>
+          </Panel>
+        )}
+
+        {isAdmin && (
+          <Panel className="p-5 order-6 lg:order-none">
             <SectionHeader title={t.adminPanel.pageTitle} />
             <button
               type="button"
@@ -166,7 +186,7 @@ function Settings() {
         )}
 
         {/* หมวดหมู่อุปกรณ์ */}
-        <Panel className="p-5 lg:col-span-2">
+        <Panel className="p-5 lg:col-span-2 order-7 lg:order-none">
           <SectionHeader
             title={t.equipment.equipmentCategory}
             right={
@@ -198,7 +218,7 @@ function Settings() {
         </Panel>
 
         {/* เกี่ยวกับระบบ */}
-        <Panel className="p-5 lg:col-span-2">
+        <Panel className="p-5 lg:col-span-2 order-8 lg:order-none">
           <SectionHeader title={t.settings.aboutSystem} />
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-[#0F2854] flex items-center justify-center shrink-0">

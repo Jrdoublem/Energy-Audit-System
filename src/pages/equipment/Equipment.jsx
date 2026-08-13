@@ -323,7 +323,7 @@ function Equipment() {
     setConfirmDeleteId(null);
     const removed = equipment.find((e) => e.id === id);
     await deleteEquipmentItem(id);
-    if (removed?.image) deleteImage(removed.image);
+    (removed?.images || []).forEach((url) => deleteImage(url));
     setEquipment((prev) => prev.filter((e) => e.id !== id));
     await refreshFactories();
   };

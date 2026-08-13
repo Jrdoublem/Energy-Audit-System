@@ -26,7 +26,7 @@ function CalcButton({ label, onClick, className = '', style, children }) {
       type="button"
       onClick={onClick}
       style={style}
-      className={`h-14 rounded-2xl text-xl sm:text-lg font-bold flex items-center justify-center transition-transform active:scale-95 ${className}`}
+      className={`h-14 sm:h-16 rounded-2xl text-xl sm:text-2xl font-bold flex items-center justify-center transition-transform active:scale-95 ${className}`}
     >
       {children ?? label}
     </button>
@@ -108,28 +108,28 @@ function EngineerCalculatorFab() {
       {open && createPortal(
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:px-4 font-sans">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="relative z-10 w-full sm:max-w-xs bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 sm:px-5 pt-5 pb-2">
-              <p className="text-base sm:text-sm font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{t.fabCalc.title}</p>
+          <div className="relative z-10 w-full sm:max-w-md bg-white dark:bg-[#111F35] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 sm:px-7 pt-5 sm:pt-6 pb-2 sm:pb-3">
+              <p className="text-base sm:text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{t.fabCalc.title}</p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center text-gray-500 dark:text-[#7E93AF] transition-colors"
               >
-                <CloseIcon className="w-4 h-4" />
+                <CloseIcon className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
-            <div className="px-6 sm:px-5">
-              <div className="rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 px-5 sm:px-4 py-5 mb-4 text-right overflow-hidden">
-                <p className="text-sm sm:text-xs h-5 sm:h-4 text-gray-400 dark:text-[#7E93AF] truncate">
+            <div className="px-6 sm:px-7">
+              <div className="rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 px-5 sm:px-6 py-5 sm:py-7 mb-4 sm:mb-5 text-right overflow-hidden">
+                <p className="text-sm sm:text-base h-5 sm:h-6 text-gray-400 dark:text-[#7E93AF] truncate">
                   {state.operator ? `${formatNumber(state.prevValue)} ${state.operator}` : ' '}
                 </p>
-                <p className="text-4xl sm:text-3xl font-mono font-extrabold text-[#0F2854] dark:text-[#E7EEF7] truncate">{state.display}</p>
+                <p className="text-4xl sm:text-5xl font-mono font-extrabold text-[#0F2854] dark:text-[#E7EEF7] truncate">{state.display}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 px-6 sm:px-5 pb-6 sm:pb-5">
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 px-6 sm:px-7 pb-6 sm:pb-7">
               <CalcButton label="C" onClick={clearAll} className="bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20" />
               <CalcButton onClick={backspace} className={fnClass}><BackspaceIcon className="w-5 h-5" /></CalcButton>
               <CalcButton label="%" onClick={percent} className={fnClass} />
