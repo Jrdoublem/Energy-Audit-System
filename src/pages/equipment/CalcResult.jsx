@@ -298,12 +298,14 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:px-4 font-sans">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowMeasure(false)} />
           <div className="relative z-10 w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[88vh] bg-[#F8FAFC] dark:bg-[#0B1B33] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-y-auto">
-            <MeasureSelect
-              item={item}
-              result={result}
-              onClose={() => setShowMeasure(false)}
-              initialMeasure={quickMeasure || undefined}
-            />
+            <div className="px-4 sm:px-6">
+              <MeasureSelect
+                item={item}
+                result={result}
+                onClose={() => setShowMeasure(false)}
+                initialMeasure={quickMeasure || undefined}
+              />
+            </div>
           </div>
         </div>,
         document.body

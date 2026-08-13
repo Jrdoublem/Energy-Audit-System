@@ -638,7 +638,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
       {step === 'select' ? (
         <>
           {/* MEASURE SELECT PANEL */}
-          <Panel className="p-6 rounded-3xl space-y-5">
+          <Panel className="p-6 rounded-2xl space-y-5">
             <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
               <ClipboardIcon className="w-4 h-4 text-[#4988C4]" />
               {t.measures.selectDesiredMeasure}
@@ -688,7 +688,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
 
           {/* SAVED MEASURES LIST */}
           {savedMeasures.length > 0 && (
-            <Panel className="p-6 rounded-3xl space-y-4 border-t-4 border-t-emerald-500">
+            <Panel className="p-6 rounded-2xl space-y-4 border-t-4 border-t-emerald-500">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                 <CheckIcon className="w-4 h-4 text-emerald-500" />
                 {t.measures.savedMeasures} ({savedMeasures.length} รายการ)
@@ -750,7 +750,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
       ) : (
         <>
           {/* MEASURE FORM PANEL */}
-          <Panel className="p-6 rounded-3xl space-y-5 border-t-4 border-t-[#4988C4]">
+          <Panel className="p-6 rounded-2xl space-y-5 border-t-4 border-t-[#4988C4]">
             <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider mb-1">
               <ClipboardIcon className="w-4 h-4 text-[#4988C4]" />
               เลือกมาตรการ (CHANGE MEASURE)
@@ -813,7 +813,7 @@ function MeasureSelect({ item, result, onClose, inline = false, initialSavedMeas
           </Panel>
 
           {/* EVALUATION PANEL */}
-          <Panel className="p-6 rounded-3xl space-y-5 border-t-4 border-t-amber-400">
+          <Panel className="p-6 rounded-2xl space-y-5 border-t-4 border-t-amber-400">
             <EvalSection
               basePower={basePower}
               category={item?.category}
