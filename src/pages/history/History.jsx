@@ -7,7 +7,7 @@ import { fetchAllHistory, deleteHistoryItem } from '../../context/historyStore.j
 import { fetchAllEquipment } from '../../context/equipmentStore.js';
 import { getSession } from '../../context/authStore.js';
 import { useLang } from '../../context/languageStore.js';
-import { GlassSearchInput, GlassSelect, PageHeader, Panel } from '../../components/ui';
+import { GlassSearchInput, GlassSelect, Panel } from '../../components/ui';
 import CalcResult from '../equipment/CalcResult';
 import MeasureSelect from './MeasureSelect';
 import {
@@ -182,8 +182,30 @@ function History() {
   return (
     <AppLayout hideHeader fullBleed mobileHeaderCenter hideRoleBadge hideFactorySelect>
       <div className="flex flex-col min-h-screen">
-        <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-[2px]">
-          <div className="w-full flex justify-center lg:justify-start items-center gap-2">
+        <div className="px-5 lg:px-10 pt-14 lg:pt-8 pb-5 -mt-6 lg:-mt-[2px]">
+          {/* ── Title row — role badge + factory selector sit to the right on
+              desktop, same line as the title, matching the Reports page ── */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <span className="w-1.5 h-7 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
+              <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">{t.history.pageTitle}</h1>
+            </div>
+            <div className="hidden lg:flex items-center gap-3">
+              <RoleBadge role={roleLabel} />
+              <FactorySelect
+                selectedFactory={selectedFactory}
+                setSelectedFactory={setSelectedFactory}
+                refreshFactories={refreshFactories}
+                factories={factories}
+                role={session.role}
+                t={t}
+              />
+            </div>
+          </div>
+          <p className="text-sm font-medium text-[#0F2854]/60 dark:text-[#7E93AF] pl-5 tracking-wide mt-1">{t.history.subtitle}</p>
+
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+          <div className="w-full flex lg:hidden justify-center items-center gap-2">
             <RoleBadge role={roleLabel} stretch />
             <FactorySelect
               selectedFactory={selectedFactory}
@@ -201,44 +223,53 @@ function History() {
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-xl text-xs font-bold text-center transition-all ${
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
                 activeTab === 'all'
                   ? 'bg-[#0F2854] text-white shadow-sm'
                   : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
               }`}
             >
-              <span className="whitespace-nowrap">ทั้งหมด</span>
-              <span className="text-[10px] font-mono opacity-70">({combinedHistory.length})</span>
+              <span className="hidden lg:inline whitespace-nowrap">ทั้งหมด ({combinedHistory.length})</span>
+              <span className="lg:hidden whitespace-nowrap">ทั้งหมด</span>
+              <span className="lg:hidden text-[10px] font-mono opacity-70">({combinedHistory.length})</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('inspections')}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-xl text-xs font-bold text-center transition-all ${
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
                 activeTab === 'inspections'
                   ? 'bg-[#0F2854] text-white shadow-sm'
                   : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
               }`}
             >
-              <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+              <span className="hidden lg:flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <SearchIcon className="w-3.5 h-3.5 shrink-0" />
+                ประวัติตรวจวัด ({inspectionsCount})
+              </span>
+              <span className="flex lg:hidden items-center justify-center gap-1.5 whitespace-nowrap">
                 <SearchIcon className="w-3.5 h-3.5 shrink-0" />
                 ประวัติ
               </span>
-              <span className="whitespace-nowrap">ตรวจวัด ({inspectionsCount})</span>
+              <span className="lg:hidden whitespace-nowrap">ตรวจวัด ({inspectionsCount})</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('comments')}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-xl text-xs font-bold text-center transition-all ${
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
                 activeTab === 'comments'
                   ? 'bg-[#0F2854] text-white shadow-sm'
                   : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
               }`}
             >
-              <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+              <span className="hidden lg:flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <MessageIcon className="w-3.5 h-3.5 shrink-0" />
+                บันทึกข้อความการซ่อมบำรุง ({commentsCount})
+              </span>
+              <span className="flex lg:hidden items-center justify-center gap-1.5 whitespace-nowrap">
                 <MessageIcon className="w-3.5 h-3.5 shrink-0" />
                 บันทึกข้อความ
               </span>
-              <span className="whitespace-nowrap">การซ่อมบำรุง ({commentsCount})</span>
+              <span className="lg:hidden whitespace-nowrap">การซ่อมบำรุง ({commentsCount})</span>
             </button>
           </div>
 
@@ -264,7 +295,8 @@ function History() {
             </button>
           )}
           <GlassSearchInput value={search} onChange={setSearch} placeholder={t.history.searchPlaceholder} className="w-full" />
-        </PageHeader>
+          </div>
+        </div>
 
         {/* ── Content ── */}
         <div className="flex-1 px-5 pt-2 pb-28 lg:pb-10">

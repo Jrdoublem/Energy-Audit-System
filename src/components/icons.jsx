@@ -60,4 +60,6 @@ export {
   PlugZap as PlugZapIcon,
   Container as ContainerIcon,
   Delete as BackspaceIcon,
+  Shapes as ShapesIcon,
+  Percent as PercentIcon,
 } from 'lucide-react';

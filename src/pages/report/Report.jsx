@@ -588,7 +588,11 @@ export default function Report() {
                     className="p-4 sm:p-5 flex items-center gap-4 hover:shadow-lg hover:border-[#4988C4]/30 dark:hover:border-[#4988C4]/30 transition-all group cursor-pointer"
                     onClick={() => handleOpenReport(r)}
                   >
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#EAF4FC] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
+                    <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                      r.status === 'done'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                    }`}>
                       <ClipboardIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
 

@@ -43,3 +43,7 @@ export async function saveCategoryItem(category) {
   const { key, ...rest } = category;
   await setDoc(doc(db, CATEGORIES_COLLECTION, key), rest);
 }
+
+export async function deleteCategoryItem(key) {
+  await deleteDoc(doc(db, CATEGORIES_COLLECTION, key));
+}

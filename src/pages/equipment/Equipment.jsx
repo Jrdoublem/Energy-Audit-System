@@ -7,7 +7,7 @@ import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { getSession } from '../../context/authStore.js';
 import {
-  fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem,
+  fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem, deleteCategoryItem,
 } from '../../context/equipmentStore.js';
 import { fetchAllCatalogItems } from '../../context/catalogStore.js';
 import { deleteImage } from '../../context/storageStore.js';
@@ -150,6 +150,7 @@ function Equipment() {
   const [formErrors, setFormErrors] = useState({});
   const [calcItem, setCalcItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [confirmDeleteCategoryKey, setConfirmDeleteCategoryKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('newest');
   const [saving, setSaving] = useState(false);
   const [catalogItems, setCatalogItems] = useState([]);
@@ -343,6 +344,14 @@ function Equipment() {
     }
   };
 
+  const deleteCategory = async () => {
+    const key = confirmDeleteCategoryKey;
+    setConfirmDeleteCategoryKey(null);
+    await deleteCategoryItem(key);
+    setCategories((prev) => prev.filter((c) => c.key !== key));
+    if (category === key) setCategory('all');
+  };
+
   // Category counts in current factory scope
   const categoryCounts = useMemo(() => {
     const realCats = categories.filter((c) => c.key !== 'all');
@@ -477,25 +486,26 @@ function Equipment() {
           </div>
 
           <div className="flex overflow-x-auto scrollbar-none -mx-1 px-1 pb-1 gap-3 sm:grid sm:grid-cols-4 lg:grid-cols-7 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
-            {/* ALL filter card */}
+            {/* ALL filter card — deliberately styled distinct from the category
+                cards below (solid navy vs. their plain white) so it reads as
+                the one "reset/overview" option rather than a peer category */}
             <button
               type="button"
               onClick={() => setCategory('all')}
-              className={`shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
-                category === 'all'
-                  ? 'border-[#4988C4] bg-[#EAF4FC] dark:bg-[#4988C4]/20 shadow-sm ring-2 ring-[#4988C4]/30'
-                  : 'border-[#E4EBF6] dark:border-white/10 bg-white dark:bg-[#111F35] hover:border-[#4988C4]/40'
+              style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
+              className={`shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border-0 text-left transition-all flex flex-col justify-between h-24 shadow-sm ${
+                category === 'all' ? 'ring-2 ring-[#4988C4]/50 ring-offset-2 ring-offset-white dark:ring-offset-[#0B1B33]' : 'hover:shadow-md'
               }`}
             >
-              <div className="flex justify-between items-start text-[#4988C4]">
+              <div className="flex justify-between items-start text-white">
                 <LayoutGridIcon className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-[#8CA3C0] truncate">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/70 truncate">
                   {t.equipment.allEquipment}
                 </p>
-                <p className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono mt-0.5">
-                  {factoryScopedEquipment.length} <span className="text-[10px] font-sans font-normal text-gray-400">{t.factories.units}</span>
+                <p className="text-lg font-extrabold text-white font-mono mt-0.5">
+                  {factoryScopedEquipment.length} <span className="text-[10px] font-sans font-normal text-white/60">{t.factories.units}</span>
                 </p>
               </div>
             </button>
@@ -509,7 +519,7 @@ function Equipment() {
                   key={c.key}
                   type="button"
                   onClick={() => setCategory(c.key)}
-                  className={`shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+                  className={`relative shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
                     c.count === 0 ? 'opacity-50 hover:opacity-100' : ''
                   } ${
                     isSelected
@@ -517,6 +527,18 @@ function Equipment() {
                       : 'border-[#E4EBF6] dark:border-white/10 bg-white dark:bg-[#111F35] hover:border-[#4988C4]/40'
                   }`}
                 >
+                  {isAdmin && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteCategoryKey(c.key); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setConfirmDeleteCategoryKey(c.key); } }}
+                      title={t.common.delete}
+                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-white dark:bg-[#1A2B47] border border-[#E4EBF6] dark:border-white/10 text-gray-400 hover:bg-rose-500 hover:text-white hover:border-rose-500 flex items-center justify-center transition-colors"
+                    >
+                      <TrashIcon className="w-2.5 h-2.5" />
+                    </span>
+                  )}
                   <div className="flex justify-between items-start">
                     <Icon className="w-5 h-5 text-[#4988C4]" />
                   </div>
@@ -801,6 +823,59 @@ function Equipment() {
                 {t.common.delete}
               </button>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Confirm delete category dialog */}
+      {confirmDeleteCategoryKey !== null && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6 font-sans">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDeleteCategoryKey(null)} />
+          <div className="relative bg-white dark:bg-[#111F35] rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
+            {(categoryCounts.find((c) => c.key === confirmDeleteCategoryKey)?.count || 0) > 0 ? (
+              <>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-amber-500">
+                    <TrashIcon className="w-6 h-6" />
+                  </div>
+                  <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.deleteCategoryBlocked}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteCategoryKey(null)}
+                  className="w-full py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
+                >
+                  {t.common.cancel}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500">
+                    <TrashIcon className="w-6 h-6" />
+                  </div>
+                  <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.equipment.deleteCategoryConfirm}</p>
+                  <p className="text-sm text-gray-400 dark:text-[#7E93AF]">{t.equipment.deleteCategoryWarning}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteCategoryKey(null)}
+                    className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-[#8CA3C0] font-semibold text-sm transition-colors"
+                  >
+                    {t.common.cancel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deleteCategory}
+                    className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors"
+                  >
+                    {t.common.delete}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>,
         document.body
