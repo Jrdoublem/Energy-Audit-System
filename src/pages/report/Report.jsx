@@ -4,8 +4,11 @@ import AppLayout from '../../layouts/AppLayout';
 import { Panel } from '../../components/ui';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { useLang } from '../../context/languageStore.js';
+import { fileToResizedDataUrl } from '../../utils/image.js';
+import { uploadImage, deleteImage } from '../../context/storageStore.js';
 import {
   ArrowLeftIcon,
+  CameraIcon,
   CheckIcon,
   ClipboardIcon,
   GearIcon,
@@ -37,19 +40,11 @@ export default function Report() {
   const { selectedFactory, allowedFactories } = useFactory();
 
   const [reports, setReports] = useState([]);
-  // Any editingReport lacking a saved `id` (a report opened straight from a
-  // fresh measure evaluation, or a brand-new blank report) gets one assigned
-  // once here — never derived lazily during render/useMemo, which would call
-  // the impure Date.now() on every recompute.
   const [editingReport, setEditingReport] = useState(() => (
     state ? { ...state, id: state.id || `rpt-${Date.now()}` } : null
   ));
   const [search, setSearch] = useState('');
   const [showPreview, setShowPreview] = useState(false);
-  // Tracks whether we're in the "just viewing" flow (eye icon) vs. inside
-  // the edit form's own preview button — closing the preview should land
-  // back on the report list for the former, but stay on the form for the
-  // latter.
   const [viewOnly, setViewOnly] = useState(false);
 
   useEffect(() => {
@@ -105,11 +100,6 @@ export default function Report() {
     setEditingReport({ id: `rpt-${Date.now()}` });
   };
 
-  // Form State — memoized so these stay referentially stable across re-renders
-  // that don't actually change `editingReport` (e.g. typing in the form).
-  // Without this, the `|| {}` / `|| []` fallbacks below would create a new
-  // object/array every render, and the load-effect further down (which
-  // depends on them) would never stop re-firing.
   const item = useMemo(() => editingReport?.item || {}, [editingReport]);
   const result = useMemo(() => editingReport?.result || {}, [editingReport]);
   const measures = useMemo(() => editingReport?.measures || [], [editingReport]);
@@ -124,32 +114,35 @@ export default function Report() {
     electrical: t.report?.categoryElectrical || 'ระบบไฟฟ้า (Electrical)',
   };
 
-  const buildBlankForm = (forItem, forMeasures) => ({
-    equipmentId: forItem.id || '',
-    measureName: forMeasures.map((m) => m.name).join(', '),
-    reportTitle: '',
-    brandModel: forItem.brandModel || '',
-    factory: forItem.factory || '',
-    department: forItem.building || '',
-    measureOrigin: '',
-    measureType: CATEGORY_LABEL[forItem.category] || '',
-    objective: '',
-    responsible: forItem.owner || '',
-    consultant: '',
-    approver: '',
-    summary: '',
-    additionalNotes: '',
-  });
+  const buildBlankForm = (forItem, forMeasures) => {
+    const defaultBefore = forItem?.images && forItem.images.length > 0
+      ? forItem.images
+      : (forItem?.image ? [forItem.image] : []);
+    const defaultAfter = (forMeasures || []).flatMap((m) => m.afterImages || m.images || []);
+
+    return {
+      equipmentId: forItem?.id || '',
+      measureName: (forMeasures || []).map((m) => m.name).join(', '),
+      reportTitle: '',
+      brandModel: forItem?.brandModel || '',
+      factory: forItem?.factory || '',
+      department: forItem?.building || '',
+      measureOrigin: '',
+      measureType: CATEGORY_LABEL[forItem?.category] || '',
+      objective: '',
+      responsible: forItem?.owner || '',
+      consultant: '',
+      approver: '',
+      summary: '',
+      additionalNotes: '',
+      beforeImages: defaultBefore,
+      afterImages: defaultAfter,
+    };
+  };
 
   const [form, setForm] = useState(() => (editingReport?.form ? editingReport.form : buildBlankForm(item, measures)));
-
-  // Tracks the exact form object reference that was just loaded (vs. typed
-  // by the user) so the autosave effect below can tell the two apart.
   const [loadedForm, setLoadedForm] = useState(form);
 
-  // Reset `form` when `editingReport` changes (opening a different report,
-  // or starting a new one) — adjusted during render rather than in an effect
-  // so it takes effect in the same commit instead of an extra render pass.
   const [prevEditingReport, setPrevEditingReport] = useState(editingReport);
   if (editingReport !== prevEditingReport) {
     setPrevEditingReport(editingReport);
@@ -159,6 +152,65 @@ export default function Report() {
   }
 
   const [saving, setSaving] = useState(false);
+  const [beforeUploading, setBeforeUploading] = useState(false);
+  const [afterUploading, setAfterUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+
+  const handleUploadBeforeImages = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    const current = form.beforeImages || [];
+    const remaining = 6 - current.length;
+    if (!files.length || remaining <= 0) return;
+    setPhotoError('');
+    setBeforeUploading(true);
+    try {
+      const urls = [];
+      for (const file of files.slice(0, remaining)) {
+        const dataUrl = await fileToResizedDataUrl(file);
+        urls.push(await uploadImage(dataUrl, 'reports'));
+      }
+      setForm((p) => ({ ...p, beforeImages: [...(p.beforeImages || []), ...urls] }));
+    } catch (err) {
+      console.error('Upload before image error:', err);
+      setPhotoError('อัปโหลดรูปภาพไม่สำเร็จ');
+    } finally {
+      setBeforeUploading(false);
+    }
+  };
+
+  const handleRemoveBeforeImage = (url) => {
+    setForm((p) => ({ ...p, beforeImages: (p.beforeImages || []).filter((u) => u !== url) }));
+    deleteImage(url);
+  };
+
+  const handleUploadAfterImages = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    const current = form.afterImages || [];
+    const remaining = 6 - current.length;
+    if (!files.length || remaining <= 0) return;
+    setPhotoError('');
+    setAfterUploading(true);
+    try {
+      const urls = [];
+      for (const file of files.slice(0, remaining)) {
+        const dataUrl = await fileToResizedDataUrl(file);
+        urls.push(await uploadImage(dataUrl, 'reports'));
+      }
+      setForm((p) => ({ ...p, afterImages: [...(p.afterImages || []), ...urls] }));
+    } catch (err) {
+      console.error('Upload after image error:', err);
+      setPhotoError('อัปโหลดรูปภาพไม่สำเร็จ');
+    } finally {
+      setAfterUploading(false);
+    }
+  };
+
+  const handleRemoveAfterImage = (url) => {
+    setForm((p) => ({ ...p, afterImages: (p.afterImages || []).filter((u) => u !== url) }));
+    deleteImage(url);
+  };
 
   const saveReportRecord = async (status) => {
     const record = {
@@ -195,8 +247,6 @@ export default function Report() {
     }
   };
 
-  // Debounced draft autosave — skips the render where `form` was just loaded
-  // (programmatic reset, not a real edit) by comparing against loadedForm.
   useEffect(() => {
     if (!editingReport || form === loadedForm) return undefined;
     const timer = setTimeout(() => {
@@ -219,7 +269,6 @@ export default function Report() {
     >
       <div className="flex flex-col gap-6 w-full">
         {editingReport && viewOnly ? (
-          /* Print-preview-only flow (eye icon) — closing it returns to the list */
           <ReportPrintPreview
             item={item}
             result={result}
@@ -438,7 +487,122 @@ export default function Report() {
               </div>
             </Panel>
 
-            {/* SECTION 4: SUMMARY & NOTES */}
+            {/* SECTION 4: BEFORE & AFTER PHOTOS */}
+            <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-purple-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+                  <CameraIcon className="w-4 h-4 text-purple-500" />
+                  {t.report?.sectionPhotosTitle || 'รูปภาพอุปกรณ์ ก่อน - หลัง ปรับปรุง (BEFORE & AFTER PHOTOS)'}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Before Photos Box */}
+                <div className="p-4 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-gray-700 dark:text-[#E7EEF7]">
+                        {t.report?.photoBeforeLabel || 'ภาพก่อนปรับปรุง (Before)'}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        {t.report?.beforePhotosHelp || 'ภาพก่อนปรับปรุง (ดึงมาจากข้อมูลอุปกรณ์ หรืออัปโหลดเพิ่มเติม)'}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold font-mono text-gray-400">
+                      {(form.beforeImages || []).length}/6 รูป
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {(form.beforeImages || []).map((url) => (
+                      <div key={url} className="relative aspect-square rounded-xl overflow-hidden bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 shadow-sm group">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBeforeImage(url)}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center transition-colors"
+                        >
+                          <CloseIcon className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {(form.beforeImages || []).length < 6 && (
+                      <label className={`aspect-square rounded-xl border-2 border-dashed border-[#D0E4F7] dark:border-white/20 flex flex-col items-center justify-center gap-1 text-[#4988C4] transition-colors ${
+                        beforeUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-[#EAF4FC] dark:hover:bg-white/5 cursor-pointer'
+                      }`}>
+                        <CameraIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-bold text-center px-1">
+                          {beforeUploading ? 'กำลังอัปโหลด...' : '+ เพิ่มภาพ'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleUploadBeforeImages}
+                          className="hidden"
+                          disabled={beforeUploading}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* After Photos Box */}
+                <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-500/10 border border-purple-200/80 dark:border-purple-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-purple-900 dark:text-purple-300">
+                        {t.report?.photoAfterLabel || 'ภาพหลังปรับปรุง (After)'}
+                      </p>
+                      <p className="text-[10px] text-purple-600/70 dark:text-purple-400/70">
+                        {t.report?.afterPhotosHelp || 'ภาพหลังปรับปรุง (ดึงมาจากมาตรการ หรืออัปโหลดเพิ่มเติม)'}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold font-mono text-purple-600 dark:text-purple-400">
+                      {(form.afterImages || []).length}/6 รูป
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {(form.afterImages || []).map((url) => (
+                      <div key={url} className="relative aspect-square rounded-xl overflow-hidden bg-white dark:bg-white/10 border border-purple-200 dark:border-purple-500/30 shadow-sm group">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAfterImage(url)}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center transition-colors"
+                        >
+                          <CloseIcon className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {(form.afterImages || []).length < 6 && (
+                      <label className={`aspect-square rounded-xl border-2 border-dashed border-purple-300 dark:border-purple-500/40 flex flex-col items-center justify-center gap-1 text-purple-600 dark:text-purple-400 transition-colors ${
+                        afterUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-purple-100/60 dark:hover:bg-purple-500/20 cursor-pointer'
+                      }`}>
+                        <CameraIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-bold text-center px-1">
+                          {afterUploading ? 'กำลังอัปโหลด...' : '+ เพิ่มภาพ'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleUploadAfterImages}
+                          className="hidden"
+                          disabled={afterUploading}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {photoError && <p className="text-xs text-rose-500">{photoError}</p>}
+            </Panel>
+
+            {/* SECTION 5: SUMMARY & NOTES */}
             <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-emerald-500">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                 <SparkleIcon className="w-4 h-4 text-emerald-500" />
@@ -470,7 +634,7 @@ export default function Report() {
               </div>
             </Panel>
 
-            {/* SECTION 5: STAKEHOLDERS */}
+            {/* SECTION 6: STAKEHOLDERS */}
             <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-indigo-500">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                 <ActivityIcon className="w-4 h-4 text-indigo-500" />
@@ -552,102 +716,99 @@ export default function Report() {
                   </button>
                 )}
               </div>
-
               <button
                 type="button"
                 onClick={handleNewReport}
-                className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
               >
                 <PlusIcon className="w-4 h-4" />
-                สร้างรายงานใหม่
+                <span className="hidden sm:inline">สร้างรายงานใหม่</span>
+                <span className="sm:hidden">สร้าง</span>
               </button>
             </div>
-
-            {/* Mobile-only floating "new report" button — replaces the text
-                button above (sm:hidden), positioned above the bottom nav bar */}
-            <button
-              type="button"
-              onClick={handleNewReport}
-              title="สร้างรายงานใหม่"
-              className="sm:hidden fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full text-white shadow-lg hover:opacity-90 active:scale-95 transition-all flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
-            >
-              <PlusIcon className="w-6 h-6" />
-            </button>
 
             {/* Reports List */}
             {filteredReports.length === 0 ? (
               <Panel className="p-12 text-center text-sm text-gray-400 dark:text-[#7E93AF] rounded-3xl">
-                {search ? 'ไม่พบรายงานที่ตรงกับการค้นหา' : 'ยังไม่มีรายงานผลการตรวจวิเคราะห์พลังงานในระบบ กดปุ่ม "สร้างรายงานใหม่" ด้านบนเพื่อเริ่มสร้าง'}
+                <ClipboardIcon className="w-10 h-10 mx-auto mb-2 text-[#0F2854]/20 dark:text-[#7E93AF]/30" />
+                <p>ยังไม่มีรายงานผลการตรวจวิเคราะห์</p>
+                <p className="text-xs text-gray-400 mt-1">สามารถสร้างรายงานได้จากการคำนวณและเลือกมาตรการในหน้าประวัติ หรือกดปุ่ม "สร้างรายงานใหม่" ด้านบน</p>
               </Panel>
             ) : (
-              <div className="flex flex-col gap-3">
-                {filteredReports.map((r) => (
-                  <Panel
-                    key={r.id}
-                    className="p-4 sm:p-5 flex items-center gap-4 hover:shadow-lg hover:border-[#4988C4]/30 dark:hover:border-[#4988C4]/30 transition-all group cursor-pointer"
-                    onClick={() => handleOpenReport(r)}
-                  >
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#EAF4FC] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
-                      <ClipboardIcon className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredReports.map((r) => {
+                  const title = r.form?.reportTitle || 'รายงานผลการตรวจวิเคราะห์';
+                  const eqId = r.form?.equipmentId || r.item?.id || '-';
+                  const fact = r.form?.factory || r.item?.factory || '-';
+                  const dateStr = formatThaiDate(r.updatedAt);
+                  const isDone = r.status === 'done';
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm sm:text-base font-extrabold text-[#0F2854] dark:text-[#E7EEF7] group-hover:text-[#4988C4] transition-colors truncate">
-                          {r.form?.reportTitle || r.form?.equipmentId || 'รายงานตรวจวิเคราะห์พลังงาน'}
-                        </h3>
-                        <span className={`shrink-0 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                          r.status === 'done'
-                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
-                            : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20'
-                        }`}>
-                          {r.status === 'done' ? 'เสร็จสมบูรณ์' : 'กำลังดำเนินการ'}
-                        </span>
-                      </div>
-                      <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-gray-400 dark:text-[#7E93AF]">
-                        <span className="flex items-center gap-1 min-w-0">
-                          <FactoryIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" />
-                          <span className="truncate">{r.form?.factory || '-'}</span>
-                        </span>
-                        <span className="shrink-0">อัปเดต: {formatThaiDate(r.updatedAt)}</span>
-                        {r.form?.equipmentId && (
-                          <span className="shrink-0 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F4F7FC] dark:bg-white/5 text-gray-500 dark:text-[#8CA3C0]">
-                            {r.form.equipmentId}
+                  return (
+                    <Panel
+                      key={r.id}
+                      onClick={() => handleOpenReport(r)}
+                      className="p-5 flex flex-col justify-between gap-4 cursor-pointer group hover:shadow-lg hover:border-[#4988C4]/40 transition-all rounded-3xl"
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base font-extrabold text-[#0F2854] dark:text-[#E7EEF7] group-hover:text-[#4988C4] transition-colors truncate">
+                                {title}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-400 dark:text-[#7E93AF] mt-0.5 font-mono">
+                              รหัส: {eqId} · โรงงาน: {fact}
+                            </p>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${
+                            isDone
+                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                              : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                          }`}>
+                            {isDone ? 'เสร็จสมบูรณ์' : 'แบบร่าง (Draft)'}
                           </span>
+                        </div>
+
+                        {r.form?.measureName && (
+                          <div className="p-2.5 rounded-xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 text-xs text-gray-600 dark:text-[#C3D2E5] truncate">
+                            <span className="font-bold text-[#0F2854] dark:text-[#E7EEF7]">มาตรการ:</span> {r.form.measureName}
+                          </div>
                         )}
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => handleViewReport(r, e)}
-                        title="ดูรายงาน"
-                        className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#EAF4FC] dark:hover:bg-white/10 hover:text-[#4988C4] text-gray-400 flex items-center justify-center transition-colors"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleOpenReport(r); }}
-                        title="แก้ไขรายงาน"
-                        className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#EAF4FC] dark:hover:bg-white/10 hover:text-[#4988C4] text-gray-500 dark:text-[#8CA3C0] text-xs font-bold transition-colors"
-                      >
-                        <PencilIcon className="w-3.5 h-3.5" />
-                        แก้ไข
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteReport(r.id, e)}
-                        title="ลบรายงาน"
-                        className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-rose-500 hover:text-white text-gray-400 flex items-center justify-center transition-colors"
-                      >
-                        <TrashIcon className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </Panel>
-                ))}
+                      <div className="flex items-center justify-between pt-2 border-t border-[#EEF3FB] dark:border-white/8 text-xs">
+                        <span className="text-gray-400 font-mono">{dateStr}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => handleViewReport(r, e)}
+                            title="พิมพ์ / ดูรายงาน"
+                            className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-[#0F2854] hover:text-white text-gray-600 dark:text-[#C3D2E5] flex items-center justify-center transition-colors"
+                          >
+                            <PrinterIcon className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleOpenReport(r); }}
+                            title="แก้ไขรายงาน"
+                            className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-blue-500 hover:text-white text-gray-600 dark:text-[#C3D2E5] flex items-center justify-center transition-colors"
+                          >
+                            <PencilIcon className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteReport(r.id, e)}
+                            title="ลบรายงาน"
+                            className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-rose-500 hover:text-white text-rose-400 flex items-center justify-center transition-colors"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </Panel>
+                  );
+                })}
               </div>
             )}
           </>

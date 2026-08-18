@@ -6,18 +6,21 @@ import { BackspaceIcon, CalculatorIcon, CloseIcon } from './icons';
 const INITIAL_STATE = { display: '0', prevValue: null, operator: null, waitingForOperand: false };
 
 function computeOp(op, a, b) {
+  const numA = Number(a) || 0;
+  const numB = Number(b) || 0;
   switch (op) {
-    case '÷': return b === 0 ? NaN : a / b;
-    case '×': return a * b;
-    case '−': return a - b;
-    case '+': return a + b;
-    default: return b;
+    case '÷': return numB === 0 ? NaN : numA / numB;
+    case '×': return numA * numB;
+    case '−': return numA - numB;
+    case '+': return numA + numB;
+    default: return numB;
   }
 }
 
 function formatNumber(n) {
   if (!Number.isFinite(n)) return 'Error';
-  return parseFloat(n.toFixed(10)).toString();
+  const rounded = parseFloat(Number(n).toFixed(10));
+  return String(rounded);
 }
 
 function CalcButton({ label, onClick, className = '', style, children }) {

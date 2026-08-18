@@ -700,11 +700,40 @@ function Dashboard() {
     });
   }, [factories, equipment, measures, history, defaultOperatingHours]);
 
-  // Headline dashboard numbers, aggregated from every saved measure's
+  const [measureStatusFilter, setMeasureStatusFilter] = useState('all'); // 'all' | 'potential' | 'implemented'
+
+  const factoryScopedMeasures = useMemo(
+    () => measures.filter((m) => matchesFactory(m.factory, selectedFactory, allowedFactories)),
+    [measures, selectedFactory, allowedFactories],
+  );
+
+  const potentialCount = useMemo(
+    () => factoryScopedMeasures.filter((m) => m.status === 'ศักยภาพ' || (!m.isImplemented && m.status !== 'ดำเนินการจริง')).length,
+    [factoryScopedMeasures],
+  );
+
+  const implementedCount = useMemo(
+    () => factoryScopedMeasures.filter((m) => m.status === 'ดำเนินการจริง' || m.isImplemented === true).length,
+    [factoryScopedMeasures],
+  );
+
+  const scopedMeasures = useMemo(() => {
+    return factoryScopedMeasures.filter((m) => {
+      if (measureStatusFilter === 'potential') {
+        return m.status === 'ศักยภาพ' || (!m.isImplemented && m.status !== 'ดำเนินการจริง');
+      }
+      if (measureStatusFilter === 'implemented') {
+        return m.status === 'ดำเนินการจริง' || m.isImplemented === true;
+      }
+      return true;
+    });
+  }, [factoryScopedMeasures, measureStatusFilter]);
+
+  // Headline dashboard numbers, aggregated from every scoped measure's
   // evalData (kept generic across categories: boiler measures represent
   // thermal/fuel kWh — everything else represents electrical kWh).
   const dashboardStats = useMemo(() => {
-    const scoped = measures.filter((m) => matchesFactory(m.factory, selectedFactory, allowedFactories));
+    const scoped = scopedMeasures;
 
     const sumFor = (list) => list.reduce((acc, m) => {
       const energySaved = parseFloat(m.evalData?.energySaved || 0);
@@ -743,12 +772,7 @@ function Dashboard() {
       trendGhg: pctChange(thisMonthTotals.ghgTonnes, lastMonthTotals.ghgTonnes),
       trendCost: pctChange(thisMonthTotals.costBaht, lastMonthTotals.costBaht),
     };
-  }, [measures, selectedFactory, allowedFactories]);
-
-  const scopedMeasures = useMemo(
-    () => measures.filter((m) => matchesFactory(m.factory, selectedFactory, allowedFactories)),
-    [measures, selectedFactory, allowedFactories],
-  );
+  }, [scopedMeasures]);
 
   // Cumulative energy (kWh) + carbon (kgCO2e) saved, running total over the
   // last 6 calendar months — same energySaved/ghgSaved fields as dashboardStats.
@@ -927,7 +951,7 @@ function Dashboard() {
 
       {/* Selected Factory Info Card */}
       {selectedFactory && (
-        <Panel className="p-4 mb-5 bg-gradient-to-r from-[#0F2854] to-[#1C4D8D] text-white rounded-3xl shadow-md">
+        <Panel className="p-4 mb-4 bg-gradient-to-r from-[#0F2854] to-[#1C4D8D] text-white rounded-3xl shadow-md">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-white shrink-0">
@@ -948,12 +972,59 @@ function Dashboard() {
               </div>
               <div>
                 <span className="text-white/60 block text-[11px]">ผลประหยัดรวม</span>
-                <span className="font-extrabold text-emerald-400 text-sm">฿{(dashboardStats.costMillionBaht * 10).toFixed(2)} แสน</span>
+                <span className="font-extrabold text-emerald-400 text-sm">
+                  {scopedMeasures.reduce((s, m) => s + parseFloat(m.evalData?.energySaved || 0), 0).toLocaleString('th-TH', { maximumFractionDigits: 0 })} kWh
+                </span>
               </div>
             </div>
           </div>
         </Panel>
       )}
+
+      {/* Quick Measure Status Filter: ทั้งหมด | ศักยภาพ | ดำเนินการจริง */}
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+        <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-[#111F35] rounded-2xl border border-[#E4EBF6] dark:border-white/10 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMeasureStatusFilter('all')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              measureStatusFilter === 'all'
+                ? 'bg-[#0F2854] text-white shadow-sm'
+                : 'text-gray-600 dark:text-[#8CA3C0] hover:text-[#0F2854]'
+            }`}
+          >
+            มาตรการทั้งหมด ({factoryScopedMeasures.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMeasureStatusFilter('potential')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              measureStatusFilter === 'potential'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-600 dark:text-[#8CA3C0] hover:text-blue-600'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            ศักยภาพ ({potentialCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMeasureStatusFilter('implemented')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              measureStatusFilter === 'implemented'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-gray-600 dark:text-[#8CA3C0] hover:text-emerald-600'
+            }`}
+          >
+            <CheckIcon className="w-3.5 h-3.5" />
+            ดำเนินการจริง ({implementedCount})
+          </button>
+        </div>
+
+        <span className="text-xs text-gray-400 dark:text-[#7E93AF] font-medium hidden sm:inline">
+          {measureStatusFilter === 'potential' ? '🔍 แสดงเฉพาะมาตรการระดับศักยภาพ (Planned)' : measureStatusFilter === 'implemented' ? '✅ แสดงเฉพาะมาตรการที่ดำเนินการจริง (Implemented)' : '📊 แสดงสถิติและผลประหยัดภาพรวม'}
+        </span>
+      </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

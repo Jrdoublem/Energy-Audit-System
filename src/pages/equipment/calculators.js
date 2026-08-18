@@ -187,7 +187,23 @@ export const CALCULATORS = {
   },
 };
 
-export function defaultFormFor(category) {
+export function defaultFormFor(category, item = {}) {
   const fields = CALCULATORS[category]?.fields || [];
-  return Object.fromEntries(fields.map((f) => [f.key, f.default ?? '']));
+  const initial = {};
+  for (const f of fields) {
+    let val = f.default ?? '';
+    if (f.key === 'pMotor' || f.key === 'pshaft' || f.key === 'ratedOutput') {
+      val = item.motorPower || item.electricalPower || item.power || item.chillerPower || val;
+    } else if (f.key === 'flow') {
+      val = item.flow || item.flowRate || item.ultraflowSonic || val;
+    } else if (f.key === 'head') {
+      val = item.head || val;
+    } else if (f.key === 'voltage') {
+      val = item.voltage || val;
+    } else if (f.key === 'current') {
+      val = item.current || val;
+    }
+    initial[f.key] = String(val);
+  }
+  return initial;
 }

@@ -60,4 +60,6 @@ export {
   PlugZap as PlugZapIcon,
   Container as ContainerIcon,
   Delete as BackspaceIcon,
+  MoreHorizontal as MoreHorizontalIcon,
+  ChevronRight as ChevronRightIcon,
 } from 'lucide-react';

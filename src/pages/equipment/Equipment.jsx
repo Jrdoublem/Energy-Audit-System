@@ -10,6 +10,7 @@ import {
   fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem,
 } from '../../context/equipmentStore.js';
 import { fetchAllCatalogItems } from '../../context/catalogStore.js';
+import { fetchAllMeasures } from '../../context/measuresStore.js';
 import { deleteImage } from '../../context/storageStore.js';
 import { Combobox, Select } from '../../components/Dropdown.jsx';
 import CalcModal from './CalcModal';
@@ -142,6 +143,8 @@ function Equipment() {
   const isAdmin = session.role === 'admin';
   const [categories, setCategories] = useState([]);
   const [equipment, setEquipment] = useState([]);
+  const [measures, setMeasures] = useState([]);
+  const [selectedEquipmentMeasures, setSelectedEquipmentMeasures] = useState(null); // { item, measures }
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null); // null | 'add' | 'add-category' | 'calc'
@@ -160,6 +163,7 @@ function Equipment() {
     fetchAllCategories().then(setCategories).catch(() => setCategories([]));
     fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
     fetchAllCatalogItems().then(setCatalogItems).catch(() => setCatalogItems([]));
+    fetchAllMeasures().then(setMeasures).catch(() => setMeasures([]));
   }, []);
 
   // Auto-open add form when navigated from a factory page with state.openAdd
@@ -483,19 +487,19 @@ function Equipment() {
               onClick={() => setCategory('all')}
               className={`shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
                 category === 'all'
-                  ? 'border-[#4988C4] bg-[#EAF4FC] dark:bg-[#4988C4]/20 shadow-sm ring-2 ring-[#4988C4]/30'
+                  ? 'border-transparent bg-gradient-to-br from-[#0F2854] to-[#1C4D8D] text-white shadow-md ring-2 ring-[#0F2854]/40'
                   : 'border-[#E4EBF6] dark:border-white/10 bg-white dark:bg-[#111F35] hover:border-[#4988C4]/40'
               }`}
             >
-              <div className="flex justify-between items-start text-[#4988C4]">
+              <div className={`flex justify-between items-start ${category === 'all' ? 'text-white' : 'text-[#4988C4]'}`}>
                 <LayoutGridIcon className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-[#8CA3C0] truncate">
+                <p className={`text-[10px] font-bold uppercase tracking-wider truncate ${category === 'all' ? 'text-white/80' : 'text-gray-500 dark:text-[#8CA3C0]'}`}>
                   {t.equipment.allEquipment}
                 </p>
-                <p className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono mt-0.5">
-                  {factoryScopedEquipment.length} <span className="text-[10px] font-sans font-normal text-gray-400">{t.factories.units}</span>
+                <p className={`text-lg font-extrabold font-mono mt-0.5 ${category === 'all' ? 'text-white' : 'text-[#0F2854] dark:text-[#E7EEF7]'}`}>
+                  {factoryScopedEquipment.length} <span className={`text-[10px] font-sans font-normal ${category === 'all' ? 'text-white/70' : 'text-gray-400'}`}>{t.factories.units}</span>
                 </p>
               </div>
             </button>
@@ -613,6 +617,9 @@ function Equipment() {
               const ItemIcon = ICON_MAP[cat?.iconKey] || ClipboardIcon;
               const badgeCls = CATEGORY_BADGES[item.category] || 'bg-gray-100 text-gray-600 border-gray-200';
               const age = equipmentAgeYears(item.installYear);
+              const itemMeasures = measures.filter(
+                (m) => m.equipmentId === item.id || m.formData?.equipmentId === item.id
+              );
 
               return (
                 <Panel
@@ -655,6 +662,23 @@ function Equipment() {
                         <ClockIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                         <span>{age === null ? '-' : age === 0 ? t.equipment.ageThisYear : `${age} ${t.equipment.ageYearsSuffix}`}</span>
                       </div>
+                    </div>
+
+                    {/* Measures Counter Badge (Click to view) */}
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] font-bold text-gray-500 dark:text-[#8CA3C0]">มาตรการอนุรักษ์พลังงาน:</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEquipmentMeasures({ item, measures: itemMeasures })}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                          itemMeasures.length > 0
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20 hover:scale-105 shadow-sm'
+                            : 'bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-gray-500 border border-transparent hover:border-gray-200'
+                        }`}
+                      >
+                        <SparkleIcon className="w-3.5 h-3.5 text-amber-500" />
+                        {itemMeasures.length > 0 ? `${itemMeasures.length} มาตรการ` : '0 มาตรการ (ดู)'}
+                      </button>
                     </div>
                   </div>
 
@@ -799,6 +823,166 @@ function Equipment() {
                 className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors"
               >
                 {t.common.delete}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Equipment Measures View Modal */}
+      {selectedEquipmentMeasures !== null && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 font-sans"
+          onClick={() => setSelectedEquipmentMeasures(null)}
+        >
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div
+            className="relative bg-white dark:bg-[#111F35] rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-[#E4EBF6] dark:border-white/10 animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#EEF3FB] dark:border-white/8 shrink-0 bg-[#F4F7FC]/50 dark:bg-white/5">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#0F2854] to-[#1C4D8D] text-white flex items-center justify-center shrink-0 shadow-md">
+                  <SparkleIcon className="w-5 h-5 text-amber-300" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono truncate">
+                      {selectedEquipmentMeasures.item.id}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4]">
+                      {selectedEquipmentMeasures.item.factory || '-'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-[#8CA3C0] truncate mt-0.5">
+                    {selectedEquipmentMeasures.item.brandModel || 'ทะเบียนอุปกรณ์'} · มี {selectedEquipmentMeasures.measures.length} มาตรการ
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedEquipmentMeasures(null)}
+                className="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-500 dark:text-gray-300 flex items-center justify-center transition-colors shrink-0"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body: Measures List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {selectedEquipmentMeasures.measures.length === 0 ? (
+                <div className="py-12 text-center space-y-3">
+                  <div className="w-14 h-14 rounded-3xl bg-[#EEF3FB] dark:bg-white/5 text-[#4988C4] mx-auto flex items-center justify-center">
+                    <SparkleIcon className="w-7 h-7 text-gray-400" />
+                  </div>
+                  <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">
+                    ยังไม่มีมาตรการสำหรับ {selectedEquipmentMeasures.item.id}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-[#8CA3C0] max-w-sm mx-auto">
+                    ท่านสามารถกดปุ่ม "คำนวณ & ประเมินมาตรการ" ด้านล่างเพื่อทำการวัดและบันทึกมาตรการอนุรักษ์พลังงาน
+                  </p>
+                </div>
+              ) : (
+                selectedEquipmentMeasures.measures.map((m, idx) => {
+                  const isImplemented = m.status === 'ดำเนินการจริง' || m.isImplemented === true;
+                  const ed = m.evalData || {};
+                  const energySaved = ed.energySaved || m.energySaved || 0;
+                  const costSaved = ed.costSaved || m.costSaved || 0;
+                  const payback = ed.payback || m.payback || null;
+                  const invest = ed.investmentCost || m.investmentCost || 0;
+                  const measureName = m.measure || m.name || `มาตรการที่ ${idx + 1}`;
+
+                  return (
+                    <div
+                      key={m.id || idx}
+                      className="p-4 rounded-2xl bg-[#F4F7FC]/70 dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 hover:border-[#4988C4]/40 transition-all space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="min-w-0">
+                          <p className="text-sm font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
+                            {measureName}
+                          </p>
+                          <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] mt-0.5">
+                            บันทึกเมื่อ: {m.savedAt ? new Date(m.savedAt).toLocaleDateString('th-TH') : '-'}
+                          </p>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {isImplemented ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+                              <CheckIcon className="w-3.5 h-3.5" />
+                              ดำเนินการจริง
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                              ศักยภาพ
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quick Metric Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-[#EEF3FB] dark:border-white/8 text-xs font-mono">
+                        <div className="p-2 rounded-xl bg-white dark:bg-[#111F35] border border-[#EEF3FB] dark:border-white/8">
+                          <p className="text-[10px] text-gray-400 font-sans">พลังงานที่ประหยัด</p>
+                          <p className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] mt-0.5">
+                            {Number(energySaved).toLocaleString('th-TH', { maximumFractionDigits: 0 })} <span className="text-[10px] font-sans font-normal text-gray-400">kWh/ปี</span>
+                          </p>
+                        </div>
+
+                        <div className="p-2 rounded-xl bg-white dark:bg-[#111F35] border border-[#EEF3FB] dark:border-white/8">
+                          <p className="text-[10px] text-gray-400 font-sans">เงินที่ประหยัด</p>
+                          <p className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            ฿{Number(costSaved).toLocaleString('th-TH', { maximumFractionDigits: 0 })} <span className="text-[10px] font-sans font-normal text-gray-400">/ปี</span>
+                          </p>
+                        </div>
+
+                        <div className="p-2 rounded-xl bg-white dark:bg-[#111F35] border border-[#EEF3FB] dark:border-white/8">
+                          <p className="text-[10px] text-gray-400 font-sans">เงินลงทุน</p>
+                          <p className="font-extrabold text-gray-700 dark:text-gray-300 mt-0.5">
+                            ฿{Number(invest).toLocaleString('th-TH', { maximumFractionDigits: 0 })}
+                          </p>
+                        </div>
+
+                        <div className="p-2 rounded-xl bg-white dark:bg-[#111F35] border border-[#EEF3FB] dark:border-white/8">
+                          <p className="text-[10px] text-gray-400 font-sans">ระยะคืนทุน</p>
+                          <p className="font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+                            {payback ? `${Number(payback).toFixed(2)} ปี` : '-'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-[#EEF3FB] dark:border-white/8 shrink-0 bg-[#F4F7FC]/50 dark:bg-white/5">
+              <button
+                type="button"
+                onClick={() => setSelectedEquipmentMeasures(null)}
+                className="px-5 py-2.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-700 dark:text-[#E7EEF7] text-xs sm:text-sm font-bold transition-all"
+              >
+                ปิด
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const targetItem = selectedEquipmentMeasures.item;
+                  setSelectedEquipmentMeasures(null);
+                  openCalcModal(targetItem);
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#0F2854] to-[#1C4D8D] hover:from-[#1C4D8D] hover:to-[#4988C4] text-white text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95"
+              >
+                <CalculatorIcon className="w-4 h-4" />
+                คำนวณ & ประเมินมาตรการใหม่
               </button>
             </div>
           </div>

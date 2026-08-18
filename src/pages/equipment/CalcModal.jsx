@@ -18,15 +18,16 @@ import { useLang } from '../../context/languageStore.js';
 const INITIAL_CALC_FORM = {
   chillerType: 'WATER COOL',
   pInput: '646',
-  load: '70',
+  load: '', // ภาระการทำงานเฉลี่ย (รอกรอกเอง 0-100%)
   refrigerant: '',
   ultraflowSonic: '2400',
-  chillTempIn: '54',
-  chillTempOut: '45.6',
-  saturatedEvapTemp: '47.3',
+  pctCoolingLoad: '', // คำนวณอัตโนมัติ
+  chillTempIn: '54.5',
+  chillTempOut: '46.5', // ขาจ่ายมาตรฐาน 46 - 47°F
+  saturatedEvapTemp: '44.0',
   condTempIn: '84.1',
-  condTempOut: '90.6',
-  saturatedCondTemp: '95.4',
+  condTempOut: '94.1',
+  saturatedCondTemp: '99.0',
   dryBulbTemp: '84.1',
   dryBulbRH: '90.6',
 };
@@ -66,15 +67,70 @@ function TempToggle({ fieldKey, fieldUnits, onToggle }) {
   );
 }
 
-function getInitialChillerForm(item) {
-  return { ...INITIAL_CALC_FORM, chillerType: item.chillerType || 'WATER COOL' };
+function getInitialChillerForm(item = {}) {
+  // 1. Chiller Input Power (กำลังไฟฟ้าขาเข้า kW)
+  let pInput = '';
+  if (item.chillerPower != null && String(item.chillerPower).trim() !== '') {
+    pInput = String(item.chillerPower).trim();
+  } else if (item.electricalPower != null && String(item.electricalPower).trim() !== '') {
+    pInput = String(item.electricalPower).trim();
+  } else if (item.power != null && String(item.power).trim() !== '') {
+    pInput = String(item.power).trim();
+  } else if (item.pInput != null && String(item.pInput).trim() !== '') {
+    pInput = String(item.pInput).trim();
+  } else {
+    // If power not directly specified, calculate from TR * kW/TR
+    const tr = parseFloat(item.coolingCapacity ?? item.capacityTR);
+    const eff = parseFloat(item.chillerEfficiency ?? item.specificPower);
+    if (!Number.isNaN(tr) && !Number.isNaN(eff) && tr > 0 && eff > 0) {
+      pInput = String((tr * eff).toFixed(1));
+    }
+  }
+
+  // 2. Load factor (ภาระการทำงาน %)
+  let load = '';
+  if (item.loadFactor != null && String(item.loadFactor).trim() !== '') {
+    const rawLoad = parseFloat(item.loadFactor);
+    if (!Number.isNaN(rawLoad) && rawLoad > 0) {
+      load = rawLoad <= 1 ? String(Math.round(rawLoad * 100)) : String(rawLoad);
+    }
+  }
+
+  // 3. Flow rate (อัตราการไหล GPM)
+  let ultraflowSonic = '';
+  if (item.ultraflowSonic != null && String(item.ultraflowSonic).trim() !== '') {
+    ultraflowSonic = String(item.ultraflowSonic).trim();
+  } else if (item.flowRate != null && String(item.flowRate).trim() !== '') {
+    ultraflowSonic = String(item.flowRate).trim();
+  } else if (item.flow != null && String(item.flow).trim() !== '') {
+    ultraflowSonic = String(item.flow).trim();
+  } else {
+    const tr = parseFloat(item.coolingCapacity ?? item.capacityTR);
+    if (!Number.isNaN(tr) && tr > 0) {
+      // Standard chilled water flow: approx 2.4 GPM per TR
+      ultraflowSonic = String(Math.round(tr * 2.4));
+    }
+  }
+
+  // 4. Chiller Type & Refrigerant
+  const chillerType = item.chillerType || (item.spec?.toUpperCase().includes('AIR') ? 'AIR COOL' : 'WATER COOL');
+  const refrigerant = item.refrigerant || '';
+
+  return {
+    ...INITIAL_CALC_FORM,
+    chillerType,
+    pInput: pInput || INITIAL_CALC_FORM.pInput,
+    load: load || INITIAL_CALC_FORM.load,
+    ultraflowSonic: ultraflowSonic || INITIAL_CALC_FORM.ultraflowSonic,
+    refrigerant,
+  };
 }
 
 export default function CalcModal({ item, onClose }) {
   const { t } = useLang();
   const isChiller = item.category === 'chiller';
   const [calcForm, setCalcForm] = useState(() =>
-    isChiller ? getInitialChillerForm(item) : defaultFormFor(item.category)
+    isChiller ? getInitialChillerForm(item) : defaultFormFor(item.category, item)
   );
   const [calcResult, setCalcResult] = useState(null);
   const [fieldUnits, setFieldUnits] = useState(INITIAL_FIELD_UNITS);
@@ -119,6 +175,9 @@ export default function CalcModal({ item, onClose }) {
       const T_CHWR_F = readF('chillTempIn');
       const T_CHWS_F = readF('chillTempOut');
 
+      const specTR = parseFloat(item.coolingCapacity ?? item.capacityTR) || 0;
+      const specKW = parseFloat(item.chillerPower ?? item.electricalPower ?? item.power) || 0;
+
       let TR = null,
         Q_cool_kW = null,
         kWperTR = null,
@@ -126,6 +185,14 @@ export default function CalcModal({ item, onClose }) {
         EER = null;
       if (flowGPM && T_CHWR_F != null && T_CHWS_F != null && T_CHWR_F > T_CHWS_F) {
         TR = (flowGPM * (T_CHWR_F - T_CHWS_F)) / 24;
+      } else if (calcForm.pctCoolingLoad && specTR > 0) {
+        const pct = parseFloat(calcForm.pctCoolingLoad);
+        if (!Number.isNaN(pct) && pct > 0) {
+          TR = specTR * (pct / 100);
+        }
+      }
+
+      if (TR != null && TR > 0) {
         Q_cool_kW = TR * 3.517;
         kWperTR = P_in / TR;
         COP = Q_cool_kW / P_in;
@@ -135,6 +202,9 @@ export default function CalcModal({ item, onClose }) {
       const Q_rej_kW = Q_cool_kW != null ? Q_cool_kW + P_in : null;
 
       const T_evap_F = readF('saturatedEvapTemp');
+      const evapApproach_F = T_CHWS_F != null && T_evap_F != null ? T_CHWS_F - T_evap_F : null;
+
+      const T_condOut_F = readF('condTempOut');
       let T_cond_F = null;
       if (calcForm.chillerType === 'AIR COOL') {
         const T_db_F = readF('dryBulbTemp');
@@ -142,6 +212,7 @@ export default function CalcModal({ item, onClose }) {
       } else {
         T_cond_F = readF('saturatedCondTemp');
       }
+      const condApproach_F = T_cond_F != null && T_condOut_F != null ? T_cond_F - T_condOut_F : null;
 
       let etaCarnot = null;
       if (COP != null && T_evap_F != null && T_cond_F != null) {
@@ -157,22 +228,49 @@ export default function CalcModal({ item, onClose }) {
         kWperTR == null ? null : kWperTR < 0.8 ? 'good' : kWperTR <= 1.0 ? 'ok' : 'poor';
       const fmt = (v, d = 2) => (v == null ? '-' : v.toFixed(d));
 
+      let pctCoolingLoad = null;
+      if (TR != null && specTR > 0) {
+        pctCoolingLoad = (TR / specTR) * 100;
+      } else if (calcForm.pctCoolingLoad) {
+        pctCoolingLoad = parseFloat(calcForm.pctCoolingLoad) || null;
+      }
+
+      let pctElectricalLoad = null;
+      if (P_in != null && specKW > 0) {
+        pctElectricalLoad = (P_in / specKW) * 100;
+      }
+
       setCalcResult({
         category: 'chiller',
         metrics: [
+          { key: 'pctCoolingLoad', label: '% Cooling Load', value: pctCoolingLoad != null ? `${pctCoolingLoad.toFixed(1)}%` : '-', unit: specTR > 0 ? `(${fmt(TR)} / ${specTR} TR)` : 'ภาระทำความเย็น' },
+          { key: 'efficiency', label: 'Efficiency (kW/TR)', value: fmt(kWperTR, 3), unit: 'kW/TR' },
+          { key: 'coolingLoad', label: 'Cooling Load (TR)', value: fmt(TR), unit: 'TR' },
+          { key: 'powerCF', label: 'Power (CF)', value: P_in.toFixed(2), unit: 'kW' },
           { key: 'cop', label: 'COP', value: fmt(COP, 3), unit: 'kW/kW' },
-          { key: 'efficiency', label: 'Efficiency', value: fmt(kWperTR, 3), unit: 'kW/TR' },
           { key: 'eer', label: 'EER', value: fmt(EER), unit: 'BTU/W' },
-          { key: 'coolingLoad', label: 'Cooling Load', value: fmt(TR), unit: 'TR' },
-          { key: 'qCool', label: 'Q Cool', value: fmt(Q_cool_kW), unit: 'kW' },
+          ...(flowVal != null && !Number.isNaN(flowVal)
+            ? [{ key: 'ultraflowSonic', label: 'Ultraflow Sonic', value: String(flowVal), unit: flowUnit || 'GPM' }]
+            : []),
           { key: 'qRej', label: 'Heat Rejection', value: fmt(Q_rej_kW), unit: 'kW' },
           { key: 'etaCarnot', label: 'η Carnot', value: fmt(etaCarnot, 1), unit: '%' },
         ],
+        ultraflowSonic: flowVal != null && !Number.isNaN(flowVal) ? flowVal : null,
+        flowUnit: flowUnit || 'GPM',
         coolingLoad: TR,
-        efficiency: kWperTR != null ? kWperTR.toFixed(2) : null,
+        pctCoolingLoad,
+        pctElectricalLoad,
+        efficiency: kWperTR != null ? kWperTR.toFixed(3) : null,
         grade,
         powerCF: P_in.toFixed(2),
         powerBaseline: P_in,
+        evapApproach: evapApproach_F,
+        condApproach: condApproach_F,
+        chillTempOut: T_CHWS_F,
+        saturatedEvapTemp: T_evap_F,
+        condTempOut: T_condOut_F,
+        saturatedCondTemp: T_cond_F,
+        inputs: { ...calcForm, flowUnit },
       });
       return;
     }
@@ -213,14 +311,18 @@ export default function CalcModal({ item, onClose }) {
     setFlowUnit(toUnit);
   };
 
-  const resetCalc = () => {
+  const handleResetDefaults = () => {
     if (isChiller) {
       setCalcForm(getInitialChillerForm(item));
       setFieldUnits(INITIAL_FIELD_UNITS);
       setFlowUnit('GPM');
     } else {
-      setCalcForm(defaultFormFor(item.category));
+      setCalcForm(defaultFormFor(item.category, item));
     }
+    setCalcResult(null);
+  };
+
+  const handleBackToForm = () => {
     setCalcResult(null);
   };
 
@@ -235,7 +337,7 @@ export default function CalcModal({ item, onClose }) {
 
   // When we have a result, render CalcResult directly in the same full-page layout
   if (calcResult) {
-    return <CalcResult item={item} result={calcResult} onBack={resetCalc} />;
+    return <CalcResult item={item} result={calcResult} onBack={handleBackToForm} />;
   }
 
   return (
@@ -318,39 +420,193 @@ export default function CalcModal({ item, onClose }) {
       </Panel>
 
       {/* SECTION 2: พารามิเตอร์ระบบไฟฟ้า & อัตราการไหล */}
-      {isChiller && (
-        <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-[#4988C4]">
-          <div className="flex items-center gap-2 text-xs lg:text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
-            <LightningIcon className="w-4 h-4 text-amber-500" />
-            พารามิเตอร์ระบบไฟฟ้า & อัตราการไหล (POWER & FLOW RATE)
-          </div>
+      {isChiller && (() => {
+        const specTR = parseFloat(item?.coolingCapacity ?? item?.capacityTR) || 0;
+        const specKW = parseFloat(item?.chillerPower ?? item?.electricalPower ?? item?.power) || 0;
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
-                กำลังไฟฟ้าขาเข้า (Electric Power kW)
-              </label>
-              <input
-                type="number"
-                value={calcForm.pInput || ''}
-                onChange={(e) => setCalcForm((p) => ({ ...p, pInput: e.target.value }))}
-                className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
-              />
+        const toFahrenheit = (v, unit) => (unit === 'C' ? (v * 9) / 5 + 32 : v);
+        const readF = (key) => {
+          const v = parseFloat(calcForm[key]);
+          return Number.isNaN(v) ? null : toFahrenheit(v, fieldUnits[key]);
+        };
+
+        const tInF = readF('chillTempIn');
+        const tOutF = readF('chillTempOut');
+        const deltaT_F = tInF != null && tOutF != null && tInF > tOutF ? tInF - tOutF : 8.0;
+
+        const flowVal = parseFloat(calcForm.ultraflowSonic);
+        const flowGPM = Number.isNaN(flowVal)
+          ? null
+          : flowUnit === 'm³/h'
+          ? flowVal * 4.4029
+          : flowVal;
+
+        const liveTR = flowGPM && deltaT_F > 0 ? (flowGPM * deltaT_F) / 24 : null;
+        const livePctCoolingLoad = liveTR != null && specTR > 0 ? (liveTR / specTR) * 100 : parseFloat(calcForm.pctCoolingLoad) || null;
+
+        const pInRaw = parseFloat(calcForm.pInput) || 0;
+        const livePowerKW = pInRaw > 0 ? pInRaw * 1.02 : 0;
+        const livePctElec = specKW > 0 && livePowerKW > 0 ? (livePowerKW / specKW) * 100 : null;
+        const liveKwPerTr = liveTR != null && liveTR > 0 && livePowerKW > 0 ? livePowerKW / liveTR : null;
+
+        const handlePctCoolingChange = (newPct) => {
+          setCalcForm((p) => {
+            const updated = { ...p, pctCoolingLoad: newPct };
+            const pctNum = parseFloat(newPct);
+            if (!Number.isNaN(pctNum) && specTR > 0 && pctNum > 0) {
+              const targetTR = specTR * (pctNum / 100);
+              const targetGPM = (24 * targetTR) / deltaT_F;
+              const formattedFlow = flowUnit === 'm³/h' ? (targetGPM / 4.4029).toFixed(1) : Math.round(targetGPM).toString();
+              updated.ultraflowSonic = formattedFlow;
+            }
+            return updated;
+          });
+        };
+
+        const handleFlowInputChange = (newFlow) => {
+          setCalcForm((p) => {
+            const updated = { ...p, ultraflowSonic: newFlow };
+            const flowNum = parseFloat(newFlow);
+            if (!Number.isNaN(flowNum) && flowNum > 0 && specTR > 0) {
+              const gpm = flowUnit === 'm³/h' ? flowNum * 4.4029 : flowNum;
+              const calcTR = (gpm * deltaT_F) / 24;
+              updated.pctCoolingLoad = ((calcTR / specTR) * 100).toFixed(1);
+            }
+            return updated;
+          });
+        };
+
+        return (
+          <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-[#4988C4]">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-xs lg:text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+                <LightningIcon className="w-4 h-4 text-amber-500" />
+                พารามิเตอร์ระบบไฟฟ้า & อัตราการไหล (POWER & FLOW RATE)
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 flex items-center gap-1.5 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                ค่าตรวจวัดจริง (Actual Measured Values)
+              </span>
             </div>
 
-            <div>
-              <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
-                ภาระการทำงาน (Load Factor %)
-              </label>
-              <input
-                type="number"
-                value={calcForm.load || ''}
-                onChange={(e) => setCalcForm((p) => ({ ...p, load: e.target.value }))}
-                className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 1. กำลังไฟฟ้าขาเข้า */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0]">
+                    กำลังไฟฟ้าขาเข้า (kW)
+                  </label>
+                  <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
+                    ค่าตรวจวัด
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  value={calcForm.pInput || ''}
+                  onChange={(e) => setCalcForm((p) => ({ ...p, pInput: e.target.value }))}
+                  placeholder="เช่น 350"
+                  className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                />
+                {specKW > 0 && (
+                  <p className="text-[10px] text-gray-400 font-mono mt-1">
+                    พิกัดมอเตอร์: {specKW} kW {livePctElec != null ? `(โหลด ${livePctElec.toFixed(0)}%)` : ''}
+                  </p>
+                )}
+              </div>
+
+              {/* 2. ภาระการทำงานเฉลี่ย */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0]">
+                    ภาระการทำงานเฉลี่ย (%)
+                  </label>
+                  <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300">
+                    รอกรอกเอง
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  value={calcForm.load ?? ''}
+                  onChange={(e) => setCalcForm((p) => ({ ...p, load: e.target.value }))}
+                  placeholder="0-100 (รอกรอกเอง)"
+                  className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                />
+                <p className="text-[10px] text-gray-400 font-mono mt-1">
+                  สัดส่วนการเดินเครื่อง (0-100%)
+                </p>
+              </div>
+
+              {/* 3. % ภาระทำความเย็น (% Cooling Load / Spec) - คำนวณอัตโนมัติ */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0]">
+                    % Cooling Load / Spec
+                  </label>
+                  <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                    คำนวณอัตโนมัติ
+                  </span>
+                </div>
+                <div className="w-full px-4 py-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/40 flex items-center justify-between">
+                  <span className="text-sm lg:text-base font-mono font-black text-emerald-800 dark:text-emerald-300">
+                    {livePctCoolingLoad != null ? `${livePctCoolingLoad.toFixed(1)}%` : '-'}
+                  </span>
+                  {liveTR != null && specTR > 0 && (
+                    <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+                      ({liveTR.toFixed(1)} / {specTR} TR)
+                    </span>
+                  )}
+                </div>
+                {specTR > 0 ? (
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono mt-1 font-semibold">
+                    คำนวณจาก Flow & ΔT ({deltaT_F.toFixed(1)}°F) ÷ 24
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-gray-400 font-mono mt-1">
+                    สัดส่วนภาระความเย็นคำนวณอัตโนมัติ
+                  </p>
+                )}
+              </div>
+
+              {/* 4. อัตราการไหล Ultraflow Sonic */}
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0]">
+                      อัตราการไหล ({flowUnit})
+                    </label>
+                  </div>
+                  <div className="flex bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 gap-0.5 self-start sm:self-auto">
+                    {['GPM', 'm³/h'].map((unit) => (
+                      <button
+                        key={unit}
+                        type="button"
+                        onClick={() => flowUnit !== unit && toggleFlowUnit()}
+                        className={`px-2.5 py-0.5 rounded-md text-xs font-bold transition-colors ${
+                          flowUnit === unit
+                            ? 'bg-[#0F2854] text-white shadow-sm'
+                            : 'text-[#0F2854]/60 dark:text-[#7E93AF]'
+                        }`}
+                      >
+                        {unit}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  value={calcForm.ultraflowSonic || ''}
+                  onChange={(e) => handleFlowInputChange(e.target.value)}
+                  placeholder="เช่น 1200"
+                  className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                />
+                <p className="text-[10px] text-gray-400 font-mono mt-1">
+                  Q = ṁ·Cp·ΔT ({deltaT_F.toFixed(1)}°F)
+                </p>
+              </div>
             </div>
 
-            <div>
+            {/* Refrigerant Selector */}
+            <div className="pt-1">
               <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                 สารทำความเย็น (Refrigerant)
               </label>
@@ -362,39 +618,29 @@ export default function CalcModal({ item, onClose }) {
                 triggerClassName="flex items-center w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base text-[#0F2854] dark:text-[#E7EEF7]"
               />
             </div>
-          </div>
 
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mb-1.5">
-              <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0]">
-                อัตราการไหล Ultraflow Sonic ({flowUnit})
-              </label>
-              <div className="flex bg-gray-100 dark:bg-white/10 rounded-lg p-0.5 gap-0.5 self-start sm:self-auto">
-                {['GPM', 'm³/h'].map((unit) => (
-                  <button
-                    key={unit}
-                    type="button"
-                    onClick={() => flowUnit !== unit && toggleFlowUnit()}
-                    className={`px-3 py-1 rounded-md text-xs lg:text-sm font-bold transition-colors ${
-                      flowUnit === unit
-                        ? 'bg-[#0F2854] text-white'
-                        : 'text-[#0F2854]/60 dark:text-[#7E93AF]'
-                    }`}
-                  >
-                    {unit}
-                  </button>
-                ))}
+            {/* LIVE REAL-TIME CHILLER STATUS PREVIEW BAR */}
+            <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 flex items-center justify-between flex-wrap gap-2 text-xs font-mono">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                  ❄️ Cooling Load: <strong className="text-blue-600 dark:text-blue-400">{liveTR ? liveTR.toFixed(1) : '-'} TR</strong>
+                  {specTR > 0 && livePctCoolingLoad != null ? ` (${livePctCoolingLoad.toFixed(1)}% ของสเปก)` : ''}
+                </span>
+                <span className="text-gray-400">|</span>
+                <span className="font-bold text-amber-900 dark:text-amber-200">
+                  ⚡ ไฟฟ้า: <strong className="text-amber-600 dark:text-amber-400">{livePowerKW > 0 ? livePowerKW.toFixed(1) : '-'} kW</strong>
+                  {specKW > 0 && livePctElec != null ? ` (${livePctElec.toFixed(1)}% โหลด)` : ''}
+                </span>
               </div>
+              {liveKwPerTr != null && (
+                <span className="font-bold px-2.5 py-1 rounded-xl bg-white dark:bg-[#0B1B33] text-[#0F2854] dark:text-[#E7EEF7] border border-blue-200 dark:border-blue-500/30">
+                  📊 สมรรถนะเบื้องต้น: <strong className={liveKwPerTr <= 0.75 ? 'text-emerald-600' : 'text-blue-600'}>{liveKwPerTr.toFixed(3)} kW/TR</strong>
+                </span>
+              )}
             </div>
-            <input
-              type="number"
-              value={calcForm.ultraflowSonic || ''}
-              onChange={(e) => setCalcForm((p) => ({ ...p, ultraflowSonic: e.target.value }))}
-              className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
-            />
-          </div>
-        </Panel>
-      )}
+          </Panel>
+        );
+      })()}
 
       {/* SECTION 3: อุณหภูมิน้ำ / อากาศในระบบ */}
       {isChiller && (
@@ -404,53 +650,97 @@ export default function CalcModal({ item, onClose }) {
               <DropletIcon className="w-4 h-4 text-emerald-500 shrink-0" />
               อุณหภูมิในระบบ (TEMPERATURE READINGS)
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs lg:text-sm text-gray-400 dark:text-[#7E93AF] font-bold">สลับหน่วยทั้งหมด:</span>
-              <div className="flex bg-[#0F2854]/10 dark:bg-white/10 rounded-xl p-0.5 gap-0.5">
-                {['F', 'C'].map((u) => {
-                  const allSame = Object.values(fieldUnits).every((v) => v === u);
-                  return (
-                    <button
-                      key={u}
-                      type="button"
-                      onClick={() => !allSame && toggleAllTempUnit()}
-                      className={`px-3 py-1 rounded-lg text-xs lg:text-sm font-bold transition-colors ${
-                        allSame
-                          ? 'bg-[#0F2854] text-white shadow-sm'
-                          : 'text-[#0F2854]/60 dark:text-[#7E93AF]'
-                      }`}
-                    >
-                      °{u}
-                    </button>
-                  );
-                })}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                ค่าตรวจวัดจริง
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs lg:text-sm text-gray-400 dark:text-[#7E93AF] font-bold">สลับหน่วย:</span>
+                <div className="flex bg-[#0F2854]/10 dark:bg-white/10 rounded-xl p-0.5 gap-0.5">
+                  {['F', 'C'].map((u) => {
+                    const allSame = Object.values(fieldUnits).every((v) => v === u);
+                    return (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => !allSame && toggleAllTempUnit()}
+                        className={`px-3 py-1 rounded-lg text-xs lg:text-sm font-bold transition-colors ${
+                          allSame
+                            ? 'bg-[#0F2854] text-white shadow-sm'
+                            : 'text-[#0F2854]/60 dark:text-[#7E93AF]'
+                        }`}
+                      >
+                        °{u}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Chilled Water */}
           <div className="p-4 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 space-y-3">
-            <p className="flex items-center gap-1.5 text-xs lg:text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">
-              <SnowflakeIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-sky-500 shrink-0" />
-              ฝั่งน้ำเย็น (Chilled Water)
-            </p>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="flex items-center gap-1.5 text-xs lg:text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">
+                <SnowflakeIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-sky-500 shrink-0" />
+                ฝั่งน้ำเย็น (Chilled Water)
+              </p>
+              <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30">
+                ❄️ ขาจ่ายมาตรฐาน: 46 - 47°F (7.8 - 8.3°C)
+              </span>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                ['Temp In / Return', 'น้ำเย็นกลับ', 'chillTempIn'],
-                ['Temp Out / Supply', 'น้ำเย็นจ่าย', 'chillTempOut'],
-                ['Saturated Evap Temp', 'อุณหภูมิสารทำความเย็นระเหย', 'saturatedEvapTemp'],
-              ].map(([label, thai, key]) => (
-                <div key={key}>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] leading-snug">
-                      {label}
-                      <span className="block font-normal text-gray-400 dark:text-[#7E93AF]">({thai}) (°{fieldUnits[key]})</span>
-                    </label>
-                    <TempToggle fieldKey={key} fieldUnits={fieldUnits} onToggle={toggleFieldUnit} />
-                  </div>
-                  {tempInput(key)}
+              {/* Temp In / Return */}
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] leading-snug">
+                    Temp In / Return
+                    <span className="block font-normal text-gray-400 dark:text-[#7E93AF]">(น้ำเย็นกลับ) (°{fieldUnits.chillTempIn})</span>
+                  </label>
+                  <TempToggle fieldKey="chillTempIn" fieldUnits={fieldUnits} onToggle={toggleFieldUnit} />
                 </div>
-              ))}
+                {tempInput('chillTempIn')}
+                <p className="text-[10px] text-gray-400 mt-1 font-mono">ทั่วไป 54 - 56°F</p>
+              </div>
+
+              {/* Temp Out / Supply (น้ำเย็นจ่าย) - Standard 46-47 F */}
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] leading-snug">
+                    Temp Out / Supply
+                    <span className="block font-bold text-blue-600 dark:text-blue-400">(น้ำเย็นจ่าย 46-47°F)</span>
+                  </label>
+                  <TempToggle fieldKey="chillTempOut" fieldUnits={fieldUnits} onToggle={toggleFieldUnit} />
+                </div>
+                {tempInput('chillTempOut')}
+                {(() => {
+                  const val = parseFloat(calcForm.chillTempOut);
+                  if (Number.isNaN(val)) return null;
+                  const valF = fieldUnits.chillTempOut === 'C' ? (val * 9) / 5 + 32 : val;
+                  const isOptimal = valF >= 45.5 && valF <= 47.5;
+                  return (
+                    <p className={`text-[10px] mt-1 font-mono font-bold ${isOptimal ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      {isOptimal ? '✓ อุณหภูมิขาจ่ายมาตรฐาน (46-47°F)' : `ℹ อุณหภูมิน้ำจ่าย (${valF.toFixed(1)}°F)`}
+                    </p>
+                  );
+                })()}
+              </div>
+
+              {/* Saturated Evap Temp */}
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <label className="text-xs lg:text-sm font-bold text-gray-600 dark:text-[#8CA3C0] leading-snug">
+                    Saturated Evap Temp
+                    <span className="block font-normal text-gray-400 dark:text-[#7E93AF]">(สารทำความเย็นระเหย) (°{fieldUnits.saturatedEvapTemp})</span>
+                  </label>
+                  <TempToggle fieldKey="saturatedEvapTemp" fieldUnits={fieldUnits} onToggle={toggleFieldUnit} />
+                </div>
+                {tempInput('saturatedEvapTemp')}
+                <p className="text-[10px] text-gray-400 mt-1 font-mono">ทั่วไป 42 - 45°F</p>
+              </div>
             </div>
           </div>
 
@@ -510,9 +800,15 @@ export default function CalcModal({ item, onClose }) {
       {/* Non-chiller Calculators */}
       {!isChiller && (
         <Panel className="p-6 space-y-4 rounded-3xl">
-          <div className="flex items-center gap-2 text-xs lg:text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
-            <CalculatorIcon className="w-4 h-4 text-[#4988C4]" />
-            กรอกพารามิเตอร์การคำนวณ (INPUT DATA)
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-xs lg:text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+              <CalculatorIcon className="w-4 h-4 text-[#4988C4]" />
+              กรอกพารามิเตอร์การคำนวณ (INPUT DATA)
+            </div>
+            <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 flex items-center gap-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              ค่าตรวจวัดจริง (Actual Measured Values)
+            </span>
           </div>
           {CALCULATORS[item.category] ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -541,7 +837,7 @@ export default function CalcModal({ item, onClose }) {
       <div className="flex gap-4 pt-2">
         <button
           type="button"
-          onClick={resetCalc}
+          onClick={handleResetDefaults}
           className="flex-1 py-3.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-600 dark:text-[#C3D2E5] font-bold text-sm lg:text-base transition-colors flex items-center justify-center gap-2"
         >
           <RefreshIcon className="w-4 h-4" />

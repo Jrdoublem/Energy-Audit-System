@@ -7,7 +7,7 @@ import { fetchAllCategories } from '../context/equipmentStore.js';
 import { fetchAllCatalogItems, saveCatalogItem, deleteCatalogItem } from '../context/catalogStore.js';
 import { ICON_MAP } from '../components/iconMap.js';
 import { fileToResizedDataUrl } from '../utils/image.js';
-import { uploadImage, deleteImage } from '../context/storageStore.js';
+import { uploadImage, uploadFile, deleteImage } from '../context/storageStore.js';
 import { useLang } from '../context/languageStore.js';
 import { BoxIcon, CalculatorIcon, ChevronDownIcon, ClipboardIcon, PencilIcon, PlusIcon, TrashIcon, ArrowLeftIcon, CheckIcon, SparkleIcon, GearIcon } from '../components/icons';
 import SavingsCalculator from './catalog/SavingsCalculator.jsx';
@@ -67,11 +67,53 @@ function CatalogCard({ item, onEdit, onDelete, onCalculate }) {
             <span className="text-sm font-semibold text-[#0F2854] dark:text-[#E7EEF7] truncate max-w-[55%] text-right">{item.spec}</span>
           </div>
         )}
+
+        {/* Chiller Load Performance Summary */}
+        {item.catId === 'chiller' && (item.kwPerTr100 || item.iplv) && (
+          <div className="p-2.5 rounded-xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-bold text-gray-600 dark:text-[#8CA3C0]">
+              <span>Load Performance:</span>
+              {item.iplv && <span className="text-[#4988C4] font-mono">IPLV: {item.iplv} kW/TR</span>}
+            </div>
+            <div className="grid grid-cols-4 gap-1 text-center font-mono text-[10px]">
+              <div className="p-1 rounded bg-white dark:bg-[#111F35] border border-[#EEF3FB] dark:border-white/5">
+                <span className="text-gray-400 block text-[9px]">100%</span>
+                <span className="font-bold text-[#0F2854] dark:text-[#E7EEF7]">{item.kwPerTr100 || '-'}</span>
+              </div>
+              <div className="p-1 rounded bg-white dark:bg-[#111F35] border border-[#EEF3FB] dark:border-white/5">
+                <span className="text-gray-400 block text-[9px]">75%</span>
+                <span className="font-bold text-[#0F2854] dark:text-[#E7EEF7]">{item.kwPerTr75 || '-'}</span>
+              </div>
+              <div className="p-1 rounded bg-white dark:bg-[#111F35] border border-[#EEF3FB] dark:border-white/5">
+                <span className="text-gray-400 block text-[9px]">50%</span>
+                <span className="font-bold text-[#0F2854] dark:text-[#E7EEF7]">{item.kwPerTr50 || '-'}</span>
+              </div>
+              <div className="p-1 rounded bg-white dark:bg-[#111F35] border border-[#EEF3FB] dark:border-white/5">
+                <span className="text-gray-400 block text-[9px]">25%</span>
+                <span className="font-bold text-[#0F2854] dark:text-[#E7EEF7]">{item.kwPerTr25 || '-'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {item.costEst > 0 && (
           <div className="flex items-center justify-between rounded-xl border border-gray-100 dark:border-white/8 px-3.5 py-3">
             <span className="text-sm text-gray-500 dark:text-[#8CA3C0]">{t.catalog.costEstimate}</span>
             <span className="text-sm font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">฿{fmt(item.costEst)}</span>
           </div>
+        )}
+        {item.pdfUrl && (
+          <a
+            href={item.pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold transition-colors border border-red-200 dark:border-red-500/20"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+            </svg>
+            <span className="truncate">📄 ดูไฟล์ PDF สเปก (Datasheet) ↗</span>
+          </a>
         )}
         {item.catId === 'chiller' && item.specificPower > 0 && (
           <button
@@ -101,10 +143,28 @@ function Catalog() {
 
   const [modalMode, setModalMode] = useState(null); // null | 'add' | 'edit'
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ catId: '', brand: '', model: '', spec: '', specificPower: '', costEst: '', desc: '', image: '' });
+  const [form, setForm] = useState({
+    catId: '',
+    brand: '',
+    model: '',
+    spec: '',
+    specificPower: '',
+    kwPerTr100: '',
+    kwPerTr75: '',
+    kwPerTr50: '',
+    kwPerTr25: '',
+    iplv: '',
+    costEst: '',
+    desc: '',
+    image: '',
+    pdfUrl: '',
+    pdfName: '',
+  });
   const [formError, setFormError] = useState('');
   const [imageError, setImageError] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfError, setPdfError] = useState('');
   const [calculatorItem, setCalculatorItem] = useState(null);
   const catScrollRef = useRef(null);
 
@@ -114,9 +174,26 @@ function Catalog() {
   const openAddItem = () => {
     setModalMode('add');
     setEditingId(null);
-    setForm({ catId: activeCategory, brand: '', model: '', spec: '', specificPower: '', costEst: '', desc: '', image: '' });
+    setForm({
+      catId: activeCategory,
+      brand: '',
+      model: '',
+      spec: '',
+      specificPower: '',
+      kwPerTr100: '',
+      kwPerTr75: '',
+      kwPerTr50: '',
+      kwPerTr25: '',
+      iplv: '',
+      costEst: '',
+      desc: '',
+      image: '',
+      pdfUrl: '',
+      pdfName: '',
+    });
     setFormError('');
     setImageError('');
+    setPdfError('');
   };
 
   const openEditItem = (item) => {
@@ -128,12 +205,20 @@ function Catalog() {
       model: item.model || '',
       spec: item.spec || '',
       specificPower: item.specificPower || '',
+      kwPerTr100: item.kwPerTr100 || '',
+      kwPerTr75: item.kwPerTr75 || '',
+      kwPerTr50: item.kwPerTr50 || '',
+      kwPerTr25: item.kwPerTr25 || '',
+      iplv: item.iplv || '',
       costEst: item.costEst || '',
       desc: item.desc || '',
       image: item.image || '',
+      pdfUrl: item.pdfUrl || '',
+      pdfName: item.pdfName || '',
     });
     setFormError('');
     setImageError('');
+    setPdfError('');
   };
 
   const closeModal = () => setModalMode(null);
@@ -156,6 +241,27 @@ function Catalog() {
     }
   };
 
+  const handlePdfChange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    setPdfError('');
+    setPdfUploading(true);
+    try {
+      const url = await uploadFile(file, 'catalog_pdf');
+      setForm((p) => ({ ...p, pdfUrl: url, pdfName: file.name }));
+    } catch (err) {
+      console.error('Catalog PDF upload failed:', err);
+      setPdfError('อัปโหลดไฟล์ PDF ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setPdfUploading(false);
+    }
+  };
+
+  const handleRemovePdf = () => {
+    setForm((p) => ({ ...p, pdfUrl: '', pdfName: '' }));
+  };
+
   const handleSaveItem = async () => {
     const brand = form.brand.trim();
     const model = form.model.trim();
@@ -170,6 +276,8 @@ function Catalog() {
       costEst: parseFloat(form.costEst) || 0,
       desc: form.desc.trim(),
       image: form.image,
+      pdfUrl: form.pdfUrl || '',
+      pdfName: form.pdfName || '',
     };
     if (modalMode === 'edit' && editingId) {
       const item = { id: editingId, ...record };
@@ -346,6 +454,121 @@ function Catalog() {
                   )}
                 </div>
 
+                {/* Load Performance Section (Chiller Specific) */}
+                {form.catId === 'chiller' && (
+                  <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-xs font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                        <LightningIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        ประสิทธิภาพตามภาระโหลด (Load Performance & IPLV)
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 font-bold">
+                        AHRI Standard 550/590
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
+                          100% Load (kW/TR)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          placeholder="เช่น 0.650"
+                          value={form.kwPerTr100 || ''}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setForm((p) => {
+                              const updated = { ...p, kwPerTr100: v };
+                              if (!p.specificPower) updated.specificPower = v;
+                              return updated;
+                            });
+                          }}
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
+                          75% Load (kW/TR)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          placeholder="เช่น 0.520"
+                          value={form.kwPerTr75 || ''}
+                          onChange={(e) => setForm((p) => ({ ...p, kwPerTr75: e.target.value }))}
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
+                          50% Load (kW/TR)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          placeholder="เช่น 0.420"
+                          value={form.kwPerTr50 || ''}
+                          onChange={(e) => setForm((p) => ({ ...p, kwPerTr50: e.target.value }))}
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
+                          25% Load (kW/TR)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          placeholder="เช่น 0.480"
+                          value={form.kwPerTr25 || ''}
+                          onChange={(e) => setForm((p) => ({ ...p, kwPerTr25: e.target.value }))}
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5]">
+                          ค่า IPLV / NPLV (Integrated Part Load Value)
+                        </label>
+                        {(() => {
+                          const a = parseFloat(form.kwPerTr100);
+                          const b = parseFloat(form.kwPerTr75);
+                          const c = parseFloat(form.kwPerTr50);
+                          const d = parseFloat(form.kwPerTr25);
+                          if (a > 0 && b > 0 && c > 0 && d > 0) {
+                            const iplvCalc = (0.01 * a + 0.42 * b + 0.45 * c + 0.12 * d).toFixed(3);
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => setForm((p) => ({ ...p, iplv: iplvCalc }))}
+                                className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline"
+                              >
+                                คำนวณ IPLV: {iplvCalc} kW/TR (คลิกเพื่อใช้)
+                              </button>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      <input
+                        type="number"
+                        step="0.001"
+                        placeholder="เช่น 0.475 หรือคลิกคำนวณอัตโนมัติ"
+                        value={form.iplv || ''}
+                        onChange={(e) => setForm((p) => ({ ...p, iplv: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {form.catId === 'chiller' && (
                   <div>
                     <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
@@ -401,6 +624,71 @@ function Catalog() {
                   </label>
                   {imageError && <p className="text-xs text-rose-500">{imageError}</p>}
                 </div>
+              </div>
+            </Panel>
+
+            <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-red-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+                  <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                  </svg>
+                  เอกสารสเปก PDF (PDF DATASHEET / CATALOG)
+                </div>
+                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-full">
+                  รองรับไฟล์ PDF
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 space-y-3">
+                {form.pdfUrl ? (
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-white/10 border border-red-200 dark:border-red-500/30">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
+                        PDF
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] truncate">
+                          {form.pdfName || 'เอกสารสเปกอุปกรณ์.pdf'}
+                        </p>
+                        <a
+                          href={form.pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] font-bold text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1"
+                        >
+                          เปิดดูไฟล์ PDF ในแท็บใหม่ ↗
+                        </a>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePdf}
+                      className="px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-100 text-xs font-bold transition-colors"
+                    >
+                      ลบไฟล์
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 text-center sm:text-left space-y-1">
+                      <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">แนบเอกสาร PDF Datasheet / โบรชัวร์สเปกเครื่อง</p>
+                      <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">สำหรับเปิดอ่านสเปกเครื่อง ตารางกำลังไฟฟ้า และใบรับรองประสิทธิภาพ</p>
+                    </div>
+                    <label className={`px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-red-200 dark:border-red-500/30 text-xs font-bold text-red-600 dark:text-red-400 transition-colors shrink-0 ${
+                      pdfUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer'
+                    }`}>
+                      {pdfUploading ? 'กำลังอัปโหลด PDF...' : '📄 เลือกไฟล์ PDF'}
+                      <input type="file" accept=".pdf,application/pdf" onChange={handlePdfChange} className="hidden" disabled={pdfUploading} />
+                    </label>
+                  </div>
+                )}
+                {pdfError && <p className="text-xs text-rose-500">{pdfError}</p>}
               </div>
             </Panel>
 

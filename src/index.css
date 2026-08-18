@@ -151,6 +151,54 @@ body {
   animation: statusPulse 2s ease-in-out infinite;
 }
 
+/* --- Mobile "More" (เพิ่มเติม) Menu Animations --- */
+@keyframes moreMenuPopup {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 18px) scale(0.94);
+  }
+  60% {
+    transform: translate(-50%, -2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes moreMenuFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes moreItemSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-more-popup {
+  animation: moreMenuPopup 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-more-backdrop {
+  animation: moreMenuFadeIn 0.25s ease-out forwards;
+}
+
+.animate-more-item {
+  animation: moreItemSlide 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+
 /* --- Report print preview: hide everything except the printable
    document (app chrome, modal backdrop/toolbar) when the browser's
    print dialog is used. --- */

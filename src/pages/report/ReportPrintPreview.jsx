@@ -64,6 +64,13 @@ function ReportPrintPreview({ item, result, measures, form, onClose, onEdit }) {
   const docNumber = docNumberFor(item, form);
   const printDate = formatThaiDate(new Date());
 
+  const beforeImgs = (form?.beforeImages && form.beforeImages.length > 0)
+    ? form.beforeImages
+    : (item?.images && item.images.length > 0 ? item.images : (item?.image ? [item.image] : []));
+  const afterImgs = (form?.afterImages && form.afterImages.length > 0)
+    ? form.afterImages
+    : (primaryMeasure?.afterImages || (measures || []).flatMap((m) => m.afterImages || m.images || []));
+
   const handlePrint = () => window.print();
 
   return createPortal(
@@ -201,6 +208,63 @@ function ReportPrintPreview({ item, result, measures, form, onClose, onEdit }) {
               )}
             </div>
           </div>
+
+          {/* Before/After Photos Comparison */}
+          {(beforeImgs.length > 0 || afterImgs.length > 0) && (
+            <div className="mb-6 break-inside-avoid">
+              <div className="bg-[#0F2854] text-white text-xs font-bold px-3 py-2 rounded-t-lg flex items-center justify-between">
+                <span>{t.report.beforeAfterPhotosTitle || 'รูปภาพเปรียบเทียบ ก่อน - หลัง ปรับปรุง'}</span>
+                <span className="text-[10px] text-white/70 font-normal hidden sm:inline">
+                  {t.report.beforeAfterPhotosSubtitle || 'ภาพถ่ายสภาพอุปกรณ์ก่อนและหลังดำเนินมาตรการ'}
+                </span>
+              </div>
+              <div className="border border-t-0 border-gray-200 rounded-b-lg p-3 sm:p-4 bg-[#F8FAFC]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Before Column */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-700">{t.report.photoBeforeLabel || 'ภาพก่อนปรับปรุง (Before)'}</span>
+                      <span className="text-[10px] text-gray-400 font-mono">{beforeImgs.length} รูป</span>
+                    </div>
+                    {beforeImgs.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {beforeImgs.map((url, idx) => (
+                          <div key={idx} className="aspect-[4/3] rounded-lg overflow-hidden bg-white border border-gray-200 shadow-sm">
+                            <img src={url} alt={`Before ${idx + 1}`} className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-lg">
+                        ไม่มีภาพก่อนปรับปรุง
+                      </p>
+                    )}
+                  </div>
+
+                  {/* After Column */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-700">{t.report.photoAfterLabel || 'ภาพหลังปรับปรุง (After)'}</span>
+                      <span className="text-[10px] text-emerald-600 font-mono">{afterImgs.length} รูป</span>
+                    </div>
+                    {afterImgs.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {afterImgs.map((url, idx) => (
+                          <div key={idx} className="aspect-[4/3] rounded-lg overflow-hidden bg-white border border-emerald-300 shadow-sm">
+                            <img src={url} alt={`After ${idx + 1}`} className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-lg">
+                        ไม่มีภาพหลังปรับปรุง
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Summary + notes */}
           {form.summary && (

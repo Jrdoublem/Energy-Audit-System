@@ -1,8 +1,4 @@
-// Image uploads, backed by Firebase Storage. Callers resize/re-encode the
-// file client-side first (see src/utils/image.js) and pass in the resulting
-// data URL — this just uploads it and hands back the public download URL to
-// store on the record (factory/catalog doc) instead of the image itself.
-import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '../firebase.js';
 
 export async function uploadImage(dataUrl, folder) {
@@ -11,6 +7,14 @@ export async function uploadImage(dataUrl, folder) {
   const imageRef = ref(storage, `${folder}/${fileName}`);
   await uploadString(imageRef, dataUrl, 'data_url');
   return getDownloadURL(imageRef);
+}
+
+export async function uploadFile(file, folder = 'catalog_pdf') {
+  const ext = file.name ? file.name.split('.').pop() : 'pdf';
+  const fileName = `${crypto.randomUUID()}.${ext}`;
+  const fileRef = ref(storage, `${folder}/${fileName}`);
+  await uploadBytes(fileRef, file);
+  return getDownloadURL(fileRef);
 }
 
 // Best-effort: called when a factory/catalog item is deleted so its photo

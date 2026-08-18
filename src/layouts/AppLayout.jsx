@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import companyLogo from '../assets/Logo.png';
 import { useFactory } from '../context/factoryStore.js';
 import { getSession, logout as clearSession } from '../context/authStore.js';
@@ -14,14 +14,17 @@ import {
   BoxIcon,
   CalculatorIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   ClipboardIcon,
   ClockIcon,
+  CloseIcon,
   DocumentIcon,
   GearIcon,
   HomeIcon,
   LogoutIcon,
   MapPinIcon,
   MoonIcon,
+  MoreHorizontalIcon,
   PlusIcon,
   ShieldIcon,
   SunIcon,
@@ -31,7 +34,15 @@ function getInitialCollapsed() {
   return localStorage.getItem('sidebarCollapsed') === 'true';
 }
 
-export function RoleBadge({ role, stretch = false }) {
+export function RoleBadge({ role, stretch = false, size = 'sm' }) {
+  if (size === 'sm') {
+    return (
+      <div className="inline-flex items-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full px-2.5 py-1 text-xs font-semibold text-[#0F2854]/80 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm shrink-0">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+        <span className="truncate">{role}</span>
+      </div>
+    );
+  }
   return (
     <div className={`flex items-center justify-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full pl-3 pr-3.5 py-2 text-sm font-medium text-[#0F2854]/80 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm ${stretch ? 'flex-1 lg:flex-none lg:shrink-0' : 'shrink-0'}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -132,13 +143,20 @@ function AppLayout({
   roleBadgeByAvatar = false,
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
   const { factories, selectedFactory, setSelectedFactory, refreshFactories } = useFactory();
   const { t } = useLang();
   const session = getSession();
   const roleLabel = session.role === 'admin' ? t.nav.roleAdmin : t.nav.roleUser;
   const { theme, toggleTheme } = useTheme();
+
+  // Close more menu on route changes
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [location.pathname]);
 
   // When the role badge/factory row sits below the title (mobile), it
   // scrolls out of view with the page content — this small pill fades in
@@ -155,7 +173,30 @@ function AppLayout({
     || (session.role === 'engineer' ? t.nav.allFactoriesMine : t.nav.allFactories);
   const visibleNavSections = navSections.filter((s) => !s.adminOnly || session.role === 'admin');
   const visibleNavItems = visibleNavSections.flatMap((s) => s.items);
-  const mobileNavItems = visibleNavItems.filter((item) => !item.mobileHidden);
+
+  const primaryMobileNavItems = [
+    { to: '/home', labelKey: 'home', icon: HomeIcon },
+    { to: '/reports', labelKey: 'reports', icon: DocumentIcon },
+    { to: '/equipment', labelKey: 'equipment', icon: ClipboardIcon },
+    { to: '/history', labelKey: 'history', icon: ClockIcon },
+  ];
+
+  const moreMenuItems = [
+    { to: '/settings', labelKey: 'settings', icon: GearIcon },
+    { to: '/calculator', labelKey: 'calculator', icon: CalculatorIcon },
+    { to: '/catalog', labelKey: 'catalog', icon: BoxIcon, countKey: 'catalog' },
+    ...(session.role === 'admin'
+      ? [
+          { to: '/factories', labelKey: 'factories', icon: MapPinIcon, countKey: 'factories' },
+          { to: '/admin', labelKey: 'adminPanel', icon: ShieldIcon },
+        ]
+      : []),
+  ];
+
+  const isMoreActive =
+    moreMenuItems.some((item) => location.pathname === item.to || location.pathname.startsWith(item.to + '/')) ||
+    location.pathname === '/units' ||
+    location.pathname.startsWith('/factories');
 
   const [equipmentCount, setEquipmentCount] = useState(0);
   useEffect(() => {
@@ -368,21 +409,18 @@ function AppLayout({
           mobileRailOffset ? 'pl-20 lg:pl-0' : 'pl-0'
         } ${collapsed ? 'lg:ml-20' : 'lg:ml-72'}`}
       >
-        {/* Persistent role badge + factory selector — mobile: every page; desktop: only pages without a header row (it merges into the title row otherwise) */}
-        {!factoryRowBelowTitle && !(hideRoleBadge && hideFactorySelect) && (
+        {/* Persistent factory selector — mobile: when !factoryRowBelowTitle and !hideFactorySelect */}
+        {!factoryRowBelowTitle && !hideFactorySelect && (
           <div className={`${hideHeader ? 'flex lg:absolute lg:z-20 lg:top-6 lg:right-10 lg:w-auto lg:max-w-none' : 'flex lg:hidden'} ${mobileHeaderRight ? 'justify-end' : mobileHeaderCenter ? 'justify-center' : ''} w-full max-w-md items-center gap-2 px-6 pt-4`}>
-            {!hideRoleBadge && <RoleBadge role={roleLabel} stretch={mobileHeaderRight} />}
-            {!hideFactorySelect && (
-              <FactorySelect
-                selectedFactory={selectedFactory}
-                setSelectedFactory={setSelectedFactory}
-                refreshFactories={refreshFactories}
-                factories={factories}
-                t={t}
-                role={session.role}
-                stretch={mobileHeaderRight}
-              />
-            )}
+            <FactorySelect
+              selectedFactory={selectedFactory}
+              setSelectedFactory={setSelectedFactory}
+              refreshFactories={refreshFactories}
+              factories={factories}
+              t={t}
+              role={session.role}
+              stretch={mobileHeaderRight}
+            />
           </div>
         )}
 
@@ -390,13 +428,13 @@ function AppLayout({
         {topSlot}
 
         <div
-          className={`w-full max-w-md lg:max-w-none items-center justify-between gap-4 px-6 lg:px-10 ${
+          className={`w-full max-w-md lg:max-w-none items-center justify-between gap-3 px-6 lg:px-10 ${
             hideHeader ? 'hidden' : hideHeaderMobile ? 'hidden lg:flex' : 'flex'
           } ${title ? 'pt-8 pb-4 lg:pt-8 lg:pb-4' : 'pt-5 pb-3 lg:pt-6 lg:pb-3'}`}
         >
           {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] shrink-0">{title}</h1>}
           <div className="hidden lg:flex flex-1 items-center justify-end gap-3">
-            {!hideRoleBadge && <RoleBadge role={roleLabel} />}
+            {!hideRoleBadge && <RoleBadge role={roleLabel} size="md" />}
             {!hideFactorySelect && (
               <FactorySelect
                 selectedFactory={selectedFactory}
@@ -409,13 +447,11 @@ function AppLayout({
             )}
             {actions}
           </div>
-          <div className="flex items-center gap-2 shrink-0 ml-auto">
-            {roleBadgeByAvatar && (
-              <div className="lg:hidden">
-                <RoleBadge role={roleLabel} />
-              </div>
+          <div className="flex items-center gap-2 shrink-0 ml-auto lg:hidden">
+            {!hideRoleBadgeMobile && (
+              <RoleBadge role={roleLabel} size="sm" />
             )}
-            <div className="relative group lg:hidden">
+            <div className="relative group">
               <button
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
@@ -465,20 +501,17 @@ function AppLayout({
           </div>
         </div>
 
-        {factoryRowBelowTitle && !hideHeaderMobile && !(hideRoleBadgeMobile && hideFactorySelect) && (
+        {factoryRowBelowTitle && !hideHeaderMobile && !hideFactorySelect && (
           <div className="flex lg:hidden w-full max-w-md items-center gap-2 px-6 pb-2 -mt-[10px]">
-            {!hideRoleBadgeMobile && <RoleBadge role={roleLabel} stretch />}
-            {!hideFactorySelect && (
-              <FactorySelect
-                selectedFactory={selectedFactory}
-                setSelectedFactory={setSelectedFactory}
-                refreshFactories={refreshFactories}
-                factories={factories}
-                t={t}
-                role={session.role}
-                stretch
-              />
-            )}
+            <FactorySelect
+              selectedFactory={selectedFactory}
+              setSelectedFactory={setSelectedFactory}
+              refreshFactories={refreshFactories}
+              factories={factories}
+              t={t}
+              role={session.role}
+              stretch
+            />
           </div>
         )}
 
@@ -510,14 +543,106 @@ function AppLayout({
         </div>
       </div>
 
+      {/* Mobile More (เพิ่มเติม) Menu Popup & Backdrop */}
+      {moreOpen && (
+        <div className="lg:hidden">
+          {/* Backdrop with fade animation */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 animate-more-backdrop"
+            onClick={() => setMoreOpen(false)}
+          />
+
+          {/* Vertical Menu Container with spring pop-up animation */}
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-md px-5 z-40 animate-more-popup">
+            <div
+              className="relative bg-[#0F2854]/95 backdrop-blur-xl rounded-2xl border border-white/15 p-2 shadow-[0_16px_48px_rgba(10,27,61,0.8)]"
+              style={{ boxShadow: '0 16px 48px rgba(10,27,61,0.8), 0 0 0 1px rgba(56,189,248,0.15)' }}
+            >
+              {/* Subtle top accent gradient */}
+              <span className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-[#38BDF8]/50 to-transparent pointer-events-none" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 mb-1">
+                <span className="text-xs font-bold text-[#38BDF8] tracking-widest uppercase flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-pulse" />
+                  {t.nav.more}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen(false)}
+                  className="p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
+                >
+                  <CloseIcon className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Vertical Menu Items with staggered cascading animation */}
+              <div className="flex flex-col gap-1">
+                {moreMenuItems.map(({ to, labelKey, icon: Icon, countKey }, idx) => {
+                  const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
+                  const count = countKey ? getCount(countKey) : null;
+                  return (
+                    <button
+                      key={to}
+                      type="button"
+                      style={{ animationDelay: `${idx * 40}ms` }}
+                      onClick={() => {
+                        setMoreOpen(false);
+                        navigate(to);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 active:scale-[0.97] animate-more-item ${
+                        isActive
+                          ? 'bg-[#38BDF8]/15 border border-[#38BDF8]/30 text-white'
+                          : 'text-white/80 hover:text-white hover:bg-white/10 border border-transparent'
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                          isActive
+                            ? 'bg-[#38BDF8] text-[#0F2854] shadow-sm shadow-[#38BDF8]/30'
+                            : 'bg-white/10 text-[#38BDF8]'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className={`flex-1 text-sm font-medium truncate ${isActive ? 'font-bold text-white' : ''}`}>
+                        {t.nav[labelKey]}
+                      </span>
+                      {count > 0 && (
+                        <span
+                          className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                            isActive ? 'bg-[#38BDF8] text-[#0F2854]' : 'bg-white/15 text-white/80'
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      )}
+                      <ChevronRightIcon
+                        className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
+                          isActive ? 'text-[#38BDF8] translate-x-0.5' : 'text-white/30'
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Bottom Navbar */}
       <div className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-md px-5 z-20">
-        <nav className="relative bg-[#0F2854]/95 backdrop-blur-md rounded-2xl border border-white/10 flex items-center justify-between px-1.5 py-1.5"
-          style={{ boxShadow: '0 8px 32px rgba(10,27,61,0.7), 0 0 0 1px rgba(56,189,248,0.08)' }}>
+        <nav
+          className="relative bg-[#0F2854]/95 backdrop-blur-md rounded-2xl border border-white/10 flex items-center justify-between px-1.5 py-1.5"
+          style={{ boxShadow: '0 8px 32px rgba(10,27,61,0.7), 0 0 0 1px rgba(56,189,248,0.08)' }}
+        >
           <span className="absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#38BDF8]/40 to-transparent pointer-events-none" />
-          {mobileNavItems.map(({ to, labelKey, icon: Icon }) => (
+          {primaryMobileNavItems.map(({ to, labelKey, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
+              onClick={() => setMoreOpen(false)}
               className={({ isActive }) =>
                 `relative flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl text-[10px] font-medium tracking-wider transition-colors ${
                   isActive ? 'text-[#38BDF8]' : 'text-white/35 hover:text-white/70'
@@ -527,7 +652,7 @@ function AppLayout({
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <span className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#38BDF8]" />
+                    <span className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#38BDF8] shadow-[0_0_8px_#38BDF8]" />
                   )}
                   <Icon className="w-5 h-5 mt-1" />
                   {t.nav[labelKey]}
@@ -535,6 +660,21 @@ function AppLayout({
               )}
             </NavLink>
           ))}
+
+          {/* More (เพิ่มเติม) Button */}
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className={`relative flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl text-[10px] font-medium tracking-wider transition-all duration-200 active:scale-95 ${
+              isMoreActive || moreOpen ? 'text-[#38BDF8]' : 'text-white/35 hover:text-white/70'
+            }`}
+          >
+            {(isMoreActive || moreOpen) && (
+              <span className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#38BDF8] shadow-[0_0_8px_#38BDF8]" />
+            )}
+            <MoreHorizontalIcon className={`w-5 h-5 mt-1 transition-transform duration-300 ${moreOpen ? 'rotate-90 scale-110' : 'rotate-0 scale-100'}`} />
+            {t.nav.more}
+          </button>
         </nav>
       </div>
     </div>
