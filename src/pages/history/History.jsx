@@ -236,86 +236,91 @@ function History() {
                 stretch
               />
             </div>
+          </PageHeader>
 
-          {/* ── Filter Tabs — same width as the search row below ── */}
-          <div className="w-full flex items-stretch gap-1.5 bg-white dark:bg-[#111F35] p-1.5 rounded-2xl border border-[#E4EBF6] dark:border-white/10 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab('all')}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
-                activeTab === 'all'
-                  ? 'bg-[#0F2854] text-white shadow-sm'
-                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
-              }`}
-            >
-              <span className="hidden lg:inline whitespace-nowrap">ทั้งหมด ({combinedHistory.length})</span>
-              <span className="lg:hidden whitespace-nowrap">ทั้งหมด</span>
-              <span className="lg:hidden text-[10px] font-mono opacity-70">({combinedHistory.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('inspections')}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
-                activeTab === 'inspections'
-                  ? 'bg-[#0F2854] text-white shadow-sm'
-                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
-              }`}
-            >
-              <span className="hidden lg:flex items-center justify-center gap-1.5 whitespace-nowrap">
-                <SearchIcon className="w-3.5 h-3.5 shrink-0" />
-                ประวัติตรวจวัด ({inspectionsCount})
-              </span>
-              <span className="flex lg:hidden items-center justify-center gap-1.5 whitespace-nowrap">
-                <SearchIcon className="w-3.5 h-3.5 shrink-0" />
-                ประวัติ
-              </span>
-              <span className="lg:hidden whitespace-nowrap">ตรวจวัด ({inspectionsCount})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('comments')}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
-                activeTab === 'comments'
-                  ? 'bg-[#0F2854] text-white shadow-sm'
-                  : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
-              }`}
-            >
-              <span className="hidden lg:flex items-center justify-center gap-1.5 whitespace-nowrap">
-                <MessageIcon className="w-3.5 h-3.5 shrink-0" />
-                บันทึกข้อความการซ่อมบำรุง ({commentsCount})
-              </span>
-              <span className="flex lg:hidden items-center justify-center gap-1.5 whitespace-nowrap">
-                <MessageIcon className="w-3.5 h-3.5 shrink-0" />
-                บันทึกข้อความ
-              </span>
-              <span className="lg:hidden whitespace-nowrap">การซ่อมบำรุง ({commentsCount})</span>
-            </button>
-          </div>
+          {/* ── Filter & Search Controls ── */}
+          <div className="px-5 pt-4 pb-2 space-y-3">
+            {/* Filter Tabs */}
+            <div className="w-full flex items-stretch gap-1.5 bg-white dark:bg-[#111F35] p-1.5 rounded-2xl border border-[#E4EBF6] dark:border-white/10 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setActiveTab('all')}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
+                  activeTab === 'all'
+                    ? 'bg-[#0F2854] text-white shadow-sm'
+                    : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
+                }`}
+              >
+                <span className="hidden lg:inline whitespace-nowrap">ทั้งหมด ({combinedHistory.length})</span>
+                <span className="lg:hidden whitespace-nowrap">ทั้งหมด</span>
+                <span className="lg:hidden text-[10px] font-mono opacity-70">({combinedHistory.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('inspections')}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
+                  activeTab === 'inspections'
+                    ? 'bg-[#0F2854] text-white shadow-sm'
+                    : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
+                }`}
+              >
+                <span className="hidden lg:flex items-center justify-center gap-1.5 whitespace-nowrap">
+                  <SearchIcon className="w-3.5 h-3.5 shrink-0" />
+                  ประวัติตรวจวัด ({inspectionsCount})
+                </span>
+                <span className="flex lg:hidden items-center justify-center gap-1.5 whitespace-nowrap">
+                  <SearchIcon className="w-3.5 h-3.5 shrink-0" />
+                  ประวัติ
+                </span>
+                <span className="lg:hidden whitespace-nowrap">ตรวจวัด ({inspectionsCount})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('comments')}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 lg:px-6 lg:py-3 rounded-xl text-xs lg:text-sm font-bold text-center transition-all ${
+                  activeTab === 'comments'
+                    ? 'bg-[#0F2854] text-white shadow-sm'
+                    : 'text-gray-500 dark:text-[#7E93AF] hover:text-[#0F2854] dark:hover:text-[#E7EEF7]'
+                }`}
+              >
+                <span className="hidden lg:flex items-center justify-center gap-1.5 whitespace-nowrap">
+                  <MessageIcon className="w-3.5 h-3.5 shrink-0" />
+                  บันทึกข้อความการซ่อมบำรุง ({commentsCount})
+                </span>
+                <span className="flex lg:hidden items-center justify-center gap-1.5 whitespace-nowrap">
+                  <MessageIcon className="w-3.5 h-3.5 shrink-0" />
+                  บันทึกข้อความ
+                </span>
+                <span className="lg:hidden whitespace-nowrap">การซ่อมบำรุง ({commentsCount})</span>
+              </button>
+            </div>
 
-          <GlassSelect value={filterMonth} onChange={setFilterMonth}>
-            <option value="" className="text-gray-800">{t.history.allMonths}</option>
-            {t.history.months.map((m, i) => (
-              <option key={i} value={i} className="text-gray-800">{m}</option>
-            ))}
-          </GlassSelect>
-          <GlassSelect value={filterYear} onChange={setFilterYear}>
-            <option value="" className="text-gray-800">{t.history.allYears}</option>
-            {availableYears.map((y) => (
-              <option key={y} value={y} className="text-gray-800">{y + 543}</option>
-            ))}
-          </GlassSelect>
-          {(filterMonth !== '' || filterYear !== '') && (
-            <button
-              type="button"
-              onClick={() => { setFilterMonth(''); setFilterYear(''); }}
-              className="text-xs text-[#0F2854]/60 dark:text-[#7E93AF] hover:text-[#0F2854] dark:text-[#E7EEF7] underline underline-offset-2 transition-colors"
-            >
-              {t.common.reset}
-            </button>
-          )}
-          <GlassSearchInput value={search} onChange={setSearch} placeholder={t.history.searchPlaceholder} className="w-full" />
+            <div className="flex flex-wrap items-center gap-2">
+              <GlassSelect value={filterMonth} onChange={setFilterMonth}>
+                <option value="" className="text-gray-800">{t.history.allMonths}</option>
+                {t.history.months.map((m, i) => (
+                  <option key={i} value={i} className="text-gray-800">{m}</option>
+                ))}
+              </GlassSelect>
+              <GlassSelect value={filterYear} onChange={setFilterYear}>
+                <option value="" className="text-gray-800">{t.history.allYears}</option>
+                {availableYears.map((y) => (
+                  <option key={y} value={y} className="text-gray-800">{y + 543}</option>
+                ))}
+              </GlassSelect>
+              {(filterMonth !== '' || filterYear !== '') && (
+                <button
+                  type="button"
+                  onClick={() => { setFilterMonth(''); setFilterYear(''); }}
+                  className="text-xs text-[#0F2854]/60 dark:text-[#7E93AF] hover:text-[#0F2854] dark:text-[#E7EEF7] underline underline-offset-2 transition-colors"
+                >
+                  {t.common.reset}
+                </button>
+              )}
+            </div>
+
+            <GlassSearchInput value={search} onChange={setSearch} placeholder={t.history.searchPlaceholder} className="w-full" />
           </div>
-        </div>
 
         {/* ── Content ── */}
         <div className="flex-1 px-5 pt-2 pb-28 lg:pb-10">
