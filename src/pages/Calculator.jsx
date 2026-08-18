@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import AppLayout from '../layouts/AppLayout';
 import { Panel, SectionHeader } from '../components/ui';
+import { Select } from '../components/Dropdown.jsx';
 import { useLang } from '../context/languageStore.js';
 import { CalculatorIcon, SparkleIcon, LightningIcon, DropletIcon, ThermometerIcon } from '../components/icons';
 import EngineerCalculatorFab from '../components/EngineerCalculatorFab.jsx';
@@ -232,6 +233,8 @@ export default function Calculator() {
   };
 
   const show = (cat) => activeCategory === 'all' || activeCategory === cat;
+
+  const categoryFormulas = MATH_FORMULAS.filter((f) => f.category === activeCategory);
 
   return (
     <>

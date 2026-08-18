@@ -7,7 +7,7 @@ import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { getSession } from '../../context/authStore.js';
 import {
-  fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem,
+  fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem, deleteCategoryItem,
 } from '../../context/equipmentStore.js';
 import { fetchAllCatalogItems } from '../../context/catalogStore.js';
 import { fetchAllMeasures } from '../../context/measuresStore.js';
@@ -153,6 +153,7 @@ function Equipment() {
   const [formErrors, setFormErrors] = useState({});
   const [calcItem, setCalcItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [confirmDeleteCategoryKey, setConfirmDeleteCategoryKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('newest');
   const [saving, setSaving] = useState(false);
   const [catalogItems, setCatalogItems] = useState([]);
@@ -347,6 +348,14 @@ function Equipment() {
     }
   };
 
+  const deleteCategory = async () => {
+    const key = confirmDeleteCategoryKey;
+    setConfirmDeleteCategoryKey(null);
+    await deleteCategoryItem(key);
+    setCategories((prev) => prev.filter((c) => c.key !== key));
+    if (category === key) setCategory('all');
+  };
+
   // Category counts in current factory scope
   const categoryCounts = useMemo(() => {
     const realCats = categories.filter((c) => c.key !== 'all');
@@ -481,7 +490,9 @@ function Equipment() {
           </div>
 
           <div className="flex overflow-x-auto scrollbar-none -mx-1 px-1 pb-1 gap-3 sm:grid sm:grid-cols-4 lg:grid-cols-7 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0">
-            {/* ALL filter card */}
+            {/* ALL filter card — deliberately styled distinct from the category
+                cards below (solid navy vs. their plain white) so it reads as
+                the one "reset/overview" option rather than a peer category */}
             <button
               type="button"
               onClick={() => setCategory('all')}
@@ -513,7 +524,7 @@ function Equipment() {
                   key={c.key}
                   type="button"
                   onClick={() => setCategory(c.key)}
-                  className={`shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+                  className={`relative shrink-0 w-32 sm:w-auto p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
                     c.count === 0 ? 'opacity-50 hover:opacity-100' : ''
                   } ${
                     isSelected
@@ -521,6 +532,18 @@ function Equipment() {
                       : 'border-[#E4EBF6] dark:border-white/10 bg-white dark:bg-[#111F35] hover:border-[#4988C4]/40'
                   }`}
                 >
+                  {isAdmin && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteCategoryKey(c.key); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setConfirmDeleteCategoryKey(c.key); } }}
+                      title={t.common.delete}
+                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-white dark:bg-[#1A2B47] border border-[#E4EBF6] dark:border-white/10 text-gray-400 hover:bg-rose-500 hover:text-white hover:border-rose-500 flex items-center justify-center transition-colors"
+                    >
+                      <TrashIcon className="w-2.5 h-2.5" />
+                    </span>
+                  )}
                   <div className="flex justify-between items-start">
                     <Icon className="w-5 h-5 text-[#4988C4]" />
                   </div>

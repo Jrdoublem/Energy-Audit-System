@@ -29,7 +29,7 @@ function CalcButton({ label, onClick, className = '', style, children }) {
       type="button"
       onClick={onClick}
       style={style}
-      className={`h-14 sm:h-16 rounded-2xl text-xl sm:text-2xl font-bold flex items-center justify-center transition-transform active:scale-95 ${className}`}
+      className={`h-14 sm:h-16 rounded-2xl text-xl sm:text-2xl font-bold flex items-center justify-center transition-transform active:scale-95 select-none touch-manipulation ${className}`}
     >
       {children ?? label}
     </button>

@@ -1855,7 +1855,7 @@ function MeasureSelect({ item, result, onClose, initialSavedMeasures, initialMea
           </Panel>
 
           {/* EVALUATION PANEL */}
-          <Panel className="p-6 rounded-3xl space-y-5 border-t-4 border-t-amber-400">
+          <Panel className="p-6 rounded-2xl space-y-5 border-t-4 border-t-amber-400">
             <EvalSection
               basePower={basePower}
               category={item?.category}

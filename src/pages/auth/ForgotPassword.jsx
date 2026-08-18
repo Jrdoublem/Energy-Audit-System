@@ -24,7 +24,7 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-animated-gradient flex flex-col items-center sm:justify-center font-sans relative overflow-x-hidden">
+    <div className="min-h-dvh w-full bg-animated-gradient flex flex-col items-center sm:justify-center font-sans relative overflow-x-hidden">
 
       {/* Tech grid */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
