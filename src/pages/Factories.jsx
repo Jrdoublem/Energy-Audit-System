@@ -266,31 +266,34 @@ function Factories() {
   return (
     <AppLayout
       title={
-        <span className="flex items-center gap-2.5">
-          <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
-          {t.factories.pageTitle}
-        </span>
+        modalMode ? null : (
+          <span className="flex items-center gap-2.5">
+            <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
+            {t.factories.pageTitle}
+          </span>
+        )
       }
       hideFactorySelect
+      hideRoleBadge={!!modalMode}
       factoryRowBelowTitle
     >
       <div className="flex flex-col gap-6 w-full">
         {modalMode ? (
-          <div className="max-w-4xl mx-auto w-full py-6 space-y-6 font-sans">
+          <div className="max-w-6xl mx-auto w-full py-6 space-y-6 font-sans">
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
+                <h2 className="text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
                   {modalMode === 'edit' ? 'แก้ไขข้อมูลโรงงาน' : 'เพิ่มโรงงานใหม่'}
                 </h2>
-                <p className="text-sm text-gray-400 dark:text-[#7E93AF] mt-0.5">
+                <p className="text-base text-gray-400 dark:text-[#7E93AF] mt-0.5">
                   กรอกรายละเอียดข้อมูลและรูปภาพโรงงานด้านล่างให้ครบถ้วน
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
               >
                 <ArrowLeftIcon className="w-4 h-4" />
                 ยกเลิก
@@ -298,14 +301,14 @@ function Factories() {
             </div>
 
             {formError && (
-              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold">
+              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm font-bold">
                 {formError}
               </div>
             )}
 
             {/* SECTION 1: ข้อมูลทั่วไปโรงงาน */}
             <Panel className="p-6 space-y-5 rounded-3xl">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                 <FactoryIcon className="w-4 h-4 text-[#4988C4]" />
                 ข้อมูลทั่วไปโรงงาน (GENERAL INFORMATION)
               </div>
@@ -313,25 +316,25 @@ function Factories() {
               <div className="space-y-4">
                 {modalMode === 'add' && (
                   <div>
-                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                    <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                       ชื่อโรงงาน <span className="text-rose-500">*</span>
                     </label>
                     <div className="flex items-stretch rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 focus-within:ring-2 focus-within:ring-[#4988C4] overflow-hidden">
-                      <span className="flex items-center pl-4 pr-1 text-sm font-bold text-[#0F2854]/60 dark:text-[#7E93AF] select-none shrink-0">
+                      <span className="flex items-center pl-4 pr-1 text-base font-bold text-[#0F2854]/60 dark:text-[#7E93AF] select-none shrink-0">
                         {FACTORY_NAME_PREFIX}
                       </span>
                       <input
                         value={form.name}
                         onChange={(e) => { setForm((p) => ({ ...p, name: e.target.value })); setFormError(''); }}
                         placeholder={t.factories.egFactorySuffix}
-                        className="flex-1 min-w-0 pr-4 py-3 bg-transparent text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:outline-none"
+                        className="flex-1 min-w-0 pr-4 py-3 bg-transparent text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:outline-none"
                       />
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                  <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                     จังหวัด <span className="text-rose-500">*</span>
                   </label>
                   <Combobox
@@ -339,12 +342,12 @@ function Factories() {
                     onChange={(v) => setForm((p) => ({ ...p, province: v }))}
                     options={THAI_PROVINCES}
                     placeholder={t.factories.egProvince}
-                    inputClassName="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-semibold text-[#0F2854] dark:text-[#E7EEF7] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                    inputClassName="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base font-semibold text-[#0F2854] dark:text-[#E7EEF7] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                  <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                     คำอธิบายเพิ่มเติม / ที่อยู่โรงงาน
                   </label>
                   <textarea
@@ -352,7 +355,7 @@ function Factories() {
                     onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                     placeholder="ระบุคำอธิบาย หรือ ที่อยู่อาคารสถานที่..."
                     rows={3}
-                    className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm text-[#0F2854] dark:text-[#E7EEF7] focus:outline-none focus:ring-2 focus:ring-[#4988C4] resize-none"
+                    className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base text-[#0F2854] dark:text-[#E7EEF7] focus:outline-none focus:ring-2 focus:ring-[#4988C4] resize-none"
                   />
                 </div>
               </div>
@@ -360,7 +363,7 @@ function Factories() {
 
             {/* SECTION 2: รูปภาพประกอบ */}
             <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-sky-500">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                 <SparkleIcon className="w-4 h-4 text-sky-500" />
                 รูปภาพโรงงาน (FACTORY IMAGE)
               </div>
@@ -374,15 +377,15 @@ function Factories() {
                   </div>
                 )}
                 <div className="flex-1 space-y-2 text-center sm:text-left">
-                  <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">อัปโหลดรูปภาพประจำโรงงาน</p>
-                  <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">รองรับไฟล์ JPG, PNG ความละเอียดแนะนำ 1200x800 px</p>
-                  <label className={`inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-xs font-bold text-[#4988C4] transition-colors ${
+                  <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">อัปโหลดรูปภาพประจำโรงงาน</p>
+                  <p className="text-xs text-gray-400 dark:text-[#7E93AF]">รองรับไฟล์ JPG, PNG ความละเอียดแนะนำ 1200x800 px</p>
+                  <label className={`inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#4988C4] transition-colors ${
                     imageUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-[#EAF4FC] cursor-pointer'
                   }`}>
                     {imageUploading ? 'กำลังอัปโหลด...' : (form.image ? 'เปลี่ยนรูปภาพ' : 'เลือกรูปภาพ')}
                     <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" disabled={imageUploading} />
                   </label>
-                  {imageError && <p className="text-xs text-rose-500">{imageError}</p>}
+                  {imageError && <p className="text-sm text-rose-500">{imageError}</p>}
                 </div>
               </div>
             </Panel>
@@ -392,7 +395,7 @@ function Factories() {
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex-1 py-3.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-600 dark:text-[#C3D2E5] font-bold text-sm transition-colors"
+                className="flex-1 py-3.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-600 dark:text-[#C3D2E5] font-bold text-base transition-colors"
               >
                 ยกเลิก
               </button>
@@ -400,7 +403,7 @@ function Factories() {
                 type="button"
                 onClick={handleSaveFactory}
                 disabled={imageUploading}
-                className="flex-1 py-3.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-bold text-sm shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
+                className="flex-1 py-3.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-bold text-base shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <CheckIcon className="w-5 h-5" />
                 {modalMode === 'add' ? 'บันทึกโรงงานใหม่' : 'บันทึกการแก้ไข'}
