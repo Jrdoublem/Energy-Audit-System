@@ -419,7 +419,7 @@ function Factories() {
 
             {/* Toolbar Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-md">
+              <div className="flex items-center gap-3 flex-1 min-w-[240px]">
                 <div className="relative w-full">
                   <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input

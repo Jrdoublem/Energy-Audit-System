@@ -8,7 +8,7 @@ import {
 import { fileToResizedDataUrl } from '../utils/image.js';
 import { uploadImage, deleteImage } from '../context/storageStore.js';
 import { useLang } from '../context/languageStore.js';
-import { CameraIcon } from '../components/icons';
+import { CameraIcon, CheckIcon } from '../components/icons';
 
 function initialsOf(name) {
   const parts = (name || '').trim().split(/\s+/);
@@ -200,7 +200,11 @@ function Profile() {
               >
                 {savingInfo ? '...' : t.profile.saveInfo}
               </button>
-              {infoSaved && <span className="text-xs font-semibold text-emerald-600">{t.profile.infoSaved}</span>}
+              {infoSaved && (
+                <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1">
+                  <CheckIcon className="w-3.5 h-3.5 shrink-0" /> {t.profile.infoSaved}
+                </span>
+              )}
             </div>
           </div>
         </Panel>
@@ -246,7 +250,11 @@ function Profile() {
             >
               {changingPassword ? '...' : t.profile.changePassword}
             </button>
-            {passwordChanged && <span className="text-xs font-semibold text-emerald-600">{t.profile.passwordChanged}</span>}
+            {passwordChanged && (
+              <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1">
+                <CheckIcon className="w-3.5 h-3.5 shrink-0" /> {t.profile.passwordChanged}
+              </span>
+            )}
           </div>
         </Panel>
       </div>

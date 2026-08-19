@@ -858,7 +858,7 @@ export default function Calculator() {
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] flex items-center gap-2">
-                        <span>📊</span> ร้อยละการเปลี่ยนแปลง (% Change)
+                        <PercentIcon className="w-4 h-4 shrink-0" /> ร้อยละการเปลี่ยนแปลง (% Change)
                       </span>
                       <span className="text-xs font-mono text-gray-400">% = (New − Old) / Old × 100</span>
                     </div>

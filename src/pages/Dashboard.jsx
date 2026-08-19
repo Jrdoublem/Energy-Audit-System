@@ -25,8 +25,6 @@ import {
   FlameIcon,
   LightningIcon,
   SnowflakeIcon,
-  SearchIcon,
-  ActivityIcon,
 } from '../components/icons';
 
 /* ── Stat card ── */
@@ -875,56 +873,54 @@ function Dashboard() {
       factoryBeforeRole
       hideRoleBadgeMobile
       roleBadgeByAvatar
-      actions={
-        <div className="flex items-center gap-3">
-          {/* Desktop Measure Status Filter - Moved here to be aligned right before Factory Selector */}
-          <div className="hidden lg:flex items-center gap-1.5 p-1 bg-white dark:bg-[#111F35] rounded-full border border-[#E4EBF6] dark:border-white/10 shadow-sm mr-2">
-            <button
-              type="button"
-              onClick={() => setMeasureStatusFilter('all')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                measureStatusFilter === 'all'
-                  ? 'bg-[#0F2854] text-white shadow-sm'
-                  : 'text-gray-600 dark:text-[#8CA3C0] hover:text-[#0F2854]'
-              }`}
-            >
-              มาตรการทั้งหมด ({factoryScopedMeasures.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setMeasureStatusFilter('potential')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                measureStatusFilter === 'potential'
-                  ? 'bg-blue-100 text-blue-800 shadow-sm'
-                  : 'text-gray-600 dark:text-[#8CA3C0] hover:text-blue-600'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-              ศักยภาพ ({potentialCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setMeasureStatusFilter('implemented')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                measureStatusFilter === 'implemented'
-                  ? 'bg-emerald-100 text-emerald-800 shadow-sm'
-                  : 'text-gray-600 dark:text-[#8CA3C0] hover:text-emerald-600'
-              }`}
-            >
-              <CheckIcon className="w-3.5 h-3.5" />
-              ดำเนินการจริง ({implementedCount})
-            </button>
-          </div>
-
+      beforeFactorySlot={
+        <div className="hidden lg:flex items-center gap-1.5 p-1 bg-white dark:bg-[#111F35] rounded-full border border-[#E4EBF6] dark:border-white/10 shadow-sm">
           <button
             type="button"
-            onClick={enterPresentation}
-            className="flex items-center gap-2 bg-[#0F2854] hover:bg-[#1C4D8D] dark:bg-white/10 dark:hover:bg-white/15 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition-colors shrink-0"
+            onClick={() => setMeasureStatusFilter('all')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+              measureStatusFilter === 'all'
+                ? 'bg-[#0F2854] text-white shadow-sm'
+                : 'text-gray-600 dark:text-[#8CA3C0] hover:text-[#0F2854]'
+            }`}
           >
-            <ExpandIcon className="w-4 h-4" />
-            {t.dashboard.presentationMode}
+            มาตรการทั้งหมด ({factoryScopedMeasures.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMeasureStatusFilter('potential')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+              measureStatusFilter === 'potential'
+                ? 'bg-blue-100 text-blue-800 shadow-sm'
+                : 'text-gray-600 dark:text-[#8CA3C0] hover:text-blue-600'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            ศักยภาพ ({potentialCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMeasureStatusFilter('implemented')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+              measureStatusFilter === 'implemented'
+                ? 'bg-emerald-100 text-emerald-800 shadow-sm'
+                : 'text-gray-600 dark:text-[#8CA3C0] hover:text-emerald-600'
+            }`}
+          >
+            <CheckIcon className="w-3.5 h-3.5" />
+            ดำเนินการจริง ({implementedCount})
           </button>
         </div>
+      }
+      actions={
+        <button
+          type="button"
+          onClick={enterPresentation}
+          className="flex items-center gap-2 bg-[#0F2854] hover:bg-[#1C4D8D] dark:bg-white/10 dark:hover:bg-white/15 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition-colors shrink-0"
+        >
+          <ExpandIcon className="w-4 h-4" />
+          {t.dashboard.presentationMode}
+        </button>
       }
       title={
         <>

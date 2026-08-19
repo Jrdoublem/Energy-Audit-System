@@ -153,6 +153,7 @@ function Catalog() {
     kwPerTr75: '',
     kwPerTr50: '',
     kwPerTr25: '',
+    extraLoadPoints: [],
     iplv: '',
     costEst: '',
     desc: '',
@@ -184,6 +185,7 @@ function Catalog() {
       kwPerTr75: '',
       kwPerTr50: '',
       kwPerTr25: '',
+      extraLoadPoints: [],
       iplv: '',
       costEst: '',
       desc: '',
@@ -209,6 +211,7 @@ function Catalog() {
       kwPerTr75: item.kwPerTr75 || '',
       kwPerTr50: item.kwPerTr50 || '',
       kwPerTr25: item.kwPerTr25 || '',
+      extraLoadPoints: (item.extraLoadPoints || []).map((p) => ({ pct: String(p.pct ?? ''), value: String(p.value ?? '') })),
       iplv: item.iplv || '',
       costEst: item.costEst || '',
       desc: item.desc || '',
@@ -262,13 +265,27 @@ function Catalog() {
     setForm((p) => ({ ...p, pdfUrl: '', pdfName: '' }));
   };
 
+  const addExtraLoadPoint = () => {
+    setForm((p) => ({ ...p, extraLoadPoints: [...p.extraLoadPoints, { pct: '', value: '' }] }));
+  };
+  const updateExtraLoadPoint = (idx, field, val) => {
+    setForm((p) => ({
+      ...p,
+      extraLoadPoints: p.extraLoadPoints.map((pt, i) => (i === idx ? { ...pt, [field]: val } : pt)),
+    }));
+  };
+  const removeExtraLoadPoint = (idx) => {
+    setForm((p) => ({ ...p, extraLoadPoints: p.extraLoadPoints.filter((_, i) => i !== idx) }));
+  };
+
   const handleSaveItem = async () => {
     const brand = form.brand.trim();
     const model = form.model.trim();
     if (!brand) { setFormError(t.catalog.errBrand); return; }
     if (!model) { setFormError(t.catalog.errModel); return; }
+    const catId = form.catId || activeCategory;
     const record = {
-      catId: form.catId || activeCategory,
+      catId,
       brand,
       model,
       spec: form.spec.trim(),
@@ -278,6 +295,16 @@ function Catalog() {
       image: form.image,
       pdfUrl: form.pdfUrl || '',
       pdfName: form.pdfName || '',
+      ...(catId === 'chiller' ? {
+        kwPerTr100: parseFloat(form.kwPerTr100) || 0,
+        kwPerTr75: parseFloat(form.kwPerTr75) || 0,
+        kwPerTr50: parseFloat(form.kwPerTr50) || 0,
+        kwPerTr25: parseFloat(form.kwPerTr25) || 0,
+        iplv: parseFloat(form.iplv) || 0,
+        extraLoadPoints: form.extraLoadPoints
+          .filter((p) => p.pct !== '' && p.value !== '')
+          .map((p) => ({ pct: parseFloat(p.pct) || 0, value: parseFloat(p.value) || 0 })),
+      } : {}),
     };
     if (modalMode === 'edit' && editingId) {
       const item = { id: editingId, ...record };
@@ -302,13 +329,15 @@ function Catalog() {
   return (
     <AppLayout
       title={
-        <span className="flex items-center gap-2.5 flex-wrap">
-          <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
-          {t.catalog.pageTitle}
-          <span className="text-[11px] lg:text-xs font-bold px-2.5 py-1 rounded-full bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] tracking-wide whitespace-nowrap">
-            {items.length} {t.catalog.itemsCountSuffix}
+        modalMode ? null : (
+          <span className="flex items-center gap-2.5 flex-wrap">
+            <span className="w-1.5 h-6 lg:w-2 lg:h-8 rounded-full bg-[#4988C4] shrink-0" />
+            {t.catalog.pageTitle}
+            <span className="text-[11px] lg:text-xs font-bold px-2.5 py-1 rounded-full bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] tracking-wide whitespace-nowrap">
+              {items.length} {t.catalog.itemsCountSuffix}
+            </span>
           </span>
-        </span>
+        )
       }
       hideFactorySelect
       factoryRowBelowTitle
@@ -316,20 +345,20 @@ function Catalog() {
     >
       <div className="flex flex-col gap-5 w-full">
         {modalMode ? (
-          <div className="max-w-4xl mx-auto w-full py-6 space-y-6 font-sans">
+          <div className="max-w-6xl mx-auto w-full py-6 space-y-6 font-sans">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
+                <h2 className="text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
                   {modalMode === 'edit' ? 'แก้ไขอุปกรณ์ในแคตตาล็อก' : 'เพิ่มอุปกรณ์ใหม่ในแคตตาล็อก'}
                 </h2>
-                <p className="text-sm text-gray-400 dark:text-[#7E93AF] mt-0.5">
+                <p className="text-base text-gray-400 dark:text-[#7E93AF] mt-0.5">
                   กรอกรายละเอียดข้อมูลสเปก รูปภาพ และราคาประมาณการอุปกรณ์ด้านล่าง
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-base font-bold text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm"
               >
                 <ArrowLeftIcon className="w-4 h-4" />
                 ยกเลิก
@@ -337,20 +366,20 @@ function Catalog() {
             </div>
 
             {formError && (
-              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold">
+              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-sm text-rose-600 dark:text-rose-400 font-bold">
                 {formError}
               </div>
             )}
 
             <Panel className="p-6 space-y-5 rounded-3xl">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                 <BoxIcon className="w-4 h-4 text-[#4988C4]" />
                 หมวดหมู่และข้อมูลรุ่นอุปกรณ์ (CATEGORY & MODEL)
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-2 block">หมวดหมู่อุปกรณ์</label>
+                  <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-2 block">หมวดหมู่อุปกรณ์</label>
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                     {realCategories.map(({ key, label, iconKey }) => {
                       const Icon = ICON_MAP[iconKey] || BoxIcon;
@@ -359,7 +388,7 @@ function Catalog() {
                           key={key}
                           type="button"
                           onClick={() => setForm((p) => ({ ...p, catId: key }))}
-                          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 transition-colors text-xs font-bold shrink-0 ${
+                          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 transition-colors text-sm font-bold shrink-0 ${
                             form.catId === key
                               ? 'border-[#0F2854] bg-[#0F2854] text-white'
                               : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#0F2854] dark:text-[#E7EEF7] hover:border-[#0F2854]/40'
@@ -375,7 +404,7 @@ function Catalog() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                    <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                       ยี่ห้อ (Brand) <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -383,12 +412,12 @@ function Catalog() {
                       placeholder="เช่น Trane, Daikin"
                       value={form.brand}
                       onChange={(e) => { setForm((p) => ({ ...p, brand: e.target.value })); setFormError(''); }}
-                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-semibold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base font-semibold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                    <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                       รุ่น (Model) <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -396,7 +425,7 @@ function Catalog() {
                       placeholder="เช่น CVHE, RTAF"
                       value={form.model}
                       onChange={(e) => { setForm((p) => ({ ...p, model: e.target.value })); setFormError(''); }}
-                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-semibold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base font-semibold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -404,7 +433,7 @@ function Catalog() {
             </Panel>
 
             <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-[#4988C4]">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                 <GearIcon className="w-4 h-4 text-[#4988C4]" />
                 คุณสมบัติทางเทคนิค & ราคาประมาณการ (SPECIFICATIONS & COST)
               </div>
@@ -412,7 +441,7 @@ function Catalog() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                    <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                       สเปกอุปกรณ์ (Specifications)
                     </label>
                     <input
@@ -420,13 +449,13 @@ function Catalog() {
                       placeholder="เช่น 500 TR, High Efficiency"
                       value={form.spec}
                       onChange={(e) => setForm((p) => ({ ...p, spec: e.target.value }))}
-                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
                     />
                   </div>
 
                   {form.catId === 'chiller' ? (
                     <div>
-                      <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                      <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                         ค่ากำลังไฟฟ้าจำเพาะ (Specific Power kW/TR)
                       </label>
                       <input
@@ -435,12 +464,12 @@ function Catalog() {
                         placeholder="เช่น 0.58"
                         value={form.specificPower}
                         onChange={(e) => setForm((p) => ({ ...p, specificPower: e.target.value }))}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
                       />
                     </div>
                   ) : (
                     <div>
-                      <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                      <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                         ราคาประมาณการ (Cost Estimate ฿)
                       </label>
                       <input
@@ -448,7 +477,7 @@ function Catalog() {
                         placeholder="เช่น 2500000"
                         value={form.costEst}
                         onChange={(e) => setForm((p) => ({ ...p, costEst: e.target.value }))}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
                       />
                     </div>
                   )}
@@ -458,18 +487,18 @@ function Catalog() {
                 {form.catId === 'chiller' && (
                   <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 space-y-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-xs font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                      <span className="text-sm font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
                         <LightningIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                         ประสิทธิภาพตามภาระโหลด (Load Performance & IPLV)
                       </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 font-bold">
+                      <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 font-bold">
                         AHRI Standard 550/590
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                       <div>
-                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
+                        <label className="text-sm font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
                           100% Load (kW/TR)
                         </label>
                         <input
@@ -485,12 +514,12 @@ function Catalog() {
                               return updated;
                             });
                           }}
-                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-sm font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
+                        <label className="text-sm font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
                           75% Load (kW/TR)
                         </label>
                         <input
@@ -499,12 +528,12 @@ function Catalog() {
                           placeholder="เช่น 0.520"
                           value={form.kwPerTr75 || ''}
                           onChange={(e) => setForm((p) => ({ ...p, kwPerTr75: e.target.value }))}
-                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-sm font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
+                        <label className="text-sm font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
                           50% Load (kW/TR)
                         </label>
                         <input
@@ -513,12 +542,12 @@ function Catalog() {
                           placeholder="เช่น 0.420"
                           value={form.kwPerTr50 || ''}
                           onChange={(e) => setForm((p) => ({ ...p, kwPerTr50: e.target.value }))}
-                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-sm font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
+                        <label className="text-sm font-bold text-gray-700 dark:text-[#C3D2E5] mb-1 block">
                           25% Load (kW/TR)
                         </label>
                         <input
@@ -527,14 +556,14 @@ function Catalog() {
                           placeholder="เช่น 0.480"
                           value={form.kwPerTr25 || ''}
                           onChange={(e) => setForm((p) => ({ ...p, kwPerTr25: e.target.value }))}
-                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-sm font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-bold text-gray-700 dark:text-[#C3D2E5]">
+                        <label className="text-sm font-bold text-gray-700 dark:text-[#C3D2E5]">
                           ค่า IPLV / NPLV (Integrated Part Load Value)
                         </label>
                         {(() => {
@@ -548,7 +577,7 @@ function Catalog() {
                               <button
                                 type="button"
                                 onClick={() => setForm((p) => ({ ...p, iplv: iplvCalc }))}
-                                className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline"
+                                className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline"
                               >
                                 คำนวณ IPLV: {iplvCalc} kW/TR (คลิกเพื่อใช้)
                               </button>
@@ -563,15 +592,69 @@ function Catalog() {
                         placeholder="เช่น 0.475 หรือคลิกคำนวณอัตโนมัติ"
                         value={form.iplv || ''}
                         onChange={(e) => setForm((p) => ({ ...p, iplv: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-sm font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
                       />
+                    </div>
+
+                    <div className="pt-2 border-t border-blue-200/70 dark:border-blue-500/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-bold text-gray-700 dark:text-[#C3D2E5]">
+                          จุดโหลดเพิ่มเติม (Additional Load Points)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={addExtraLoadPoint}
+                          className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          <PlusIcon className="w-3.5 h-3.5" />
+                          เพิ่มจุดโหลด
+                        </button>
+                      </div>
+                      {form.extraLoadPoints.length === 0 ? (
+                        <p className="text-xs text-gray-400 dark:text-[#7E93AF]">
+                          ไม่บังคับ — ใช้สำหรับระบุจุดโหลดอื่นนอกเหนือจาก 100/75/50/25% เช่น 90% หรือ 40%
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {form.extraLoadPoints.map((pt, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <div className="relative w-28 shrink-0">
+                                <input
+                                  type="number"
+                                  step="1"
+                                  placeholder="เช่น 90"
+                                  value={pt.pct}
+                                  onChange={(e) => updateExtraLoadPoint(idx, 'pct', e.target.value)}
+                                  className="w-full pl-3 pr-7 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-sm font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-bold pointer-events-none">%</span>
+                              </div>
+                              <input
+                                type="number"
+                                step="0.001"
+                                placeholder="kW/TR"
+                                value={pt.value}
+                                onChange={(e) => updateExtraLoadPoint(idx, 'value', e.target.value)}
+                                className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-[#111F35] border border-blue-200 dark:border-blue-500/30 text-sm font-mono font-bold text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeExtraLoadPoint(idx)}
+                                className="w-9 h-9 shrink-0 rounded-xl bg-white dark:bg-white/10 border border-blue-200 dark:border-blue-500/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center justify-center transition-colors"
+                              >
+                                <TrashIcon className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {form.catId === 'chiller' && (
                   <div>
-                    <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                    <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                       ราคาประมาณการ (Cost Estimate ฿)
                     </label>
                     <input
@@ -579,13 +662,13 @@ function Catalog() {
                       placeholder="เช่น 2500000"
                       value={form.costEst}
                       onChange={(e) => setForm((p) => ({ ...p, costEst: e.target.value }))}
-                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base font-mono text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="text-xs font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
+                  <label className="text-sm font-bold text-gray-600 dark:text-[#8CA3C0] mb-1.5 block">
                     คำอธิบายเพิ่มเติม (Description)
                   </label>
                   <textarea
@@ -593,14 +676,14 @@ function Catalog() {
                     onChange={(e) => setForm((p) => ({ ...p, desc: e.target.value }))}
                     placeholder="ระบุรายละเอียดเพิ่มเติม..."
                     rows={3}
-                    className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none resize-none"
+                    className="w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-base text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none resize-none"
                   />
                 </div>
               </div>
             </Panel>
 
             <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-emerald-500">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                 <SparkleIcon className="w-4 h-4 text-emerald-500" />
                 รูปภาพประจำรุ่นอุปกรณ์ (CATALOG IMAGE)
               </div>
@@ -614,9 +697,9 @@ function Catalog() {
                   </div>
                 )}
                 <div className="flex-1 space-y-2 text-center sm:text-left">
-                  <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">อัปโหลดรูปภาพรุ่นอุปกรณ์ในแคตตาล็อก</p>
-                  <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">รองรับไฟล์ JPG, PNG ภาพพื้นหลังขาวจะแสดงผลสวยงามที่สุด</p>
-                  <label className={`inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-xs font-bold text-[#4988C4] transition-colors ${
+                  <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">อัปโหลดรูปภาพรุ่นอุปกรณ์ในแคตตาล็อก</p>
+                  <p className="text-xs text-gray-400 dark:text-[#7E93AF]">รองรับไฟล์ JPG, PNG ภาพพื้นหลังขาวจะแสดงผลสวยงามที่สุด</p>
+                  <label className={`inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-sm font-bold text-[#4988C4] transition-colors ${
                     imageUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-[#EAF4FC] cursor-pointer'
                   }`}>
                     {imageUploading ? 'กำลังอัปโหลด...' : (form.image ? 'เปลี่ยนรูปภาพ' : 'เลือกรูปภาพ')}
@@ -629,13 +712,13 @@ function Catalog() {
 
             <Panel className="p-6 space-y-5 rounded-3xl border-t-4 border-t-red-500">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                   <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
                   </svg>
                   เอกสารสเปก PDF (PDF DATASHEET / CATALOG)
                 </div>
-                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-full">
                   รองรับไฟล์ PDF
                 </span>
               </div>
@@ -644,18 +727,18 @@ function Catalog() {
                 {form.pdfUrl ? (
                   <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-white/10 border border-red-200 dark:border-red-500/30">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
+                      <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-sm shrink-0">
                         PDF
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] truncate">
+                        <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] truncate">
                           {form.pdfName || 'เอกสารสเปกอุปกรณ์.pdf'}
                         </p>
                         <a
                           href={form.pdfUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[11px] font-bold text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1"
+                          className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1"
                         >
                           เปิดดูไฟล์ PDF ในแท็บใหม่ ↗
                         </a>
@@ -664,7 +747,7 @@ function Catalog() {
                     <button
                       type="button"
                       onClick={handleRemovePdf}
-                      className="px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-100 text-xs font-bold transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-100 text-sm font-bold transition-colors"
                     >
                       ลบไฟล์
                     </button>
@@ -677,10 +760,10 @@ function Catalog() {
                       </svg>
                     </div>
                     <div className="flex-1 text-center sm:text-left space-y-1">
-                      <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">แนบเอกสาร PDF Datasheet / โบรชัวร์สเปกเครื่อง</p>
-                      <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">สำหรับเปิดอ่านสเปกเครื่อง ตารางกำลังไฟฟ้า และใบรับรองประสิทธิภาพ</p>
+                      <p className="text-base font-bold text-[#0F2854] dark:text-[#E7EEF7]">แนบเอกสาร PDF Datasheet / โบรชัวร์สเปกเครื่อง</p>
+                      <p className="text-xs text-gray-400 dark:text-[#7E93AF]">สำหรับเปิดอ่านสเปกเครื่อง ตารางกำลังไฟฟ้า และใบรับรองประสิทธิภาพ</p>
                     </div>
-                    <label className={`px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-red-200 dark:border-red-500/30 text-xs font-bold text-red-600 dark:text-red-400 transition-colors shrink-0 flex items-center gap-1.5 ${
+                    <label className={`px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-red-200 dark:border-red-500/30 text-sm font-bold text-red-600 dark:text-red-400 transition-colors shrink-0 flex items-center gap-1.5 ${
                       pdfUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer'
                     }`}>
                       {pdfUploading ? 'กำลังอัปโหลด PDF...' : <><DocumentIcon className="w-3.5 h-3.5 shrink-0" /> เลือกไฟล์ PDF</>}
@@ -688,7 +771,7 @@ function Catalog() {
                     </label>
                   </div>
                 )}
-                {pdfError && <p className="text-xs text-rose-500">{pdfError}</p>}
+                {pdfError && <p className="text-sm text-rose-500">{pdfError}</p>}
               </div>
             </Panel>
 
@@ -696,7 +779,7 @@ function Catalog() {
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex-1 py-3.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-600 dark:text-[#C3D2E5] font-bold text-sm transition-colors"
+                className="flex-1 py-3.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-600 dark:text-[#C3D2E5] font-bold text-base transition-colors"
               >
                 ยกเลิก
               </button>
@@ -704,7 +787,7 @@ function Catalog() {
                 type="button"
                 onClick={handleSaveItem}
                 disabled={imageUploading}
-                className="flex-1 py-3.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-bold text-sm shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
+                className="flex-1 py-3.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white font-bold text-base shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <CheckIcon className="w-5 h-5" />
                 {modalMode === 'add' ? 'บันทึกอุปกรณ์ใหม่' : 'บันทึกการแก้ไข'}
@@ -756,15 +839,15 @@ function Catalog() {
             </div>
 
             <SectionHeader
-              title={`${t.catalog.recommended} (${activeCategoryLabel})`}
+              title={<span className="text-base">{`${t.catalog.recommended} (${activeCategoryLabel})`}</span>}
               right={
                 <button
                   type="button"
                   onClick={openAddItem}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
                   style={{ background: 'linear-gradient(135deg, #0F2854 0%, #1C4D8D 60%, #4988C4 100%)' }}
                 >
-                  <PlusIcon className="w-3.5 h-3.5" />
+                  <PlusIcon className="w-4 h-4" />
                   {t.catalog.addItem}
                 </button>
               }

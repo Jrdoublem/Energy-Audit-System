@@ -140,7 +140,7 @@ function AppLayout({
   title, actions, children, hideHeader = false, hideHeaderMobile = false, fullBleed = false, hideFactorySelect = false,
   mobileHeaderRight = false, mobileHeaderCenter = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
   hideRoleBadge = false, hideRoleBadgeMobile = hideRoleBadge, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
-  roleBadgeByAvatar = false, factoryBeforeRole = false,
+  roleBadgeByAvatar = false, factoryBeforeRole = false, beforeFactorySlot = null,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -313,7 +313,7 @@ function AppLayout({
           )}
         </button>
 
-        <div className="h-px bg-white/8 mb-5" />
+        <div className="h-px bg-white/8 mb-3" />
 
         <nav className="flex flex-col gap-1.5">
           {visibleNavItems.map(({ to, labelKey, icon: Icon, countKey }) => {
@@ -366,7 +366,7 @@ function AppLayout({
           type="button"
           onClick={() => navigate('/equipment', { state: { openAdd: true } })}
           title={collapsed ? t.nav.newMeasurement : undefined}
-          className={`mt-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 hover:bg-[#38BDF8]/8 text-[#38BDF8] text-xs font-semibold transition-all ${
+          className={`mt-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 hover:bg-[#38BDF8]/8 text-[#38BDF8] text-base font-semibold transition-all ${
             collapsed ? '' : 'mx-1'
           }`}
         >
@@ -376,14 +376,12 @@ function AppLayout({
 
         <div className="flex-1" />
 
-        <div className="h-px bg-white/8 mb-3" />
-
-        <div className={`flex gap-2 ${collapsed ? 'flex-col items-center' : ''}`}>
+        <div className={`flex gap-2 mt-3 ${collapsed ? 'flex-col items-center' : ''}`}>
           <button
             type="button"
             onClick={toggleTheme}
             title={collapsed ? (theme === 'dark' ? t.nav.lightMode : t.nav.darkMode) : undefined}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors text-sm font-semibold whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors text-base font-semibold whitespace-nowrap ${
               collapsed ? 'justify-center' : 'flex-1'
             }`}
           >
@@ -394,7 +392,7 @@ function AppLayout({
             type="button"
             onClick={handleLogout}
             title={collapsed ? t.nav.logout : undefined}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-red-400/90 hover:text-red-300 hover:bg-red-500/10 transition-colors text-sm font-semibold whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-red-400/90 hover:text-red-300 hover:bg-red-500/10 transition-colors text-base font-semibold whitespace-nowrap ${
               collapsed ? 'justify-center' : 'flex-1'
             }`}
           >
@@ -434,6 +432,7 @@ function AppLayout({
         >
           {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] shrink-0">{title}</h1>}
           <div className="hidden lg:flex flex-1 items-center justify-end gap-3">
+            {beforeFactorySlot}
             {(() => {
               const roleEl = !hideRoleBadge && <RoleBadge key="role" role={roleLabel} size="md" />;
               const factoryEl = !hideFactorySelect && (

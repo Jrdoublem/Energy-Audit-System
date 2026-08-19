@@ -11,7 +11,7 @@ import { fetchAllEquipment } from '../context/equipmentStore.js';
 import { DEFAULT_SETTINGS, fetchSettings, saveSettingsItem } from '../context/settingsStore.js';
 import { useLang } from '../context/languageStore.js';
 import {
-  ShieldIcon, UsersIcon, DollarSignIcon, PencilIcon, TrashIcon, PlusIcon, CloseIcon,
+  ShieldIcon, UsersIcon, DollarSignIcon, PencilIcon, TrashIcon, PlusIcon, CloseIcon, CheckIcon,
 } from '../components/icons';
 
 // Seed suggestions so the combobox isn't empty before any real position has
@@ -439,7 +439,9 @@ function AdminPanel() {
                 {t.settings.saveDefaults}
               </button>
               {savedFlash && (
-                <span className="text-xs font-semibold text-emerald-600">{t.settings.savedFlash}</span>
+                <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1">
+                  <CheckIcon className="w-3.5 h-3.5 shrink-0" /> {t.settings.savedFlash}
+                </span>
               )}
             </div>
           </Panel>

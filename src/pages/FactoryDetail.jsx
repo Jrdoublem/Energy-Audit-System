@@ -19,7 +19,7 @@ import {
   DropletIcon, EyeIcon, FactoryIcon, FlameIcon, LightningIcon,
   MapPinIcon, PencilIcon, PlusIcon, SnowflakeIcon, SparkleIcon,
   TrashIcon, TrendDownIcon, TrendUpIcon, UserIcon, LayoutGridIcon,
-  CheckIcon, CloseIcon, GearIcon,
+  CheckIcon, CloseIcon, GearIcon, RefreshIcon, BrushIcon, WrenchIcon,
 } from '../components/icons';
 import { fileToResizedDataUrl } from '../utils/image.js';
 import { uploadImage } from '../context/storageStore.js';
@@ -730,6 +730,7 @@ function FactoryDetail() {
                   let actionColor = 'text-purple-600 dark:text-purple-400';
                   let actionBg = 'bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20';
                   let actionDesc = t.factories.actionMonitorDesc;
+                  let ActionIcon = ActivityIcon;
                   let isReplace = false;
 
                   if (eq.age >= 10 || (eq.age >= 6 && eq.score > 400000)) {
@@ -737,17 +738,20 @@ function FactoryDetail() {
                     actionColor = 'text-rose-600 dark:text-rose-400';
                     actionBg = 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20';
                     actionDesc = t.factories.actionReplaceDesc;
+                    ActionIcon = RefreshIcon;
                     isReplace = true;
                   } else if (['chiller', 'cooling'].includes(eq.category) && eq.age >= 3) {
                     action = t.factories.actionClean;
                     actionColor = 'text-sky-600 dark:text-sky-400';
                     actionBg = 'bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/20';
                     actionDesc = t.factories.actionCleanDesc;
+                    ActionIcon = BrushIcon;
                   } else if (eq.age >= 5) {
                     action = t.factories.actionOverhaul;
                     actionColor = 'text-amber-600 dark:text-amber-400';
                     actionBg = 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20';
                     actionDesc = t.factories.actionOverhaulDesc;
+                    ActionIcon = WrenchIcon;
                   }
 
                   const cat = categories.find((c) => c.key === eq.category);
@@ -794,7 +798,9 @@ function FactoryDetail() {
 
                         {/* Action Badge */}
                         <div className={`p-2.5 rounded-xl border ${actionBg}`}>
-                          <p className={`text-xs font-bold ${actionColor}`}>{action}</p>
+                          <p className={`text-xs font-bold flex items-center gap-1.5 ${actionColor}`}>
+                            <ActionIcon className="w-3.5 h-3.5 shrink-0" /> {action}
+                          </p>
                           <p className="text-[11px] text-gray-500 dark:text-[#8CA3C0] mt-0.5 leading-relaxed">{actionDesc}</p>
                         </div>
 

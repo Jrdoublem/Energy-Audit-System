@@ -97,7 +97,7 @@ function Settings() {
         </Panel>
 
         {/* การตั้งค่าทั่วไป */}
-        <Panel className="p-5 lg:col-span-2 order-2 lg:order-none">
+        <Panel className="p-5 order-2 lg:order-none">
           <SectionHeader title={t.settings.preferences} />
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-[#0F2854] dark:text-[#E7EEF7]">{t.settings.language}</p>
