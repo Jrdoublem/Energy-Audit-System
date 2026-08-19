@@ -3,17 +3,21 @@ import AppLayout from '../layouts/AppLayout';
 import { Panel, SectionHeader } from '../components/ui';
 import { Select } from '../components/Dropdown.jsx';
 import { useLang } from '../context/languageStore.js';
-import { CalculatorIcon, SparkleIcon, LightningIcon, DropletIcon, ThermometerIcon } from '../components/icons';
+import {
+  CalculatorIcon, SparkleIcon, LightningIcon, DropletIcon, ThermometerIcon,
+  LayoutGridIcon, RulerIcon, ShapesIcon, PercentIcon, CircleIcon, StarIcon,
+  CylinderIcon,
+} from '../components/icons';
 import EngineerCalculatorFab from '../components/EngineerCalculatorFab.jsx';
 
 const CATEGORIES = [
-  { key: 'all', label: 'ทั้งหมด (All Formulas)', icon: '📐' },
-  { key: 'temp', label: 'อุณหภูมิ (Temperature)', icon: '🌡️' },
-  { key: 'length', label: 'ความยาว & ท่อ (Length & Pipe)', icon: '📏' },
-  { key: 'area', label: 'พื้นที่ & รูปทรง (Area & Geometry)', icon: '📐' },
-  { key: 'flow', label: 'อัตราการไหล (Flow Rate)', icon: '💧' },
-  { key: 'chiller', label: 'ประสิทธิภาพ Chiller Plant (kW/TR)', icon: '⚡' },
-  { key: 'math', label: 'ร้อยละ (% Change)', icon: '📊' },
+  { key: 'all', label: 'ทั้งหมด (All Formulas)', icon: LayoutGridIcon },
+  { key: 'temp', label: 'อุณหภูมิ (Temperature)', icon: ThermometerIcon },
+  { key: 'length', label: 'ความยาว & ท่อ (Length & Pipe)', icon: RulerIcon },
+  { key: 'area', label: 'พื้นที่ & รูปทรง (Area & Geometry)', icon: ShapesIcon },
+  { key: 'flow', label: 'อัตราการไหล (Flow Rate)', icon: DropletIcon },
+  { key: 'chiller', label: 'ประสิทธิภาพ Chiller Plant (kW/TR)', icon: LightningIcon },
+  { key: 'math', label: 'ร้อยละ (% Change)', icon: PercentIcon },
 ];
 
 function fmt(n, d = 2) {
@@ -148,20 +152,26 @@ export default function Calculator() {
     const plantEff = totalKW / tr;
     const pumpCtEff = (chwp + cwp + ct) / tr;
 
-    let rating = '🟢 ดีมาก (Good Practice)';
+    let rating = 'ดีมาก (Good Practice)';
     let ratingColor = 'text-emerald-600 dark:text-emerald-400';
+    let ratingDot = 'bg-emerald-500';
+    let ratingIsStar = false;
     if (plantEff < 0.70) {
-      rating = '🌟 ดีเยี่ยมระดับโลก (World Class < 0.70 kW/TR)';
+      rating = 'ดีเยี่ยมระดับโลก (World Class < 0.70 kW/TR)';
       ratingColor = 'text-sky-600 dark:text-sky-400';
+      ratingIsStar = true;
     } else if (plantEff <= 0.85) {
-      rating = '🟢 ดีมาก (Good Practice 0.70 - 0.85 kW/TR)';
+      rating = 'ดีมาก (Good Practice 0.70 - 0.85 kW/TR)';
       ratingColor = 'text-emerald-600 dark:text-emerald-400';
+      ratingDot = 'bg-emerald-500';
     } else if (plantEff <= 1.00) {
-      rating = '🟡 ปานกลาง (Average 0.85 - 1.00 kW/TR)';
+      rating = 'ปานกลาง (Average 0.85 - 1.00 kW/TR)';
       ratingColor = 'text-amber-600 dark:text-amber-400';
+      ratingDot = 'bg-amber-500';
     } else {
-      rating = '🔴 สิ้นเปลืองพลังงาน ควรปรับปรุง (> 1.00 kW/TR)';
+      rating = 'สิ้นเปลืองพลังงาน ควรปรับปรุง (> 1.00 kW/TR)';
       ratingColor = 'text-rose-600 dark:text-rose-400';
+      ratingDot = 'bg-rose-500';
     }
 
     setPlantResult({
@@ -171,6 +181,8 @@ export default function Calculator() {
       pumpCtEff,
       rating,
       ratingColor,
+      ratingDot,
+      ratingIsStar,
     });
   };
 
@@ -262,6 +274,7 @@ export default function Calculator() {
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
             {CATEGORIES.map((cat) => {
               const active = activeCategory === cat.key;
+              const Icon = cat.icon;
               return (
                 <button
                   key={cat.key}
@@ -273,7 +286,7 @@ export default function Calculator() {
                       : 'bg-white dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-gray-600 dark:text-[#C3D2E5] hover:bg-gray-50 dark:hover:bg-white/10'
                   }`}
                 >
-                  <span>{cat.icon}</span>
+                  <Icon className="w-4 h-4 shrink-0" />
                   <span>{cat.label}</span>
                 </button>
               );
@@ -289,7 +302,7 @@ export default function Calculator() {
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] flex items-center gap-2">
-                        <span>⭕</span> พื้นที่ & เส้นรอบวงกลม / ท่อ (Circle & Pipe Geometry)
+                        <CircleIcon className="w-4 h-4 shrink-0" /> พื้นที่ & เส้นรอบวงกลม / ท่อ (Circle & Pipe Geometry)
                       </span>
                       <span className="text-xs font-mono text-gray-400">D = C / π, A = πr²</span>
                     </div>
@@ -384,7 +397,7 @@ export default function Calculator() {
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] flex items-center gap-2">
-                        <span>🌡️</span> แปลงหน่วยอุณหภูมิ (°F & °C & K)
+                        <ThermometerIcon className="w-4 h-4 shrink-0" /> แปลงหน่วยอุณหภูมิ (°F & °C & K)
                       </span>
                       <span className="text-xs font-mono text-gray-400">°C = (°F−32)×5/9</span>
                     </div>
@@ -458,7 +471,7 @@ export default function Calculator() {
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] flex items-center gap-2">
-                        <span>💧</span> แปลงหน่วยอัตราการไหล (GPM &gt; m³/h &gt; CFM)
+                        <DropletIcon className="w-4 h-4 shrink-0" /> แปลงหน่วยอัตราการไหล (GPM &gt; m³/h &gt; CFM)
                       </span>
                       <span className="text-xs font-mono text-sky-600 font-bold">2,400 GPM &asymp; 1,000 TR</span>
                     </div>
@@ -555,7 +568,7 @@ export default function Calculator() {
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] flex items-center gap-2">
-                        <span>⚡</span> ประสิทธิภาพรวม Chiller Plant (System kW/TR)
+                        <LightningIcon className="w-4 h-4 shrink-0" /> ประสิทธิภาพรวม Chiller Plant (System kW/TR)
                       </span>
                       <span className="text-xs font-mono text-emerald-600 font-bold">kW รวมทั้งระบบ ÷ TR</span>
                     </div>
@@ -645,7 +658,12 @@ export default function Calculator() {
                     </div>
                     <div className="p-3 rounded-2xl bg-[#0F2854] text-white flex items-center justify-between">
                       <span className="text-xs font-bold">ระดับประสิทธิภาพ (Plant Rating):</span>
-                      <span className="text-xs font-extrabold text-amber-300">{plantResult.rating}</span>
+                      <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
+                        {plantResult.ratingIsStar
+                          ? <StarIcon className="w-3.5 h-3.5 shrink-0 fill-current" />
+                          : <span className={`w-2 h-2 rounded-full shrink-0 ${plantResult.ratingDot}`} />}
+                        {plantResult.rating}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -659,7 +677,7 @@ export default function Calculator() {
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] flex items-center gap-2">
-                        <span>📏</span> คำนวณขนาดท่อ (Pipe Sizing & Velocity)
+                        <RulerIcon className="w-4 h-4 shrink-0" /> คำนวณขนาดท่อ (Pipe Sizing & Velocity)
                       </span>
                       <span className="text-xs font-mono text-gray-400">A = Q / V, D = √(4Q/πV)</span>
                     </div>
@@ -720,7 +738,7 @@ export default function Calculator() {
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] flex items-center gap-2">
-                        <span>🟧</span> สี่เหลี่ยมผืนผ้า (Rectangle Area & Perimeter)
+                        <ShapesIcon className="w-4 h-4 shrink-0" /> สี่เหลี่ยมผืนผ้า (Rectangle Area & Perimeter)
                       </span>
                       <span className="text-xs font-mono text-gray-400">A = w×l, P = 2(w+l)</span>
                     </div>
@@ -780,7 +798,7 @@ export default function Calculator() {
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-[#0F2854] dark:text-[#E7EEF7] flex items-center gap-2">
-                        <span>🛢️</span> ทรงกระบอก (Cylinder Volume & Surface)
+                        <CylinderIcon className="w-4 h-4 shrink-0" /> ทรงกระบอก (Cylinder Volume & Surface)
                       </span>
                       <span className="text-xs font-mono text-gray-400">V = πr²h, S = 2πrh</span>
                     </div>

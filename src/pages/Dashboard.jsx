@@ -25,6 +25,8 @@ import {
   FlameIcon,
   LightningIcon,
   SnowflakeIcon,
+  SearchIcon,
+  ActivityIcon,
 } from '../components/icons';
 
 /* ── Stat card ── */
@@ -648,7 +650,7 @@ function Dashboard() {
   const { t } = useLang();
   const isAdmin = getSession().role === 'admin';
 
-  const { factories, selectedFactory, setSelectedFactory, allowedFactories, factoryRecords = [] } = useFactory();
+  const { factories, selectedFactory, allowedFactories, factoryRecords = [] } = useFactory();
 
   const [presenting, setPresenting] = useState(false);
   const enterPresentation = () => {
@@ -870,18 +872,59 @@ function Dashboard() {
   return (
     <AppLayout
       factoryRowBelowTitle
-      hideFactorySelect
+      factoryBeforeRole
       hideRoleBadgeMobile
       roleBadgeByAvatar
       actions={
-        <button
-          type="button"
-          onClick={enterPresentation}
-          className="flex items-center gap-2 bg-[#0F2854] hover:bg-[#1C4D8D] dark:bg-white/10 dark:hover:bg-white/15 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition-colors shrink-0"
-        >
-          <ExpandIcon className="w-4 h-4" />
-          {t.dashboard.presentationMode}
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Desktop Measure Status Filter - Moved here to be aligned right before Factory Selector */}
+          <div className="hidden lg:flex items-center gap-1.5 p-1 bg-white dark:bg-[#111F35] rounded-full border border-[#E4EBF6] dark:border-white/10 shadow-sm mr-2">
+            <button
+              type="button"
+              onClick={() => setMeasureStatusFilter('all')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                measureStatusFilter === 'all'
+                  ? 'bg-[#0F2854] text-white shadow-sm'
+                  : 'text-gray-600 dark:text-[#8CA3C0] hover:text-[#0F2854]'
+              }`}
+            >
+              มาตรการทั้งหมด ({factoryScopedMeasures.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setMeasureStatusFilter('potential')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                measureStatusFilter === 'potential'
+                  ? 'bg-blue-100 text-blue-800 shadow-sm'
+                  : 'text-gray-600 dark:text-[#8CA3C0] hover:text-blue-600'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              ศักยภาพ ({potentialCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setMeasureStatusFilter('implemented')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                measureStatusFilter === 'implemented'
+                  ? 'bg-emerald-100 text-emerald-800 shadow-sm'
+                  : 'text-gray-600 dark:text-[#8CA3C0] hover:text-emerald-600'
+              }`}
+            >
+              <CheckIcon className="w-3.5 h-3.5" />
+              ดำเนินการจริง ({implementedCount})
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={enterPresentation}
+            className="flex items-center gap-2 bg-[#0F2854] hover:bg-[#1C4D8D] dark:bg-white/10 dark:hover:bg-white/15 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm transition-colors shrink-0"
+          >
+            <ExpandIcon className="w-4 h-4" />
+            {t.dashboard.presentationMode}
+          </button>
+        </div>
       }
       title={
         <>
@@ -901,54 +944,18 @@ function Dashboard() {
         </>
       }
     >
-      {/* Quick Factory Selector Bar */}
-      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
-        <div className="flex items-center gap-2 flex-nowrap shrink-0">
-          <button
-            type="button"
-            onClick={() => setSelectedFactory('')}
-            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
-              !selectedFactory
-                ? 'bg-[#0F2854] text-white shadow-md'
-                : 'bg-white dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-gray-600 dark:text-[#C3D2E5] hover:bg-gray-50'
-            }`}
-          >
-            <FactoryIcon className="w-3.5 h-3.5" />
-            ทุกโรงงาน ({factories.length})
-          </button>
-
-          {factories.map((name) => {
-            const active = selectedFactory === name;
-            const equipCount = equipmentCountByFactory.get(name) || 0;
-            return (
-              <button
-                key={name}
-                type="button"
-                onClick={() => setSelectedFactory(name)}
-                className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
-                  active
-                    ? 'bg-[#0F2854] text-white shadow-md'
-                    : 'bg-white dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-gray-600 dark:text-[#C3D2E5] hover:bg-gray-50'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${active ? 'bg-emerald-400' : 'bg-gray-300'}`} />
-                {name} ({equipCount})
-              </button>
-            );
-          })}
-        </div>
-
-        {selectedFactory && (
+      {selectedFactory && (
+        <div className="flex justify-end mb-4">
           <button
             type="button"
             onClick={() => navigate(`/factories/${encodeURIComponent(selectedFactory)}`)}
-            className="flex items-center gap-1 text-xs font-bold text-[#4988C4] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors shrink-0 ml-auto pl-2"
+            className="flex items-center gap-1 text-xs font-bold text-[#4988C4] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors shrink-0"
           >
             รายละเอียดโรงงาน
             <ArrowRightIcon className="w-3.5 h-3.5" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Selected Factory Info Card */}
       {selectedFactory && (
@@ -982,13 +989,13 @@ function Dashboard() {
         </Panel>
       )}
 
-      {/* Quick Measure Status Filter: ทั้งหมด | ศักยภาพ | ดำเนินการจริง */}
-      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-        <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-[#111F35] rounded-2xl border border-[#E4EBF6] dark:border-white/10 shadow-sm">
+      {/* Quick Measure Status Filter: Mobile Only (Desktop version moved to actions prop) */}
+      <div className="flex lg:hidden items-center justify-between flex-wrap gap-2 mb-4">
+        <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-[#111F35] rounded-full border border-[#E4EBF6] dark:border-white/10 shadow-sm w-full sm:w-auto overflow-x-auto">
           <button
             type="button"
             onClick={() => setMeasureStatusFilter('all')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
               measureStatusFilter === 'all'
                 ? 'bg-[#0F2854] text-white shadow-sm'
                 : 'text-gray-600 dark:text-[#8CA3C0] hover:text-[#0F2854]'
@@ -999,9 +1006,9 @@ function Dashboard() {
           <button
             type="button"
             onClick={() => setMeasureStatusFilter('potential')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
               measureStatusFilter === 'potential'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-blue-100 text-blue-800 shadow-sm'
                 : 'text-gray-600 dark:text-[#8CA3C0] hover:text-blue-600'
             }`}
           >
@@ -1011,9 +1018,9 @@ function Dashboard() {
           <button
             type="button"
             onClick={() => setMeasureStatusFilter('implemented')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
               measureStatusFilter === 'implemented'
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'bg-emerald-100 text-emerald-800 shadow-sm'
                 : 'text-gray-600 dark:text-[#8CA3C0] hover:text-emerald-600'
             }`}
           >
@@ -1021,10 +1028,6 @@ function Dashboard() {
             ดำเนินการจริง ({implementedCount})
           </button>
         </div>
-
-        <span className="text-xs text-gray-400 dark:text-[#7E93AF] font-medium hidden sm:inline">
-          {measureStatusFilter === 'potential' ? '🔍 แสดงเฉพาะมาตรการระดับศักยภาพ (Planned)' : measureStatusFilter === 'implemented' ? '✅ แสดงเฉพาะมาตรการที่ดำเนินการจริง (Implemented)' : '📊 แสดงสถิติและผลประหยัดภาพรวม'}
-        </span>
       </div>
 
       {/* Stat cards */}

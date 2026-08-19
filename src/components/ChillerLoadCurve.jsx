@@ -1,4 +1,5 @@
 import { useLang } from '../context/languageStore.js';
+import { CheckIcon, LightbulbIcon } from './icons';
 
 export default function ChillerLoadCurve({
   specTR = 0,
@@ -193,8 +194,8 @@ export default function ChillerLoadCurve({
               <span className="font-mono font-bold text-gray-700 dark:text-[#C3D2E5]">{ratedEff.toFixed(3)} kW/TR</span>
             </div>
             {actualEff > 0 && ratedEff > 0 && (
-              <p className={`text-[10px] font-bold ${actualEff <= ratedEff ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                {actualEff <= ratedEff ? '✓ ดีกว่าพิกัดเต็มสเปก' : `+${(((actualEff - ratedEff) / ratedEff) * 100).toFixed(1)}% จากพิกัดเต็ม`}
+              <p className={`text-[10px] font-bold flex items-center gap-1 ${actualEff <= ratedEff ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                {actualEff <= ratedEff ? <><CheckIcon className="w-2.5 h-2.5 shrink-0" /> ดีกว่าพิกัดเต็มสเปก</> : `+${(((actualEff - ratedEff) / ratedEff) * 100).toFixed(1)}% จากพิกัดเต็ม`}
               </p>
             )}
           </div>
@@ -351,7 +352,7 @@ export default function ChillerLoadCurve({
       {/* Advice Callout */}
       {!compact && (
         <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-xs text-blue-950 dark:text-blue-200 flex items-start gap-2.5">
-          <span className="text-base shrink-0">💡</span>
+          <LightbulbIcon className="w-4 h-4 shrink-0" />
           <p className="leading-relaxed">{zoneAdvice}</p>
         </div>
       )}

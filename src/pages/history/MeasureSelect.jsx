@@ -18,6 +18,9 @@ import {
   PlusIcon,
   SparkleIcon,
   TrashIcon,
+  SnowflakeIcon,
+  LightbulbIcon,
+  DocumentIcon,
 } from '../../components/icons';
 import { MEASURES, ALL_MEASURES } from './measuresData.js';
 import ChillerLoadCurve from '../../components/ChillerLoadCurve';
@@ -565,7 +568,7 @@ function EvalSection({
               <div className="text-xs text-blue-950 dark:text-blue-200 bg-white/90 dark:bg-white/5 p-3 rounded-xl border border-blue-100 dark:border-white/5 space-y-1.5">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="flex items-center gap-2">
-                    <span>💡 ผลลัพธ์:</span>
+                    <span className="flex items-center gap-1"><LightbulbIcon className="w-3.5 h-3.5 shrink-0" /> ผลลัพธ์:</span>
                     <strong>{currentKW.toFixed(1)} kW</strong> &rarr; <strong>{proposedKW.toFixed(1)} kW</strong>
                   </span>
                   <span className="font-bold text-emerald-700 dark:text-emerald-400">
@@ -575,12 +578,15 @@ function EvalSection({
                 {(pctCoolingLoad != null || pctElectricalLoad != null) && (
                   <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] pt-1 border-t border-blue-100 dark:border-white/5 text-gray-500 dark:text-[#8CA3C0] font-mono">
                     {pctCoolingLoad != null && (
-                      <span>❄️ Cooling Load: <strong className="text-blue-600 dark:text-blue-400">{pctCoolingLoad.toFixed(1)}%</strong> ({trVal.toFixed(1)}/{specTR} TR)</span>
+                      <span className="flex items-center gap-1"><SnowflakeIcon className="w-3 h-3 shrink-0 text-sky-500" /> Cooling Load: <strong className="text-blue-600 dark:text-blue-400">{pctCoolingLoad.toFixed(1)}%</strong> ({trVal.toFixed(1)}/{specTR} TR)</span>
                     )}
                     {pctElectricalLoad != null && (
-                      <span>⚡ Elec Load: <strong className="text-amber-600 dark:text-amber-400">{pctElectricalLoad.toFixed(1)}%</strong> ({currentKW.toFixed(1)}/{specKW} kW)</span>
+                      <span className="flex items-center gap-1"><LightningIcon className="w-3 h-3 shrink-0 text-amber-500" /> Elec Load: <strong className="text-amber-600 dark:text-amber-400">{pctElectricalLoad.toFixed(1)}%</strong> ({currentKW.toFixed(1)}/{specKW} kW)</span>
                     )}
-                    <span>{pctCoolingLoad < 40 ? '🔴 ภาระต่ำกินไฟสูง' : pctCoolingLoad <= 85 ? '🟢 ช่วงประหยัดสูงสุด (Optimal)' : '🔵 ภาระเต็มพิกัด'}</span>
+                    <span className="flex items-center gap-1">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pctCoolingLoad < 40 ? 'bg-rose-500' : pctCoolingLoad <= 85 ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                      {pctCoolingLoad < 40 ? 'ภาระต่ำกินไฟสูง' : pctCoolingLoad <= 85 ? 'ช่วงประหยัดสูงสุด (Optimal)' : 'ภาระเต็มพิกัด'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1427,7 +1433,7 @@ function MeasureSelect({ item, result, onClose, initialSavedMeasures, initialMea
 
               {/* Quick Template Chips */}
               <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-gray-400 dark:text-[#7E93AF]">💡 ตัวอย่างมาตรการแนะนำด่วน:</p>
+                <p className="text-[11px] font-bold text-gray-400 dark:text-[#7E93AF] flex items-center gap-1"><LightbulbIcon className="w-3 h-3 shrink-0" /> ตัวอย่างมาตรการแนะนำด่วน:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {CUSTOM_SUGGESTIONS.map((sug) => (
                     <button
@@ -1684,7 +1690,7 @@ function MeasureSelect({ item, result, onClose, initialSavedMeasures, initialMea
                               rel="noopener noreferrer"
                               className="text-red-600 dark:text-red-400 hover:underline font-bold inline-flex items-center gap-1"
                             >
-                              📄 ดูไฟล์ PDF สเปกเครื่อง ↗
+                              <DocumentIcon className="w-3.5 h-3.5 shrink-0" /> ดูไฟล์ PDF สเปกเครื่อง ↗
                             </a>
                           )}
                         </div>

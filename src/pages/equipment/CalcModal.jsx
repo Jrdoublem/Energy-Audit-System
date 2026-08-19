@@ -9,6 +9,9 @@ import {
   RefreshIcon,
   SnowflakeIcon,
   FlameIcon,
+  ActivityIcon,
+  CheckIcon,
+  InfoIcon,
 } from '../../components/icons';
 import CalcResult from './CalcResult';
 import { CALCULATORS, defaultFormFor } from './calculators.js';
@@ -623,18 +626,18 @@ export default function CalcModal({ item, onClose }) {
             <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 flex items-center justify-between flex-wrap gap-2 text-xs font-mono">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                  ❄️ Cooling Load: <strong className="text-blue-600 dark:text-blue-400">{liveTR ? liveTR.toFixed(1) : '-'} TR</strong>
+                  <SnowflakeIcon className="w-3.5 h-3.5 shrink-0" /> Cooling Load: <strong className="text-blue-600 dark:text-blue-400">{liveTR ? liveTR.toFixed(1) : '-'} TR</strong>
                   {specTR > 0 && livePctCoolingLoad != null ? ` (${livePctCoolingLoad.toFixed(1)}% ของสเปก)` : ''}
                 </span>
                 <span className="text-gray-400">|</span>
-                <span className="font-bold text-amber-900 dark:text-amber-200">
-                  ⚡ ไฟฟ้า: <strong className="text-amber-600 dark:text-amber-400">{livePowerKW > 0 ? livePowerKW.toFixed(1) : '-'} kW</strong>
+                <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                  <LightningIcon className="w-3.5 h-3.5 shrink-0" /> ไฟฟ้า: <strong className="text-amber-600 dark:text-amber-400">{livePowerKW > 0 ? livePowerKW.toFixed(1) : '-'} kW</strong>
                   {specKW > 0 && livePctElec != null ? ` (${livePctElec.toFixed(1)}% โหลด)` : ''}
                 </span>
               </div>
               {liveKwPerTr != null && (
-                <span className="font-bold px-2.5 py-1 rounded-xl bg-white dark:bg-[#0B1B33] text-[#0F2854] dark:text-[#E7EEF7] border border-blue-200 dark:border-blue-500/30">
-                  📊 สมรรถนะเบื้องต้น: <strong className={liveKwPerTr <= 0.75 ? 'text-emerald-600' : 'text-blue-600'}>{liveKwPerTr.toFixed(3)} kW/TR</strong>
+                <span className="font-bold px-2.5 py-1 rounded-xl bg-white dark:bg-[#0B1B33] text-[#0F2854] dark:text-[#E7EEF7] border border-blue-200 dark:border-blue-500/30 flex items-center gap-1.5">
+                  <ActivityIcon className="w-3.5 h-3.5 shrink-0" /> สมรรถนะเบื้องต้น: <strong className={liveKwPerTr <= 0.75 ? 'text-emerald-600' : 'text-blue-600'}>{liveKwPerTr.toFixed(3)} kW/TR</strong>
                 </span>
               )}
             </div>
@@ -687,8 +690,8 @@ export default function CalcModal({ item, onClose }) {
                 <SnowflakeIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-sky-500 shrink-0" />
                 ฝั่งน้ำเย็น (Chilled Water)
               </p>
-              <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30">
-                ❄️ ขาจ่ายมาตรฐาน: 46 - 47°F (7.8 - 8.3°C)
+              <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 inline-flex items-center gap-1">
+                <SnowflakeIcon className="w-3 h-3 shrink-0" /> ขาจ่ายมาตรฐาน: 46 - 47°F (7.8 - 8.3°C)
               </span>
             </div>
 
@@ -722,8 +725,9 @@ export default function CalcModal({ item, onClose }) {
                   const valF = fieldUnits.chillTempOut === 'C' ? (val * 9) / 5 + 32 : val;
                   const isOptimal = valF >= 45.5 && valF <= 47.5;
                   return (
-                    <p className={`text-[10px] mt-1 font-mono font-bold ${isOptimal ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                      {isOptimal ? '✓ อุณหภูมิขาจ่ายมาตรฐาน (46-47°F)' : `ℹ อุณหภูมิน้ำจ่าย (${valF.toFixed(1)}°F)`}
+                    <p className={`text-[10px] mt-1 font-mono font-bold flex items-center gap-1 ${isOptimal ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      {isOptimal ? <CheckIcon className="w-3 h-3 shrink-0" /> : <InfoIcon className="w-3 h-3 shrink-0" />}
+                      {isOptimal ? 'อุณหภูมิขาจ่ายมาตรฐาน (46-47°F)' : `อุณหภูมิน้ำจ่าย (${valF.toFixed(1)}°F)`}
                     </p>
                   );
                 })()}

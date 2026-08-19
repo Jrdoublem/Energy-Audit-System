@@ -9,7 +9,7 @@ import { ICON_MAP } from '../components/iconMap.js';
 import { fileToResizedDataUrl } from '../utils/image.js';
 import { uploadImage, uploadFile, deleteImage } from '../context/storageStore.js';
 import { useLang } from '../context/languageStore.js';
-import { BoxIcon, CalculatorIcon, ChevronDownIcon, ClipboardIcon, PencilIcon, PlusIcon, TrashIcon, ArrowLeftIcon, CheckIcon, SparkleIcon, GearIcon, LightningIcon } from '../components/icons';
+import { BoxIcon, CalculatorIcon, ChevronDownIcon, ClipboardIcon, PencilIcon, PlusIcon, TrashIcon, ArrowLeftIcon, CheckIcon, SparkleIcon, GearIcon, LightningIcon, DocumentIcon } from '../components/icons';
 import SavingsCalculator from './catalog/SavingsCalculator.jsx';
 
 function fmt(n) {
@@ -112,7 +112,7 @@ function CatalogCard({ item, onEdit, onDelete, onCalculate }) {
             <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
             </svg>
-            <span className="truncate">📄 ดูไฟล์ PDF สเปก (Datasheet) ↗</span>
+            <span className="truncate">ดูไฟล์ PDF สเปก (Datasheet) ↗</span>
           </a>
         )}
         {item.catId === 'chiller' && item.specificPower > 0 && (
@@ -680,10 +680,10 @@ function Catalog() {
                       <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">แนบเอกสาร PDF Datasheet / โบรชัวร์สเปกเครื่อง</p>
                       <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">สำหรับเปิดอ่านสเปกเครื่อง ตารางกำลังไฟฟ้า และใบรับรองประสิทธิภาพ</p>
                     </div>
-                    <label className={`px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-red-200 dark:border-red-500/30 text-xs font-bold text-red-600 dark:text-red-400 transition-colors shrink-0 ${
+                    <label className={`px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-red-200 dark:border-red-500/30 text-xs font-bold text-red-600 dark:text-red-400 transition-colors shrink-0 flex items-center gap-1.5 ${
                       pdfUploading ? 'opacity-60 pointer-events-none' : 'hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer'
                     }`}>
-                      {pdfUploading ? 'กำลังอัปโหลด PDF...' : '📄 เลือกไฟล์ PDF'}
+                      {pdfUploading ? 'กำลังอัปโหลด PDF...' : <><DocumentIcon className="w-3.5 h-3.5 shrink-0" /> เลือกไฟล์ PDF</>}
                       <input type="file" accept=".pdf,application/pdf" onChange={handlePdfChange} className="hidden" disabled={pdfUploading} />
                     </label>
                   </div>

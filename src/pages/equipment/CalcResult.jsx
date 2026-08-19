@@ -15,6 +15,10 @@ import {
   SparkleIcon,
   SnowflakeIcon,
   FlameIcon,
+  AlertTriangleIcon,
+  StarIcon,
+  BrushIcon,
+  ShowerIcon,
 } from '../../components/icons';
 
 function getGradeConfig(t) {
@@ -256,7 +260,7 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
                   className="flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-500/10 to-teal-500/10 dark:from-emerald-500/25 dark:via-emerald-500/15 dark:to-teal-500/15 border-2 border-emerald-500 dark:border-emerald-400 shadow-md shadow-emerald-500/10 ring-2 ring-emerald-500/20 gap-1 relative overflow-hidden"
                 >
                   <div className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">
-                    <span>★</span>
+                    <StarIcon className="w-3 h-3 shrink-0 fill-current" />
                     <span>{label}</span>
                   </div>
                   <p className="text-2xl sm:text-3xl font-black text-emerald-700 dark:text-emerald-300 leading-none font-mono tracking-tight my-0.5">
@@ -316,7 +320,8 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
           if (app < 4.0) {
             return {
               zone: 'good',
-              badge: '🟢 สะอาด / ปกติ (<4°F)',
+              badge: 'สะอาด / ปกติ (<4°F)',
+              dotCls: 'bg-emerald-500',
               badgeCls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-300',
               advice: 'การแลกเปลี่ยนความร้อนสมบูรณ์ ท่อสะอาด ไม่มีตะกรันสะสม',
               shouldClean: false,
@@ -325,7 +330,8 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
           if (app <= 6.0) {
             return {
               zone: 'warn',
-              badge: '🟡 4-6°F ควรล้าง (เริ่มสกปรก)',
+              badge: '4-6°F ควรล้าง (เริ่มสกปรก)',
+              dotCls: 'bg-amber-500',
               badgeCls: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border-amber-300',
               advice: 'Approach Temp อยู่ในช่วง 4-6°F ท่อเริ่มมีคราบสกปรกสะสม ส่งผลให้กินไฟเพิ่มขึ้น แนะนำให้ดำเนินการล้างทำความสะอาด',
               shouldClean: true,
@@ -333,7 +339,8 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
           }
           return {
             zone: 'alert',
-            badge: '🔴 >6°F ต้องล้างด่วน (สกปรกมาก)',
+            badge: '>6°F ต้องล้างด่วน (สกปรกมาก)',
+            dotCls: 'bg-rose-500',
             badgeCls: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border-rose-300',
             advice: 'Approach Temp สูงเกิน 6°F เกิด Fouling/ตะกรันหนาแน่น สูญเสียพลังงานสูง ต้องล้างทำความสะอาดด่วน',
             shouldClean: true,
@@ -356,8 +363,8 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
                 </p>
               </div>
               {(evapStat?.shouldClean || condStat?.shouldClean) && (
-                <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 animate-pulse">
-                  ⚠️ ตรวจพบจุดที่ควรล้าง (4-6°F)
+                <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 animate-pulse inline-flex items-center gap-1">
+                  <AlertTriangleIcon className="w-3.5 h-3.5 shrink-0" /> ตรวจพบจุดที่ควรล้าง (4-6°F)
                 </span>
               )}
             </div>
@@ -371,7 +378,8 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
                     <span>Evaporator Approach Temp</span>
                   </div>
                   {evapStat && (
-                    <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full border ${evapStat.badgeCls}`}>
+                    <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${evapStat.badgeCls}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${evapStat.dotCls}`} />
                       {evapStat.badge}
                     </span>
                   )}
@@ -411,7 +419,7 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
                     onClick={() => handleRecommendedClick('ล้าง Evaporator')}
                     className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
                   >
-                    <span>🧹 ประเมินมาตรการ "ล้าง Evaporator"</span>
+                    <span className="flex items-center gap-1.5"><BrushIcon className="w-3.5 h-3.5 shrink-0" /> ประเมินมาตรการ "ล้าง Evaporator"</span>
                     <span>&rarr;</span>
                   </button>
                 )}
@@ -425,7 +433,8 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
                     <span>Condenser Approach Temp</span>
                   </div>
                   {condStat && (
-                    <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full border ${condStat.badgeCls}`}>
+                    <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${condStat.badgeCls}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${condStat.dotCls}`} />
                       {condStat.badge}
                     </span>
                   )}
@@ -465,7 +474,7 @@ function CalcResult({ item, result, onBack, readOnly = false, onMeasure }) {
                     onClick={() => handleRecommendedClick('ล้าง Condenser')}
                     className="w-full py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
                   >
-                    <span>🚿 ประเมินมาตรการ "ล้าง Condenser"</span>
+                    <span className="flex items-center gap-1.5"><ShowerIcon className="w-3.5 h-3.5 shrink-0" /> ประเมินมาตรการ "ล้าง Condenser"</span>
                     <span>&rarr;</span>
                   </button>
                 )}

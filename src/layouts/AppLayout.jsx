@@ -140,7 +140,7 @@ function AppLayout({
   title, actions, children, hideHeader = false, hideHeaderMobile = false, fullBleed = false, hideFactorySelect = false,
   mobileHeaderRight = false, mobileHeaderCenter = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
   hideRoleBadge = false, hideRoleBadgeMobile = hideRoleBadge, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
-  roleBadgeByAvatar = false,
+  roleBadgeByAvatar = false, factoryBeforeRole = false,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -434,17 +434,21 @@ function AppLayout({
         >
           {title && <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] shrink-0">{title}</h1>}
           <div className="hidden lg:flex flex-1 items-center justify-end gap-3">
-            {!hideRoleBadge && <RoleBadge role={roleLabel} size="md" />}
-            {!hideFactorySelect && (
-              <FactorySelect
-                selectedFactory={selectedFactory}
-                setSelectedFactory={setSelectedFactory}
-                refreshFactories={refreshFactories}
-                factories={factories}
-                role={session.role}
-                t={t}
-              />
-            )}
+            {(() => {
+              const roleEl = !hideRoleBadge && <RoleBadge key="role" role={roleLabel} size="md" />;
+              const factoryEl = !hideFactorySelect && (
+                <FactorySelect
+                  key="factory"
+                  selectedFactory={selectedFactory}
+                  setSelectedFactory={setSelectedFactory}
+                  refreshFactories={refreshFactories}
+                  factories={factories}
+                  role={session.role}
+                  t={t}
+                />
+              );
+              return factoryBeforeRole ? <>{factoryEl}{roleEl}</> : <>{roleEl}{factoryEl}</>;
+            })()}
             {actions}
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-auto lg:hidden">
