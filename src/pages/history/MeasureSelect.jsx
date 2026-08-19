@@ -236,6 +236,7 @@ function EvalSection({
   basePower,
   category,
   result,
+  item,
   evalData = {},
   onChange,
   onSave,
@@ -857,6 +858,10 @@ function EvalSection({
     </div>
   );
 }
+
+// Fallback values for auto-filled form fields that have no other source
+// (result data, linked equipment spec, etc.) to derive a default from.
+const FIELD_DEFAULTS = {};
 
 /* ── MeasureSelect — Multi-Select, Custom Measures & Post-Improvement Photos ── */
 function MeasureSelect({ item, result, onClose, initialSavedMeasures, initialMeasure }) {
@@ -1859,6 +1864,7 @@ function MeasureSelect({ item, result, onClose, initialSavedMeasures, initialMea
             <EvalSection
               basePower={basePower}
               category={item?.category}
+              item={item}
               result={result}
               evalData={editEvalData || evalData}
               activeMeasureName={activeMeasure}

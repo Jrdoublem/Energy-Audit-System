@@ -13,6 +13,7 @@ import { Panel, SectionHeader } from '../components/ui';
 import companyLogo from '../assets/Logo.png';
 import {
   ArrowRightIcon,
+  CheckIcon,
   ChevronDownIcon,
   ClipboardIcon,
   ClockIcon,

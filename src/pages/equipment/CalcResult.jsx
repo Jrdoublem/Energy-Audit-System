@@ -13,6 +13,8 @@ import {
   CheckIcon,
   ClipboardIcon,
   SparkleIcon,
+  SnowflakeIcon,
+  FlameIcon,
 } from '../../components/icons';
 
 function getGradeConfig(t) {

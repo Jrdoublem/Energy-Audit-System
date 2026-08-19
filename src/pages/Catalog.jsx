@@ -9,7 +9,7 @@ import { ICON_MAP } from '../components/iconMap.js';
 import { fileToResizedDataUrl } from '../utils/image.js';
 import { uploadImage, uploadFile, deleteImage } from '../context/storageStore.js';
 import { useLang } from '../context/languageStore.js';
-import { BoxIcon, CalculatorIcon, ChevronDownIcon, ClipboardIcon, PencilIcon, PlusIcon, TrashIcon, ArrowLeftIcon, CheckIcon, SparkleIcon, GearIcon } from '../components/icons';
+import { BoxIcon, CalculatorIcon, ChevronDownIcon, ClipboardIcon, PencilIcon, PlusIcon, TrashIcon, ArrowLeftIcon, CheckIcon, SparkleIcon, GearIcon, LightningIcon } from '../components/icons';
 import SavingsCalculator from './catalog/SavingsCalculator.jsx';
 
 function fmt(n) {

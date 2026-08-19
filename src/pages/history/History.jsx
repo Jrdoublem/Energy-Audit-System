@@ -7,7 +7,7 @@ import { fetchAllHistory, deleteHistoryItem } from '../../context/historyStore.j
 import { fetchAllEquipment } from '../../context/equipmentStore.js';
 import { getSession } from '../../context/authStore.js';
 import { useLang } from '../../context/languageStore.js';
-import { GlassSearchInput, GlassSelect, Panel } from '../../components/ui';
+import { GlassSearchInput, GlassSelect, Panel, PageHeader } from '../../components/ui';
 import CalcResult from '../equipment/CalcResult';
 import MeasureSelect from './MeasureSelect';
 import {

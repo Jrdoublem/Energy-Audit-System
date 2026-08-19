@@ -234,8 +234,6 @@ export default function Calculator() {
 
   const show = (cat) => activeCategory === 'all' || activeCategory === cat;
 
-  const categoryFormulas = MATH_FORMULAS.filter((f) => f.category === activeCategory);
-
   return (
     <>
       <AppLayout
