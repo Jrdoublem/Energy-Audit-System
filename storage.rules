@@ -31,6 +31,13 @@ service firebase.storage {
       allow delete: if isSignedIn();
     }
 
+    // Equipment photos — any signed-in user can add equipment today.
+    match /equipment/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidImage();
+      allow delete: if isSignedIn();
+    }
+
     // Profile photos — any signed-in user can set their own avatar.
     match /avatars/{fileName} {
       allow read: if isSignedIn();

@@ -416,8 +416,8 @@ function Factories() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:gap-4">
               <StatCard label={t.factories.totalFactories} value={factories.length} icon={FactoryIcon} accentColor="#4988C4" />
               <StatCard label={t.factories.totalEquipment} value={equipment.length} icon={ActivityIcon} accentColor="#38BDF8" />
-              <StatCard label={t.factories.energyKwh} value={fmt(totalEnergyAll / 1000)} unit="MWh/yr" icon={LightningIcon} accentColor="#FACC15" />
-              <StatCard label={t.factories.potentialSavings} value={`฿${fmt(totalSavingsAll)}`} unit="/yr" icon={TrendDownIcon} accentColor="#4ADE80" />
+              <StatCard label={t.factories.energyKwh} value={fmt(totalEnergyAll / 1000)} unit={t.factories.mwhPerYearUnit} icon={LightningIcon} accentColor="#FACC15" />
+              <StatCard label={t.factories.potentialSavings} value={`฿${fmt(totalSavingsAll)}`} unit={t.factories.currencyPerYearUnit} icon={TrendDownIcon} accentColor="#4ADE80" />
             </div>
 
             {/* Toolbar Header */}
@@ -429,7 +429,7 @@ function Factories() {
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="ค้นหาชื่อโรงงาน / จังหวัด..."
+                    placeholder={t.factories.searchPlaceholder}
                     className="w-full pl-9 pr-4 py-2 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                   />
                   {search && (
@@ -453,7 +453,7 @@ function Factories() {
             {/* Factory Cards Grid */}
             {filteredRows.length === 0 ? (
               <Panel className="p-12 text-center text-sm text-gray-400 dark:text-[#7E93AF] rounded-3xl">
-                {search ? 'ไม่พบโรงงานที่ตรงกับการค้นหา' : t.factories.noFactoriesYet}
+                {search ? t.factories.noSearchResults : t.factories.noFactoriesYet}
               </Panel>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

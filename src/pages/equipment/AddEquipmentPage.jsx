@@ -7,7 +7,6 @@ import { getSession } from '../../context/authStore.js';
 import { fileToResizedDataUrl } from '../../utils/image.js';
 import { uploadImage, deleteImage } from '../../context/storageStore.js';
 import {
-  ArrowLeftIcon,
   CameraIcon,
   CheckIcon,
   ClipboardIcon,
@@ -237,22 +236,13 @@ export default function AddEquipmentPage({
   };
 
   return (
-    <div className="max-w-4xl mx-auto w-full py-6 space-y-6 font-sans">
+    <div className="max-w-6xl mx-auto w-full py-6 space-y-6 font-sans">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 transition-colors shadow-sm shrink-0"
-          >
-            <ArrowLeftIcon className="w-4 h-4" />
-          </button>
-          <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] min-w-0">
-            {isEditing ? 'แก้ไขรายละเอียดอุปกรณ์' : 'เพิ่มอุปกรณ์ใหม่'}
-          </h2>
-        </div>
-        <p className="text-sm lg:text-base text-gray-400 dark:text-[#7E93AF] mt-1.5 ml-[3.25rem]">
+        <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] min-w-0">
+          {isEditing ? 'แก้ไขรายละเอียดอุปกรณ์' : 'เพิ่มอุปกรณ์ใหม่'}
+        </h2>
+        <p className="text-sm lg:text-base text-gray-400 dark:text-[#7E93AF] mt-1.5">
           กรอกรายละเอียดข้อมูลอุปกรณ์ด้านล่างให้ครบถ้วน ข้อมูลทั้งหมดจะถูกบันทึกลงฐานข้อมูล Firestore
         </p>
       </div>

@@ -65,8 +65,8 @@ function MonthlyUsageChart({ data, lang }) {
   const maxVal = validVals.length > 0 ? Math.max(...validVals, 100) : 100;
   const niceMax = Math.ceil(maxVal * 1.15);
 
-  const W = 700;
-  const H = 200;
+  const W = 900;
+  const H = 220;
   const padL = 50;
   const padR = 25;
   const padT = 20;
@@ -98,7 +98,7 @@ function MonthlyUsageChart({ data, lang }) {
 
   return (
     <div className="w-full relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-44 overflow-visible">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-72 overflow-visible">
         <defs>
           <linearGradient id="facMonthlyGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#4988C4" stopOpacity="0.35" />
@@ -417,9 +417,22 @@ function FactoryDetail() {
   const [newEq, setNewEq] = useState({ id: '', category: 'chiller', building: '', brandModel: '', installYear: String(currentYear), owner: '' });
   const [newEqError, setNewEqError] = useState('');
 
+  const CATEGORY_PREFIX = { chiller: 'CH', compressor: 'AC', pump: 'PU', boiler: 'BO', cooling: 'CT', electrical: 'EL' };
+  const getNextId = (catKey) => {
+    const prefix = CATEGORY_PREFIX[catKey] || catKey.toUpperCase().slice(0, 2);
+    const used = new Set(
+      allEquipment
+        .filter((e) => e.category === catKey)
+        .map((e) => { const m = (e.id || '').match(/(\d+)$/); return m ? parseInt(m[1]) : 0; })
+    );
+    let n = 1;
+    while (used.has(n)) n++;
+    return `${prefix}-${String(n).padStart(2, '0')}`;
+  };
+
   const openAddEquipment = () => {
     setNewEq({
-      id: '',
+      id: getNextId('chiller'),
       category: 'chiller',
       building: '',
       brand: '',
@@ -529,6 +542,7 @@ function FactoryDetail() {
               categoriesList={categories}
               factoriesList={factoryRecords.map((f) => f.name)}
               catalogItems={catalogItems}
+              getNextId={getNextId}
               onCancel={() => setAddEqModal(false)}
               onSave={async (data) => {
                 await saveEquipmentItem({
@@ -628,7 +642,7 @@ function FactoryDetail() {
                     })}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-28 text-center text-xs text-gray-400 dark:text-[#7E93AF] italic">
+                  <div className="flex items-center justify-center h-14 text-center text-xs text-gray-400 dark:text-[#7E93AF] italic">
                     {t.factories.noSavingsRecorded}
                   </div>
                 )}
