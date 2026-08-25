@@ -3,7 +3,7 @@
 // open to any signed-in user (unlike equipment/categories) since recording
 // a measure is normal day-to-day engineer work, not an admin-only action.
 import {
-  collection, doc, getDocs, setDoc, deleteDoc,
+  collection, doc, getDocs, setDoc, deleteDoc, onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 
@@ -12,6 +12,12 @@ const MEASURES_COLLECTION = 'measures';
 export async function fetchAllMeasures() {
   const snap = await getDocs(collection(db, MEASURES_COLLECTION));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToAllMeasures(callback) {
+  return onSnapshot(collection(db, MEASURES_COLLECTION), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
 }
 
 export async function saveMeasureItem(measure) {

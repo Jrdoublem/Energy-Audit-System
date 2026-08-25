@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import {
-  collection, doc, getDocs, setDoc, deleteDoc,
+  collection, doc, getDocs, setDoc, deleteDoc, onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 
@@ -23,6 +23,12 @@ const FACTORIES_COLLECTION = 'factories';
 export async function fetchAllFactoryRecords() {
   const snap = await getDocs(collection(db, FACTORIES_COLLECTION));
   return snap.docs.map((d) => ({ name: d.id, ...d.data() }));
+}
+
+export function subscribeToAllFactoryRecords(callback) {
+  return onSnapshot(collection(db, FACTORIES_COLLECTION), (snap) => {
+    callback(snap.docs.map((d) => ({ name: d.id, ...d.data() })));
+  });
 }
 
 export async function saveFactoryRecord(name, data) {

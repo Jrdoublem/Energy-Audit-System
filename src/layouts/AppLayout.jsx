@@ -556,9 +556,9 @@ function AppLayout({
           />
 
           {/* Vertical Menu Container with spring pop-up animation */}
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-md px-5 z-40 animate-more-popup">
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-md px-4 sm:px-5 z-40">
             <div
-              className="relative bg-[#0F2854]/95 backdrop-blur-xl rounded-2xl border border-white/15 p-2 shadow-[0_16px_48px_rgba(10,27,61,0.8)]"
+              className="animate-more-popup relative bg-[#0F2854]/95 backdrop-blur-xl rounded-2xl border border-white/15 p-2 shadow-[0_16px_48px_rgba(10,27,61,0.8)]"
               style={{ boxShadow: '0 16px 48px rgba(10,27,61,0.8), 0 0 0 1px rgba(56,189,248,0.15)' }}
             >
               {/* Subtle top accent gradient */}

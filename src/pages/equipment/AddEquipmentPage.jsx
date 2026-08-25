@@ -299,6 +299,7 @@ export default function AddEquipmentPage({
                   // keep a stale prefix from the previously selected category.
                   const nextId = !isEditing && getNextId ? getNextId(nextCategory) : form.id;
                   setForm({ ...form, category: nextCategory, id: nextId });
+                  setCatalogPick(''); // reset catalog pick when category changes
                 }}
                 options={categoriesList.map((c) => ({ value: c.key, label: c.label || c.key }))}
                 triggerClassName="flex items-center w-full px-4 py-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/10 text-sm lg:text-base text-[#0F2854] dark:text-[#E7EEF7] focus:ring-2 focus:ring-[#4988C4] focus:outline-none"
@@ -398,7 +399,9 @@ export default function AddEquipmentPage({
                 value={catalogPick}
                 onChange={handleCatalogSelect}
                 placeholder="-- เลือกจากแคตตาล็อกเพื่อเติมอัตโนมัติ --"
-                options={catalogItems.map((c) => ({ value: c.id, label: `${c.brand} ${c.model} (${c.id})` }))}
+                options={catalogItems
+                  .filter((c) => !c.catId || c.catId === form.category)
+                  .map((c) => ({ value: c.id, label: `${c.brand} ${c.model} (${c.id})` }))}
                 className="w-full sm:w-auto"
                 triggerClassName="flex items-center gap-1.5 w-full sm:w-auto text-xs lg:text-sm font-bold px-3 py-1.5 rounded-xl bg-[#EAF4FC] dark:bg-white/10 text-[#4988C4] dark:text-[#E7EEF7] border border-[#D0E4F7] dark:border-white/10 focus:outline-none"
                 panelClassName="min-w-[16rem]"

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FactoryContext, SELECTED_KEY, readFactories, fetchAllFactoryRecords } from './factoryStore.js';
+import { FactoryContext, SELECTED_KEY, readFactories, subscribeToAllFactoryRecords, fetchAllFactoryRecords } from './factoryStore.js';
 import { getSession } from './authStore.js';
-import { fetchAllEquipment } from './equipmentStore.js';
+import { subscribeToAllEquipment, fetchAllEquipment } from './equipmentStore.js';
 
 function readAllowedFactories() {
   const session = getSession();
@@ -13,20 +13,36 @@ export function FactoryProvider({ children }) {
   const [allowedFactories] = useState(readAllowedFactories);
   const [factories, setFactories] = useState([]);
   const [factoryRecords, setFactoryRecords] = useState([]);
+  const [equipmentList, setEquipmentList] = useState([]);
   const [selectedFactory, setSelectedFactoryState] = useState(() => localStorage.getItem(SELECTED_KEY) || '');
 
   const refreshFactories = useCallback(async () => {
     const [equipment, records] = await Promise.all([fetchAllEquipment(), fetchAllFactoryRecords()]);
     setFactoryRecords(records);
+    setEquipmentList(equipment);
     setFactories(readFactories(allowedFactories, equipment, records));
   }, [allowedFactories]);
 
   useEffect(() => {
-    Promise.all([fetchAllEquipment(), fetchAllFactoryRecords()])
-      .then(([equipment, records]) => {
-        setFactoryRecords(records);
-        setFactories(readFactories(allowedFactories, equipment, records));
-      });
+    let currEquip = [];
+    let currRecs = [];
+
+    const unsubEquip = subscribeToAllEquipment((eq) => {
+      currEquip = eq;
+      setEquipmentList(eq);
+      setFactories(readFactories(allowedFactories, currEquip, currRecs));
+    });
+
+    const unsubRecs = subscribeToAllFactoryRecords((recs) => {
+      currRecs = recs;
+      setFactoryRecords(recs);
+      setFactories(readFactories(allowedFactories, currEquip, currRecs));
+    });
+
+    return () => {
+      if (unsubEquip) unsubEquip();
+      if (unsubRecs) unsubRecs();
+    };
   }, [allowedFactories]);
 
   const setSelectedFactory = useCallback((factory) => {

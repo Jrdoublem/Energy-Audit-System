@@ -3,7 +3,7 @@
 // admin-only per the Firestore security rules — see Equipment.jsx for the
 // matching UI gating that hides add/edit/delete controls for engineers.
 import {
-  collection, doc, getDocs, setDoc, deleteDoc,
+  collection, doc, getDocs, setDoc, deleteDoc, onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 
@@ -13,6 +13,12 @@ const CATEGORIES_COLLECTION = 'categories';
 export async function fetchAllEquipment() {
   const snap = await getDocs(collection(db, EQUIPMENT_COLLECTION));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToAllEquipment(callback) {
+  return onSnapshot(collection(db, EQUIPMENT_COLLECTION), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
 }
 
 export async function saveEquipmentItem(item) {

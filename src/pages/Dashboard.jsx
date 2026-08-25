@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { matchesFactory, useFactory, computeFactoryStats, getFactoryMeta } from '../context/factoryStore.js';
-import { fetchAllEquipment } from '../context/equipmentStore.js';
-import { fetchAllMeasures } from '../context/measuresStore.js';
-import { fetchAllHistory } from '../context/historyStore.js';
+import { subscribeToAllEquipment } from '../context/equipmentStore.js';
+import { subscribeToAllMeasures } from '../context/measuresStore.js';
+import { subscribeToAllHistory } from '../context/historyStore.js';
 import { fetchSettings } from '../context/settingsStore.js';
 import { getSession } from '../context/authStore.js';
 import { useTheme } from '../context/themeStore.js';
@@ -12,6 +12,7 @@ import { useLang } from '../context/languageStore.js';
 import { Panel, SectionHeader } from '../components/ui';
 import companyLogo from '../assets/Logo.png';
 import {
+  ActivityIcon,
   ArrowRightIcon,
   CheckIcon,
   ChevronDownIcon,
@@ -24,7 +25,9 @@ import {
   FactoryIcon,
   FlameIcon,
   LightningIcon,
+  MapPinIcon,
   SnowflakeIcon,
+  SparkleIcon,
 } from '../components/icons';
 
 /* ── Stat card ── */
@@ -648,7 +651,7 @@ function Dashboard() {
   const { t } = useLang();
   const isAdmin = getSession().role === 'admin';
 
-  const { factories, selectedFactory, allowedFactories, factoryRecords = [] } = useFactory();
+  const { factories, selectedFactory, setSelectedFactory, allowedFactories, factoryRecords = [] } = useFactory();
 
   const [presenting, setPresenting] = useState(false);
   const enterPresentation = () => {
@@ -663,13 +666,13 @@ function Dashboard() {
   };
 
   const [equipment, setEquipment] = useState([]);
-  useEffect(() => { fetchAllEquipment().then(setEquipment).catch(() => setEquipment([])); }, []);
+  useEffect(() => { const unsub = subscribeToAllEquipment(setEquipment); return () => unsub && unsub(); }, []);
 
   const [measures, setMeasures] = useState([]);
-  useEffect(() => { fetchAllMeasures().then(setMeasures).catch(() => setMeasures([])); }, []);
+  useEffect(() => { const unsub = subscribeToAllMeasures(setMeasures); return () => unsub && unsub(); }, []);
 
   const [history, setHistory] = useState([]);
-  useEffect(() => { fetchAllHistory().then(setHistory).catch(() => setHistory([])); }, []);
+  useEffect(() => { const unsub = subscribeToAllHistory(setHistory); return () => unsub && unsub(); }, []);
 
   const [defaultOperatingHours, setDefaultOperatingHours] = useState('8000');
   useEffect(() => { fetchSettings().then((s) => setDefaultOperatingHours(s.defaultOperatingHours)).catch(() => {}); }, []);
@@ -679,6 +682,56 @@ function Dashboard() {
     equipment.forEach((e) => counts.set(e.factory, (counts.get(e.factory) || 0) + 1));
     return counts;
   }, [equipment]);
+
+  const selectedFactoryRecord = useMemo(
+    () => (selectedFactory ? factoryRecords.find((f) => f.name === selectedFactory) : null) || {},
+    [factoryRecords, selectedFactory]
+  );
+
+  const selectedFactoryMeta = useMemo(
+    () => (selectedFactory ? getFactoryMeta(selectedFactory, factoryRecords) : {}),
+    [selectedFactory, factoryRecords]
+  );
+
+  const selectedFactoryEquipment = useMemo(
+    () => (selectedFactory ? equipment.filter((e) => e.factory === selectedFactory) : equipment),
+    [equipment, selectedFactory]
+  );
+
+  const totalInstalledPowerKw = useMemo(
+    () => selectedFactoryEquipment.reduce((s, e) => s + (parseFloat(e.chillerPower || e.electricalPower || e.spec || 0) || 0), 0),
+    [selectedFactoryEquipment]
+  );
+
+  const totalCoolingCapacityTR = useMemo(
+    () => selectedFactoryEquipment.reduce((s, e) => s + (parseFloat(e.coolingCapacity || e.capacityTR || 0) || 0), 0),
+    [selectedFactoryEquipment]
+  );
+
+  const currentYear = new Date().getFullYear();
+  const selectedFactoryMonthly = useMemo(
+    () => selectedFactoryRecord?.monthlyUsage?.[currentYear] || {},
+    [selectedFactoryRecord, currentYear]
+  );
+
+  const selectedFactoryAnnualKWh = useMemo(() => {
+    const filled = Object.keys(selectedFactoryMonthly).filter(
+      (k) => selectedFactoryMonthly[k] !== undefined && selectedFactoryMonthly[k] !== '' && !isNaN(selectedFactoryMonthly[k])
+    );
+    if (filled.length === 0) return 0;
+    const sum = filled.reduce((s, k) => s + (parseFloat(selectedFactoryMonthly[k]) || 0), 0);
+    return (sum / filled.length) * 12;
+  }, [selectedFactoryMonthly]);
+
+  const allFactoriesTotalEquipment = equipment.length;
+  const allFactoriesTotalPowerKw = useMemo(
+    () => equipment.reduce((s, e) => s + (parseFloat(e.chillerPower || e.electricalPower || e.spec || 0) || 0), 0),
+    [equipment]
+  );
+  const allFactoriesTotalSavingsKwh = useMemo(
+    () => measures.reduce((s, m) => s + parseFloat(m.evalData?.energySaved || 0), 0),
+    [measures]
+  );
 
   const factoryOverviewRows = useMemo(() => {
     return factories.map((name) => {
@@ -729,6 +782,18 @@ function Dashboard() {
       return true;
     });
   }, [factoryScopedMeasures, measureStatusFilter]);
+
+  const totalSavingsKwh = useMemo(
+    () => scopedMeasures.reduce((s, m) => s + parseFloat(m.evalData?.energySaved || 0), 0),
+    [scopedMeasures]
+  );
+
+  const savingsPctOfFactory = useMemo(() => {
+    if (selectedFactoryAnnualKWh > 0) {
+      return ((totalSavingsKwh / selectedFactoryAnnualKWh) * 100).toFixed(1);
+    }
+    return null;
+  }, [totalSavingsKwh, selectedFactoryAnnualKWh]);
 
   // Headline dashboard numbers, aggregated from every scoped measure's
   // evalData (kept generic across categories: boiler measures represent
@@ -940,46 +1005,190 @@ function Dashboard() {
         </>
       }
     >
-      {selectedFactory && (
-        <div className="flex justify-end mb-4">
+      {/* Interactive Factory Quick Switcher Pills */}
+      {factories.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 no-scrollbar">
+          <span className="text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider shrink-0 flex items-center gap-1.5 mr-1">
+            <FactoryIcon className="w-3.5 h-3.5 text-[#4988C4]" />
+            เลือกโรงงาน:
+          </span>
           <button
             type="button"
-            onClick={() => navigate(`/factories/${encodeURIComponent(selectedFactory)}`)}
-            className="flex items-center gap-1 text-xs font-bold text-[#4988C4] hover:text-[#0F2854] dark:text-[#E7EEF7] transition-colors shrink-0"
+            onClick={() => setSelectedFactory('')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+              !selectedFactory
+                ? 'bg-[#0F2854] dark:bg-[#4988C4] text-white shadow-sm'
+                : 'bg-white dark:bg-[#111F35] text-gray-600 dark:text-[#8CA3C0] hover:bg-gray-100 dark:hover:bg-white/10 border border-[#E4EBF6] dark:border-white/10'
+            }`}
           >
-            รายละเอียดโรงงาน
-            <ArrowRightIcon className="w-3.5 h-3.5" />
+            <span>ทุกโรงงาน</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${!selectedFactory ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-500'}`}>
+              {factories.length}
+            </span>
           </button>
+          {factories.map((fName) => {
+            const isSel = selectedFactory === fName;
+            const eqCnt = equipmentCountByFactory.get(fName) || 0;
+            return (
+              <button
+                key={fName}
+                type="button"
+                onClick={() => setSelectedFactory(fName)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  isSel
+                    ? 'bg-[#0F2854] dark:bg-[#4988C4] text-white shadow-sm'
+                    : 'bg-white dark:bg-[#111F35] text-gray-600 dark:text-[#8CA3C0] hover:bg-gray-100 dark:hover:bg-white/10 border border-[#E4EBF6] dark:border-white/10'
+                }`}
+              >
+                <span>{fName}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${isSel ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-500'}`}>
+                  {eqCnt} เครื่อง
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Selected Factory Info Card */}
-      {selectedFactory && (
-        <Panel className="p-4 mb-4 bg-gradient-to-r from-[#0F2854] to-[#1C4D8D] text-white rounded-3xl shadow-md">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-white shrink-0">
-                <FactoryIcon className="w-5 h-5" />
+      {/* Selected Factory or All Sites Information Card */}
+      {selectedFactory ? (
+        <Panel className="p-5 mb-5 bg-gradient-to-br from-[#0F2854] via-[#15386B] to-[#1C4D8D] text-white rounded-3xl shadow-lg border border-white/10 relative overflow-hidden">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center text-white shrink-0 shadow-inner overflow-hidden">
+                {selectedFactoryMeta.image ? (
+                  <img src={selectedFactoryMeta.image} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <FactoryIcon className="w-6 h-6 text-[#38BDF8]" />
+                )}
               </div>
-              <div>
-                <p className="text-base font-extrabold text-white">{selectedFactory}</p>
-                <p className="text-xs text-white/70">
-                  {getFactoryMeta(selectedFactory, factoryRecords).province || 'ประเทศไทย'} · อุปกรณ์ลงทะเบียน {equipmentCountByFactory.get(selectedFactory) || 0} เครื่อง
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-lg sm:text-xl font-black text-white tracking-tight truncate">{selectedFactory}</h3>
+                  {selectedFactoryMeta.province && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/15 text-sky-200">
+                      <MapPinIcon className="w-3 h-3 text-[#38BDF8]" />
+                      {selectedFactoryMeta.province}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-white/70 mt-0.5 line-clamp-1">
+                  {selectedFactoryMeta.description || 'ข้อมูลสรุปสมรรถนะพลังงานและการตรวจวัดอุปกรณ์ประจำโรงงาน'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 text-xs border-t sm:border-t-0 sm:border-l border-white/15 pt-2 sm:pt-0 sm:pl-4">
-              <div>
-                <span className="text-white/60 block text-[11px]">มาตรการดำเนินการ</span>
-                <span className="font-extrabold text-white text-sm">{scopedMeasures.length} รายการ</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate('/equipment')}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition-all flex items-center gap-1.5"
+              >
+                <ClipboardIcon className="w-3.5 h-3.5 text-[#38BDF8]" />
+                อุปกรณ์ ({selectedFactoryEquipment.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/factories/${encodeURIComponent(selectedFactory)}`)}
+                className="px-3.5 py-2 rounded-xl bg-[#38BDF8] hover:bg-[#2EB0EA] text-[#0F2854] text-xs font-extrabold shadow-sm transition-all flex items-center gap-1.5"
+              >
+                <span>ดูโปรไฟล์โรงงาน</span>
+                <ArrowRightIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Factory Key Metrics Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-white/15">
+            <div className="rounded-2xl bg-white/10 backdrop-blur-xs p-3 border border-white/10">
+              <span className="text-[10px] text-white/60 font-semibold block uppercase tracking-wider">เครื่องจักรลงทะเบียน</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-lg font-black text-white">{selectedFactoryEquipment.length}</span>
+                <span className="text-xs text-white/70">เครื่อง</span>
               </div>
-              <div>
-                <span className="text-white/60 block text-[11px]">ผลประหยัดรวม</span>
-                <span className="font-extrabold text-emerald-400 text-sm">
-                  {scopedMeasures.reduce((s, m) => s + parseFloat(m.evalData?.energySaved || 0), 0).toLocaleString('th-TH', { maximumFractionDigits: 0 })} kWh
+            </div>
+
+            <div className="rounded-2xl bg-white/10 backdrop-blur-xs p-3 border border-white/10">
+              <span className="text-[10px] text-white/60 font-semibold block uppercase tracking-wider">กำลังติดตั้งรวม</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-lg font-black text-white">
+                  {totalInstalledPowerKw > 0 ? Math.round(totalInstalledPowerKw).toLocaleString() : '-'}
                 </span>
+                <span className="text-xs text-white/70">{totalInstalledPowerKw > 0 ? 'kW' : ''} {totalCoolingCapacityTR > 0 ? `(${totalCoolingCapacityTR} TR)` : ''}</span>
               </div>
+            </div>
+
+            <div className="rounded-2xl bg-white/10 backdrop-blur-xs p-3 border border-white/10">
+              <span className="text-[10px] text-white/60 font-semibold block uppercase tracking-wider">ค่าไฟฐานโรงงาน (Baseline)</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-lg font-black text-white">
+                  {selectedFactoryAnnualKWh > 0 ? `${(selectedFactoryAnnualKWh / 1000).toFixed(0)}k` : '-'}
+                </span>
+                <span className="text-xs text-white/70">{selectedFactoryAnnualKWh > 0 ? 'kWh/ปี' : 'ไม่มีบันทึก'}</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-emerald-500/20 backdrop-blur-xs p-3 border border-emerald-400/30">
+              <span className="text-[10px] text-emerald-300 font-semibold block uppercase tracking-wider">ผลประหยัดที่คาดการณ์</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-lg font-black text-emerald-300">
+                  {(totalSavingsKwh / 1000).toFixed(1)}
+                </span>
+                <span className="text-xs text-emerald-300/80">MWh/ปี</span>
+                {savingsPctOfFactory && (
+                  <span className="text-[10px] bg-emerald-400/30 text-emerald-200 px-1.5 py-0.5 rounded-full ml-auto font-bold">
+                    -{savingsPctOfFactory}%
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </Panel>
+      ) : (
+        <Panel className="p-5 mb-5 bg-white dark:bg-[#111F35] rounded-3xl border border-[#E4EBF6] dark:border-white/8 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-[#EEF3FB] dark:bg-white/10 flex items-center justify-center text-[#4988C4] shrink-0">
+                <FactoryIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
+                  ภาพรวมโรงงานทั้งหมด ({factories.length} ไซต์)
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-[#8CA3C0]">
+                  รวมข้อมูลเครื่องจักรและมาตรการอนุรักษ์พลังงานทุกโรงงานในความดูแล
+                </p>
+              </div>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/factories')}
+                className="px-4 py-2 rounded-full bg-[#0F2854] hover:bg-[#1C4D8D] dark:bg-white/10 dark:hover:bg-white/15 text-white text-xs font-bold transition-colors self-start sm:self-auto flex items-center gap-1.5"
+              >
+                <span>จัดการรายชื่อโรงงาน</span>
+                <ArrowRightIcon className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-[#EEF3FB] dark:border-white/8">
+            <div className="p-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5">
+              <span className="text-[10px] font-bold text-gray-500 dark:text-[#7E93AF] uppercase">โรงงานทั้งหมด</span>
+              <p className="text-lg font-black text-[#0F2854] dark:text-[#E7EEF7] mt-0.5">{factories.length} <span className="text-xs font-normal text-gray-400">แห่ง</span></p>
+            </div>
+            <div className="p-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5">
+              <span className="text-[10px] font-bold text-gray-500 dark:text-[#7E93AF] uppercase">อุปกรณ์ทั้งหมด</span>
+              <p className="text-lg font-black text-[#0F2854] dark:text-[#E7EEF7] mt-0.5">{allFactoriesTotalEquipment} <span className="text-xs font-normal text-gray-400">เครื่อง</span></p>
+            </div>
+            <div className="p-3 rounded-2xl bg-[#F4F7FC] dark:bg-white/5">
+              <span className="text-[10px] font-bold text-gray-500 dark:text-[#7E93AF] uppercase">กำลังติดตั้งรวม</span>
+              <p className="text-lg font-black text-[#0F2854] dark:text-[#E7EEF7] mt-0.5">{allFactoriesTotalPowerKw > 0 ? Math.round(allFactoriesTotalPowerKw).toLocaleString() : '-'} <span className="text-xs font-normal text-gray-400">kW</span></p>
+            </div>
+            <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20">
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">ผลประหยัดรวม</span>
+              <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{(allFactoriesTotalSavingsKwh / 1000).toFixed(1)} <span className="text-xs font-normal text-emerald-600/70">MWh/ปี</span></p>
             </div>
           </div>
         </Panel>
