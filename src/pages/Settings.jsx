@@ -50,30 +50,30 @@ function Settings() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-2xl lg:max-w-none lg:items-start">
 
         {/* โปรไฟล์ผู้ใช้งาน */}
-        <Panel className="p-5 order-1 lg:order-none">
+        <Panel className="p-5 order-1 lg:order-none lg:row-span-2 lg:self-stretch flex flex-col">
           <SectionHeader title={t.settings.userProfile} />
           <button
             type="button"
             onClick={() => navigate('/profile')}
-            className="w-full flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+            className="w-full flex items-center gap-3 text-left hover:opacity-80 transition-opacity lg:flex-1 lg:flex-col lg:items-center lg:justify-center lg:text-center lg:gap-4"
           >
             {session.photoURL ? (
-              <img src={session.photoURL} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+              <img src={session.photoURL} alt="" className="w-12 h-12 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl object-cover shrink-0" />
             ) : (
-              <span className="w-12 h-12 rounded-xl bg-[#1C4D8D] border border-[#38BDF8]/20 flex items-center justify-center text-white text-base font-bold shrink-0 font-mono">
+              <span className="w-12 h-12 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl bg-[#1C4D8D] border border-[#38BDF8]/20 flex items-center justify-center text-white text-base lg:text-3xl font-bold shrink-0 font-mono">
                 {initialsOf(session.name)}
               </span>
             )}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{session.name}</p>
-              <p className="text-xs text-[#4988C4] font-medium tracking-wide uppercase mt-0.5">{roleLabel}</p>
+            <div className="min-w-0 flex-1 lg:flex-none lg:w-full">
+              <p className="text-sm lg:text-lg font-bold text-[#0F2854] dark:text-[#E7EEF7]">{session.name}</p>
+              <p className="text-xs lg:text-sm text-[#4988C4] font-medium tracking-wide uppercase mt-0.5">{roleLabel}</p>
               {!isAdmin && (
                 <p className="text-[11px] text-gray-400 dark:text-[#7E93AF] mt-1">
                   {t.settings.responsibleFactories}: {(session.factories || []).length ? session.factories.join(', ') : t.settings.notAssignedYet}
                 </p>
               )}
             </div>
-            <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0" />
+            <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0 lg:hidden" />
           </button>
         </Panel>
 
@@ -124,7 +124,27 @@ function Settings() {
           </div>
         </Panel>
 
-        {/* จัดการโรงงาน / Admin Panel — เฉพาะ Admin; ทางเข้าหลักบนมือถือ (ไม่มีในแถบล่างแล้ว) */}
+        {/* Admin Panel / จัดการโรงงาน / หน่วยตรวจวัด — เฉพาะ Admin; ทางเข้าหลักบนมือถือ (ไม่มีในแถบล่างแล้ว) */}
+        {isAdmin && (
+          <Panel className="p-5 order-6 lg:order-none">
+            <SectionHeader title={t.adminPanel.pageTitle} />
+            <button
+              type="button"
+              onClick={() => navigate('/admin')}
+              className="w-full flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+            >
+              <div className="w-9 h-9 rounded-lg bg-red-500 flex items-center justify-center shrink-0">
+                <ShieldIcon className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.adminPanel.pageTitle}</p>
+                <p className="text-xs text-gray-400 dark:text-[#7E93AF]">{t.adminPanel.subtitle}</p>
+              </div>
+              <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0" />
+            </button>
+          </Panel>
+        )}
+
         {isAdmin && (
           <Panel className="p-5 order-5 lg:order-none">
             <SectionHeader title={t.settings.manageFactories} />
@@ -159,26 +179,6 @@ function Settings() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.units.pageTitle}</p>
                 <p className="text-xs text-gray-400 dark:text-[#7E93AF]">{t.units.subtitle}</p>
-              </div>
-              <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0" />
-            </button>
-          </Panel>
-        )}
-
-        {isAdmin && (
-          <Panel className="p-5 order-6 lg:order-none">
-            <SectionHeader title={t.adminPanel.pageTitle} />
-            <button
-              type="button"
-              onClick={() => navigate('/admin')}
-              className="w-full flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
-            >
-              <div className="w-9 h-9 rounded-lg bg-red-500 flex items-center justify-center shrink-0">
-                <ShieldIcon className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.adminPanel.pageTitle}</p>
-                <p className="text-xs text-gray-400 dark:text-[#7E93AF]">{t.adminPanel.subtitle}</p>
               </div>
               <ArrowRightIcon className="w-4 h-4 text-gray-300 dark:text-white/20 shrink-0" />
             </button>

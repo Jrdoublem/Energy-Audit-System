@@ -59,14 +59,30 @@ function MonthlyUsageChart({ data, lang }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [hoverIdx, setHoverIdx] = useState(null);
+  const svgRef = useRef(null);
+  const [box, setBox] = useState({ w: 900, h: 220 });
+
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w > 0 && h > 0) setBox({ w, h });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const values = data.map((d) => (d.value !== null && Number.isFinite(d.value) ? d.value : null));
   const validVals = values.filter((v) => v !== null);
   const maxVal = validVals.length > 0 ? Math.max(...validVals, 100) : 100;
   const niceMax = Math.ceil(maxVal * 1.15);
 
-  const W = 900;
-  const H = 220;
+  const W = box.w;
+  const H = box.h;
   const padL = 50;
   const padR = 25;
   const padT = 20;
@@ -98,7 +114,7 @@ function MonthlyUsageChart({ data, lang }) {
 
   return (
     <div className="w-full relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-72 overflow-visible">
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full h-56 lg:h-72 overflow-visible">
         <defs>
           <linearGradient id="facMonthlyGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#4988C4" stopOpacity="0.35" />
@@ -338,9 +354,25 @@ function FactoryDetail() {
         const suggested = catalogItems.find((c) => c.catId === eq.category) || null;
         const estCost = suggested?.costEst > 0 ? suggested.costEst : 1500000;
 
-        // Estimated savings if upgraded
-        const improvementPct = eq.category === 'chiller' ? 0.25 : 0.20;
-        const kwhSaved = kWhYear * improvementPct;
+        // Estimated savings if upgraded — for chillers, compute from the
+        // real kW/TR gap between this unit and the suggested catalog model
+        // (coolingCapacity(TR) x (currentKwPerTr - suggestedKwPerTr) x hours)
+        // when both efficiency figures are on record; otherwise fall back
+        // to a flat industry-typical improvement estimate.
+        const currentKwPerTr = parseFloat(eq.chillerEfficiency) || 0;
+        const suggestedKwPerTr = parseFloat(suggested?.specificPower) || 0;
+        const coolingCapacityTR = parseFloat(eq.coolingCapacity) || 0;
+        const hasRealEfficiencyData = eq.category === 'chiller'
+          && currentKwPerTr > 0 && suggestedKwPerTr > 0 && coolingCapacityTR > 0;
+
+        let kwhSaved;
+        if (hasRealEfficiencyData) {
+          const kwSaved = coolingCapacityTR * Math.max(currentKwPerTr - suggestedKwPerTr, 0);
+          kwhSaved = kwSaved * opHours;
+        } else {
+          const improvementPct = eq.category === 'chiller' ? 0.25 : 0.20;
+          kwhSaved = kWhYear * improvementPct;
+        }
         const bahtSaved = kwhSaved * electricityRate;
         const paybackYears = bahtSaved > 0 ? estCost / bahtSaved : null;
 
@@ -565,7 +597,7 @@ function FactoryDetail() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-1">
-                <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl">
+                <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl min-h-[104px] flex flex-col justify-center">
                   <span className="text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
                     {t.factories.activeEquipments}
                   </span>
@@ -574,7 +606,7 @@ function FactoryDetail() {
                   </span>
                 </div>
 
-                <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl">
+                <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl min-h-[104px] flex flex-col justify-center">
                   <span className="text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
                     {t.factories.inspectionsPerformed}
                   </span>
@@ -583,7 +615,7 @@ function FactoryDetail() {
                   </span>
                 </div>
 
-                <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl">
+                <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl min-h-[104px] flex flex-col justify-center">
                   <span className="text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
                     {t.factories.lastAuditDate}
                   </span>
@@ -592,7 +624,7 @@ function FactoryDetail() {
                   </span>
                 </div>
 
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl min-h-[104px] flex flex-col justify-center">
                   <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">
                     {t.factories.carbonSavingsPotential}
                   </span>
@@ -607,13 +639,15 @@ function FactoryDetail() {
             </div>
 
             {/* Right Progress Bars: Carbon share by category */}
-            <div className="w-full lg:w-80 bg-[#F4F7FC]/70 dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl p-5 flex flex-col justify-between shrink-0">
-              <div>
-                <h4 className="text-[10px] font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#4988C4] animate-ping" />
+            <div className="w-full lg:w-80 flex flex-col shrink-0 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-[#4988C4] rounded-full" />
+                <h4 className="text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                   {t.factories.carbonShareByType}
                 </h4>
+              </div>
 
+              <div className="flex-1 bg-[#F4F7FC]/70 dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl p-5 flex flex-col justify-center">
                 {categorySavingsBreakdown.length > 0 ? (
                   <div className="space-y-3.5">
                     {categorySavingsBreakdown.map((item) => {
@@ -642,9 +676,9 @@ function FactoryDetail() {
                     })}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-14 text-center text-xs text-gray-400 dark:text-[#7E93AF] italic">
+                  <p className="text-center text-xs text-gray-400 dark:text-[#7E93AF] italic">
                     {t.factories.noSavingsRecorded}
-                  </div>
+                  </p>
                 )}
               </div>
             </div>

@@ -265,6 +265,7 @@ export default function Report() {
         </span>
       }
       factoryRowBelowTitle
+      hideRoleBadgeMobile
       hideHeaderMobile={!!editingReport && !viewOnly}
     >
       <div className="flex flex-col gap-6 w-full">

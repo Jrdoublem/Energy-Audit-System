@@ -46,7 +46,7 @@ function useAnchoredRect(anchorRef, open) {
 // keyboard-nav, and option-list rendering ourselves.
 export function Select({
   value, onChange, options, placeholder = '', onOpen,
-  className = '', triggerClassName = '', panelClassName = '',
+  className = '', triggerClassName = '', panelClassName = '', icon = null,
 }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
@@ -94,6 +94,7 @@ export function Select({
         }}
         className={triggerClassName || 'flex items-center gap-1.5 w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-[#C3D2E5]'}
       >
+        {icon}
         <span className="truncate">{selected?.label ?? placeholder}</span>
         <ChevronDownIcon className={`w-3.5 h-3.5 shrink-0 ml-auto transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>

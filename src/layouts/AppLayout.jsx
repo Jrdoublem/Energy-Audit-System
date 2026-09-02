@@ -19,6 +19,7 @@ import {
   ClockIcon,
   CloseIcon,
   DocumentIcon,
+  FactoryIcon,
   GearIcon,
   HomeIcon,
   LogoutIcon,
@@ -37,7 +38,7 @@ function getInitialCollapsed() {
 export function RoleBadge({ role, stretch = false, size = 'sm' }) {
   if (size === 'sm') {
     return (
-      <div className="inline-flex items-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full px-2.5 py-1 text-xs font-semibold text-[#0F2854]/80 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm shrink-0">
+      <div className={`inline-flex items-center justify-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full px-2.5 py-1 text-xs font-semibold text-[#0F2854]/80 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm ${stretch ? 'flex-1' : 'shrink-0'}`}>
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
         <span className="truncate">{role}</span>
       </div>
@@ -51,7 +52,7 @@ export function RoleBadge({ role, stretch = false, size = 'sm' }) {
   );
 }
 
-export function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role, t, stretch = false }) {
+export function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role, t, stretch = false, emphasize = false }) {
   // An engineer assigned to 0-1 factories has nothing to switch between —
   // show it as a plain badge instead of a dropdown with a single option.
   if (role === 'engineer' && factories.length <= 1) {
@@ -69,8 +70,13 @@ export function FactorySelect({ selectedFactory, setSelectedFactory, refreshFact
       onOpen={refreshFactories}
       options={[{ value: '', label: allLabel }, ...factories.map((f) => ({ value: f, label: f }))]}
       className={stretch ? 'flex-1 lg:flex-none lg:shrink-0' : 'shrink-0'}
-      triggerClassName={`flex items-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full pl-3.5 pr-3 py-2 text-sm font-medium text-[#0F2854]/90 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm transition-colors ${stretch ? 'w-full justify-center lg:w-auto lg:max-w-[11rem]' : 'max-w-[11rem]'}`}
+      triggerClassName={
+        emphasize
+          ? `flex items-center gap-1.5 bg-[#EAF4FC] dark:bg-[#4988C4]/15 rounded-full pl-3.5 pr-3 py-2 text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7] border-2 border-[#4988C4]/50 shadow-sm ring-2 ring-[#4988C4]/15 transition-colors ${stretch ? 'w-full justify-center lg:w-auto lg:max-w-[13rem]' : 'max-w-[13rem]'}`
+          : `flex items-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full pl-3.5 pr-3 py-2 text-sm font-medium text-[#0F2854]/90 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm transition-colors ${stretch ? 'w-full justify-center lg:w-auto lg:max-w-[11rem]' : 'max-w-[11rem]'}`
+      }
       panelClassName="min-w-[11rem]"
+      icon={emphasize ? <FactoryIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" /> : undefined}
     />
   );
 }
@@ -140,7 +146,7 @@ function AppLayout({
   title, actions, children, hideHeader = false, hideHeaderMobile = false, fullBleed = false, hideFactorySelect = false,
   mobileHeaderRight = false, mobileHeaderCenter = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
   hideRoleBadge = false, hideRoleBadgeMobile = hideRoleBadge, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
-  roleBadgeByAvatar = false, factoryBeforeRole = false, beforeFactorySlot = null,
+  roleBadgeByAvatar = false, factoryBeforeRole = false, beforeFactorySlot = null, emphasizeFactorySelect = false,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -284,6 +290,7 @@ function AppLayout({
           )}
         </button>
 
+        <div className="flex flex-col gap-1.5">
         {/* User account card — desktop: jumps straight to Profile (logout
             already has its own dedicated button lower in the sidebar, so no
             dropdown/menu is needed here). */}
@@ -291,7 +298,7 @@ function AppLayout({
           type="button"
           onClick={() => navigate('/profile')}
           title={collapsed ? session.name : undefined}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 mb-5 rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] hover:from-white/10 hover:to-white/[0.04] border border-white/10 shadow-sm transition-colors text-left ${
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] hover:from-white/10 hover:to-white/[0.04] border border-white/10 shadow-sm transition-colors text-left ${
             collapsed ? 'justify-center' : ''
           }`}
         >
@@ -312,8 +319,6 @@ function AppLayout({
             </div>
           )}
         </button>
-
-        <div className="h-px bg-white/8 mb-3" />
 
         <nav className="flex flex-col gap-1.5">
           {visibleNavItems.map(({ to, labelKey, icon: Icon, countKey }) => {
@@ -366,13 +371,14 @@ function AppLayout({
           type="button"
           onClick={() => navigate('/equipment', { state: { openAdd: true } })}
           title={collapsed ? t.nav.newMeasurement : undefined}
-          className={`mt-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 hover:bg-[#38BDF8]/8 text-[#38BDF8] text-base font-semibold transition-all ${
+          className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 hover:bg-[#38BDF8]/8 text-[#38BDF8] text-base font-semibold transition-all ${
             collapsed ? '' : 'mx-1'
           }`}
         >
           <PlusIcon className="w-4 h-4 shrink-0" />
           {!collapsed && t.nav.newMeasurement}
         </button>
+        </div>
 
         <div className="flex-1" />
 
@@ -444,6 +450,7 @@ function AppLayout({
                   factories={factories}
                   role={session.role}
                   t={t}
+                  emphasize={emphasizeFactorySelect}
                 />
               );
               return factoryBeforeRole ? <>{factoryEl}{roleEl}</> : <>{roleEl}{factoryEl}</>;
@@ -506,6 +513,7 @@ function AppLayout({
 
         {factoryRowBelowTitle && !hideHeaderMobile && !hideFactorySelect && (
           <div className="flex lg:hidden w-full max-w-md items-center gap-2 px-6 pb-2 -mt-[10px]">
+            {hideRoleBadgeMobile && <RoleBadge role={roleLabel} size="md" stretch />}
             <FactorySelect
               selectedFactory={selectedFactory}
               setSelectedFactory={setSelectedFactory}

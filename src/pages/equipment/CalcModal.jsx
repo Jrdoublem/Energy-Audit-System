@@ -217,16 +217,6 @@ export default function CalcModal({ item, onClose }) {
       }
       const condApproach_F = T_cond_F != null && T_condOut_F != null ? T_cond_F - T_condOut_F : null;
 
-      let etaCarnot = null;
-      if (COP != null && T_evap_F != null && T_cond_F != null) {
-        const T_evap_K = ((T_evap_F - 32) * 5) / 9 + 273.15;
-        const T_cond_K = ((T_cond_F - 32) * 5) / 9 + 273.15;
-        if (T_cond_K > T_evap_K) {
-          const COP_carnot = T_evap_K / (T_cond_K - T_evap_K);
-          etaCarnot = (COP / COP_carnot) * 100;
-        }
-      }
-
       const grade =
         kWperTR == null ? null : kWperTR < 0.8 ? 'good' : kWperTR <= 1.0 ? 'ok' : 'poor';
       const fmt = (v, d = 2) => (v == null ? '-' : v.toFixed(d));
@@ -256,7 +246,6 @@ export default function CalcModal({ item, onClose }) {
             ? [{ key: 'ultraflowSonic', label: 'Ultraflow Sonic', value: String(flowVal), unit: flowUnit || 'GPM' }]
             : []),
           { key: 'qRej', label: 'Heat Rejection', value: fmt(Q_rej_kW), unit: 'kW' },
-          { key: 'etaCarnot', label: 'η Carnot', value: fmt(etaCarnot, 1), unit: '%' },
         ],
         ultraflowSonic: flowVal != null && !Number.isNaN(flowVal) ? flowVal : null,
         flowUnit: flowUnit || 'GPM',

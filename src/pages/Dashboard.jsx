@@ -651,7 +651,7 @@ function Dashboard() {
   const { t } = useLang();
   const isAdmin = getSession().role === 'admin';
 
-  const { factories, selectedFactory, setSelectedFactory, allowedFactories, factoryRecords = [] } = useFactory();
+  const { factories, selectedFactory, allowedFactories, factoryRecords = [] } = useFactory();
 
   const [presenting, setPresenting] = useState(false);
   const enterPresentation = () => {
@@ -676,12 +676,6 @@ function Dashboard() {
 
   const [defaultOperatingHours, setDefaultOperatingHours] = useState('8000');
   useEffect(() => { fetchSettings().then((s) => setDefaultOperatingHours(s.defaultOperatingHours)).catch(() => {}); }, []);
-
-  const equipmentCountByFactory = useMemo(() => {
-    const counts = new Map();
-    equipment.forEach((e) => counts.set(e.factory, (counts.get(e.factory) || 0) + 1));
-    return counts;
-  }, [equipment]);
 
   const selectedFactoryRecord = useMemo(
     () => (selectedFactory ? factoryRecords.find((f) => f.name === selectedFactory) : null) || {},
@@ -938,6 +932,7 @@ function Dashboard() {
       factoryBeforeRole
       hideRoleBadgeMobile
       roleBadgeByAvatar
+      emphasizeFactorySelect
       beforeFactorySlot={
         <div className="hidden lg:flex items-center gap-1.5 p-1 bg-white dark:bg-[#111F35] rounded-full border border-[#E4EBF6] dark:border-white/10 shadow-sm">
           <button
@@ -1005,51 +1000,6 @@ function Dashboard() {
         </>
       }
     >
-      {/* Interactive Factory Quick Switcher Pills */}
-      {factories.length > 0 && (
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 no-scrollbar">
-          <span className="text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider shrink-0 flex items-center gap-1.5 mr-1">
-            <FactoryIcon className="w-3.5 h-3.5 text-[#4988C4]" />
-            เลือกโรงงาน:
-          </span>
-          <button
-            type="button"
-            onClick={() => setSelectedFactory('')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-              !selectedFactory
-                ? 'bg-[#0F2854] dark:bg-[#4988C4] text-white shadow-sm'
-                : 'bg-white dark:bg-[#111F35] text-gray-600 dark:text-[#8CA3C0] hover:bg-gray-100 dark:hover:bg-white/10 border border-[#E4EBF6] dark:border-white/10'
-            }`}
-          >
-            <span>ทุกโรงงาน</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${!selectedFactory ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-500'}`}>
-              {factories.length}
-            </span>
-          </button>
-          {factories.map((fName) => {
-            const isSel = selectedFactory === fName;
-            const eqCnt = equipmentCountByFactory.get(fName) || 0;
-            return (
-              <button
-                key={fName}
-                type="button"
-                onClick={() => setSelectedFactory(fName)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                  isSel
-                    ? 'bg-[#0F2854] dark:bg-[#4988C4] text-white shadow-sm'
-                    : 'bg-white dark:bg-[#111F35] text-gray-600 dark:text-[#8CA3C0] hover:bg-gray-100 dark:hover:bg-white/10 border border-[#E4EBF6] dark:border-white/10'
-                }`}
-              >
-                <span>{fName}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${isSel ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-500'}`}>
-                  {eqCnt} เครื่อง
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* Selected Factory or All Sites Information Card */}
       {selectedFactory ? (
         <Panel className="p-5 mb-5 bg-gradient-to-br from-[#0F2854] via-[#15386B] to-[#1C4D8D] text-white rounded-3xl shadow-lg border border-white/10 relative overflow-hidden">
@@ -1078,11 +1028,11 @@ function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
               <button
                 type="button"
                 onClick={() => navigate('/equipment')}
-                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition-all flex items-center gap-1.5"
+                className="flex-1 lg:flex-none px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition-all flex items-center justify-center gap-1.5"
               >
                 <ClipboardIcon className="w-3.5 h-3.5 text-[#38BDF8]" />
                 อุปกรณ์ ({selectedFactoryEquipment.length})
@@ -1090,7 +1040,7 @@ function Dashboard() {
               <button
                 type="button"
                 onClick={() => navigate(`/factories/${encodeURIComponent(selectedFactory)}`)}
-                className="px-3.5 py-2 rounded-xl bg-[#38BDF8] hover:bg-[#2EB0EA] text-[#0F2854] text-xs font-extrabold shadow-sm transition-all flex items-center gap-1.5"
+                className="flex-1 lg:flex-none px-3.5 py-2 rounded-xl bg-[#38BDF8] hover:bg-[#2EB0EA] text-[#0F2854] text-xs font-extrabold shadow-sm transition-all flex items-center justify-center gap-1.5"
               >
                 <span>ดูโปรไฟล์โรงงาน</span>
                 <ArrowRightIcon className="w-3.5 h-3.5" />
@@ -1195,12 +1145,12 @@ function Dashboard() {
       )}
 
       {/* Quick Measure Status Filter: Mobile Only (Desktop version moved to actions prop) */}
-      <div className="flex lg:hidden items-center justify-between flex-wrap gap-2 mb-4">
-        <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-[#111F35] rounded-full border border-[#E4EBF6] dark:border-white/10 shadow-sm w-full sm:w-auto overflow-x-auto">
+      <div className="flex lg:hidden items-center justify-between flex-wrap gap-2 mb-4 min-w-0">
+        <div className="grid grid-cols-3 gap-1 p-1 bg-white dark:bg-[#111F35] rounded-full border border-[#E4EBF6] dark:border-white/10 shadow-sm w-full sm:w-auto min-w-0">
           <button
             type="button"
             onClick={() => setMeasureStatusFilter('all')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
+            className={`px-1.5 py-1.5 rounded-full text-[10px] font-bold transition-all truncate ${
               measureStatusFilter === 'all'
                 ? 'bg-[#0F2854] text-white shadow-sm'
                 : 'text-gray-600 dark:text-[#8CA3C0] hover:text-[#0F2854]'
@@ -1211,26 +1161,26 @@ function Dashboard() {
           <button
             type="button"
             onClick={() => setMeasureStatusFilter('potential')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
+            className={`flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-full text-[10px] font-bold transition-all truncate ${
               measureStatusFilter === 'potential'
                 ? 'bg-blue-100 text-blue-800 shadow-sm'
                 : 'text-gray-600 dark:text-[#8CA3C0] hover:text-blue-600'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-            ศักยภาพ ({potentialCount})
+            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
+            <span className="truncate">ศักยภาพ ({potentialCount})</span>
           </button>
           <button
             type="button"
             onClick={() => setMeasureStatusFilter('implemented')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
+            className={`flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-full text-[10px] font-bold transition-all truncate ${
               measureStatusFilter === 'implemented'
                 ? 'bg-emerald-100 text-emerald-800 shadow-sm'
                 : 'text-gray-600 dark:text-[#8CA3C0] hover:text-emerald-600'
             }`}
           >
-            <CheckIcon className="w-3.5 h-3.5" />
-            ดำเนินการจริง ({implementedCount})
+            <CheckIcon className="w-3 h-3 shrink-0" />
+            <span className="truncate">ดำเนินการจริง ({implementedCount})</span>
           </button>
         </div>
       </div>
