@@ -223,9 +223,23 @@ function History() {
         </div>
       ) : (
         <div className="flex flex-col min-h-screen">
-          <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-[2px]">
-            <div className="w-full flex justify-center lg:justify-start items-center gap-2">
-              <RoleBadge role={roleLabel} stretch />
+          <div className="relative">
+            <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-[2px] lg:pb-2">
+              <div className="w-full flex justify-center lg:hidden items-center gap-2">
+                <RoleBadge role={roleLabel} stretch />
+                <FactorySelect
+                  selectedFactory={selectedFactory}
+                  setSelectedFactory={setSelectedFactory}
+                  refreshFactories={refreshFactories}
+                  factories={factories}
+                  role={session.role}
+                  t={t}
+                  stretch
+                />
+              </div>
+            </PageHeader>
+            <div className="hidden lg:flex items-center gap-3 absolute top-8 right-10">
+              <RoleBadge role={roleLabel} size="md" />
               <FactorySelect
                 selectedFactory={selectedFactory}
                 setSelectedFactory={setSelectedFactory}
@@ -233,13 +247,12 @@ function History() {
                 factories={factories}
                 role={session.role}
                 t={t}
-                stretch
               />
             </div>
-          </PageHeader>
+          </div>
 
           {/* ── Filter & Search Controls ── */}
-          <div className="px-5 pt-4 pb-2 space-y-3">
+          <div className="px-5 pt-4 lg:pt-1 pb-2 space-y-3">
             {/* Filter Tabs */}
             <div className="w-full flex items-stretch gap-1.5 bg-white dark:bg-[#111F35] p-1.5 rounded-2xl border border-[#E4EBF6] dark:border-white/10 shadow-sm">
               <button
@@ -296,6 +309,7 @@ function History() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <GlassSearchInput value={search} onChange={setSearch} placeholder={t.history.searchPlaceholder} />
               <GlassSelect value={filterMonth} onChange={setFilterMonth}>
                 <option value="" className="text-gray-800">{t.history.allMonths}</option>
                 {t.history.months.map((m, i) => (
@@ -318,8 +332,6 @@ function History() {
                 </button>
               )}
             </div>
-
-            <GlassSearchInput value={search} onChange={setSearch} placeholder={t.history.searchPlaceholder} className="w-full" />
           </div>
 
         {/* ── Content ── */}

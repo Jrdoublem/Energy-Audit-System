@@ -52,7 +52,7 @@ export function RoleBadge({ role, stretch = false, size = 'sm' }) {
   );
 }
 
-export function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role, t, stretch = false, emphasize = false }) {
+export function FactorySelect({ selectedFactory, setSelectedFactory, refreshFactories, factories, role, t, stretch = false, emphasize = false, showIcon = false }) {
   // An engineer assigned to 0-1 factories has nothing to switch between —
   // show it as a plain badge instead of a dropdown with a single option.
   if (role === 'engineer' && factories.length <= 1) {
@@ -76,7 +76,11 @@ export function FactorySelect({ selectedFactory, setSelectedFactory, refreshFact
           : `flex items-center gap-1.5 bg-white dark:bg-[#111F35] rounded-full pl-3.5 pr-3 py-2 text-sm font-medium text-[#0F2854]/90 dark:text-[#C3D2E5] border border-[#0F2854]/10 dark:border-white/10 shadow-sm transition-colors ${stretch ? 'w-full justify-center lg:w-auto lg:max-w-[11rem]' : 'max-w-[11rem]'}`
       }
       panelClassName="min-w-[11rem]"
-      icon={emphasize ? <FactoryIcon className="w-3.5 h-3.5 text-[#4988C4] shrink-0" /> : undefined}
+      icon={
+        (emphasize || showIcon)
+          ? <FactoryIcon className={`w-3.5 h-3.5 shrink-0 ${emphasize ? 'text-[#4988C4]' : 'text-[#0F2854]/50 dark:text-[#C3D2E5]/60'}`} />
+          : undefined
+      }
     />
   );
 }
@@ -522,6 +526,7 @@ function AppLayout({
               t={t}
               role={session.role}
               stretch
+              showIcon={emphasizeFactorySelect}
             />
           </div>
         )}

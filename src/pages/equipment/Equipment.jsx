@@ -395,6 +395,7 @@ function Equipment() {
         </span>
       }
       factoryRowBelowTitle
+      hideHeaderMobile={modal === 'add' || modal === 'calc'}
     >
       {savedToast && (
         <div
