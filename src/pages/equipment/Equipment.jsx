@@ -395,6 +395,7 @@ function Equipment() {
         </span>
       }
       factoryRowBelowTitle
+      hideRoleBadgeMobile
       hideHeaderMobile={modal === 'add' || modal === 'calc'}
     >
       {savedToast && (
@@ -587,7 +588,7 @@ function Equipment() {
                 value={sortOrder}
                 onChange={setSortOrder}
                 options={sortOptions}
-                triggerClassName="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-xs font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                triggerClassName="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-sm font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 panelClassName="min-w-[11rem]"
               />
             </div>
@@ -601,7 +602,7 @@ function Equipment() {
                 value={sortOrder}
                 onChange={setSortOrder}
                 options={sortOptions}
-                triggerClassName="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-xs font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
+                triggerClassName="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-[#111F35] border border-[#E4EBF6] dark:border-white/10 text-sm font-semibold text-gray-700 dark:text-[#C3D2E5] focus:outline-none focus:ring-2 focus:ring-[#4988C4]"
                 panelClassName="min-w-[11rem]"
               />
             </div>

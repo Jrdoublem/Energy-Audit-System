@@ -224,9 +224,9 @@ function History() {
       ) : (
         <div className="flex flex-col min-h-screen">
           <div className="relative">
-            <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-[2px] lg:pb-2">
+            <PageHeader title={t.history.pageTitle} subtitle={t.history.subtitle} className="-mt-6 lg:-mt-[2px] pb-2">
               <div className="w-full flex justify-center lg:hidden items-center gap-2">
-                <RoleBadge role={roleLabel} stretch />
+                <RoleBadge role={roleLabel} size="md" stretch />
                 <FactorySelect
                   selectedFactory={selectedFactory}
                   setSelectedFactory={setSelectedFactory}
@@ -252,7 +252,7 @@ function History() {
           </div>
 
           {/* ── Filter & Search Controls ── */}
-          <div className="px-5 pt-4 lg:pt-1 pb-2 space-y-3">
+          <div className="px-5 pt-1 pb-2 space-y-3">
             {/* Filter Tabs */}
             <div className="w-full flex items-stretch gap-1.5 bg-white dark:bg-[#111F35] p-1.5 rounded-2xl border border-[#E4EBF6] dark:border-white/10 shadow-sm">
               <button

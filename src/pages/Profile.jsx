@@ -121,7 +121,7 @@ function Profile() {
   };
 
   return (
-    <AppLayout title={t.profile.pageTitle} hideFactorySelect factoryRowBelowTitle>
+    <AppLayout title={t.profile.pageTitle} hideFactorySelect factoryRowBelowTitle hideRoleBadgeMobile>
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-5 max-w-2xl lg:max-w-none">
 
         <Panel className="p-5 flex flex-col">

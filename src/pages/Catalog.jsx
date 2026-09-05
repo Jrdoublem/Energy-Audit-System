@@ -796,20 +796,20 @@ function Catalog() {
           </div>
         ) : (
           <>
-            <div className="lg:hidden flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/5 p-1">
+            <div className="lg:hidden flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => navigate('/equipment')}
-                className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap text-gray-500 dark:text-[#7E93AF]"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-white/10 border border-[#E4EBF6] dark:border-white/10 text-[#0F2854] dark:text-[#E7EEF7] hover:bg-gray-50 dark:hover:bg-white/15 text-sm font-bold transition-colors"
               >
-                <ClipboardIcon className="w-3.5 h-3.5 shrink-0" />
+                <ClipboardIcon className="w-4 h-4 shrink-0" />
                 <span className="truncate">{t.equipment.pageTitle}</span>
               </button>
               <button
                 type="button"
-                className="flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-lg text-xs font-semibold whitespace-nowrap bg-white dark:bg-[#111F35] text-[#0F2854] dark:text-[#E7EEF7] shadow-sm"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all"
               >
-                <BoxIcon className="w-3.5 h-3.5 shrink-0" />
+                <BoxIcon className="w-4 h-4 shrink-0" />
                 <span className="truncate">{t.catalog.pageTitle}</span>
               </button>
             </div>
