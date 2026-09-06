@@ -4,6 +4,7 @@ import companyLogo from '../../assets/Logo.png';
 import { useLang } from '../../context/languageStore.js';
 import { LangToggle } from './LangToggle.jsx';
 import { login } from '../../context/authStore.js';
+import { useBodyClass } from '../../utils/useBodyClass.js';
 
 function useClock() {
   const [time, setTime] = useState(() => new Date());
@@ -35,6 +36,7 @@ function Login() {
   const [error, setError] = useState('');
   const { lang, setLang, t } = useLang();
   const clock = useClock();
+  useBodyClass('bg-animated-gradient');
 
   const [loggingIn, setLoggingIn] = useState(false);
 

@@ -720,32 +720,20 @@ export default function Report() {
               <button
                 type="button"
                 onClick={handleNewReport}
-                className="hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
               >
                 <PlusIcon className="w-4 h-4" />
-                สร้างรายงานใหม่
+                <span className="hidden sm:inline">สร้างรายงานใหม่</span>
+                <span className="sm:hidden">สร้าง</span>
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={handleNewReport}
-              title="สร้างรายงานใหม่"
-              className="lg:hidden fixed right-4 sm:right-6 bottom-32 z-30 w-14 h-14 rounded-full bg-[#0F2854] hover:bg-[#1C4D8D] text-white shadow-lg shadow-[#0F2854]/30 active:scale-95 transition-all flex items-center justify-center"
-            >
-              <PlusIcon className="w-6 h-6" />
-            </button>
 
             {/* Reports List */}
             {filteredReports.length === 0 ? (
               <Panel className="p-12 text-center text-sm text-gray-400 dark:text-[#7E93AF] rounded-3xl">
                 <ClipboardIcon className="w-10 h-10 mx-auto mb-2 text-[#0F2854]/20 dark:text-[#7E93AF]/30" />
                 <p>ยังไม่มีรายงานผลการตรวจวิเคราะห์</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  สามารถสร้างรายงานได้จากการคำนวณและเลือกมาตรการในหน้าประวัติ หรือกดปุ่ม
-                  <span className="hidden lg:inline"> "สร้างรายงานใหม่" ด้านบน</span>
-                  <span className="lg:hidden"> + มุมล่างขวา</span>
-                </p>
+                <p className="text-xs text-gray-400 mt-1">สามารถสร้างรายงานได้จากการคำนวณและเลือกมาตรการในหน้าประวัติ หรือกดปุ่ม "สร้างรายงานใหม่" ด้านบน</p>
               </Panel>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

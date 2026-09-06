@@ -4,12 +4,14 @@ import companyLogo from '../../assets/Logo.png';
 import { useLang } from '../../context/languageStore.js';
 import { LangToggle } from './LangToggle.jsx';
 import { ArrowRightIcon } from '../../components/icons';
+import { useBodyClass } from '../../utils/useBodyClass.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function ForgotPassword() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLang();
+  useBodyClass('bg-animated-gradient');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import companyLogo from '../../assets/Logo.png';
 import { useLang } from '../../context/languageStore.js';
 import { LangToggle } from './LangToggle.jsx';
+import { useBodyClass } from '../../utils/useBodyClass.js';
 
 const RESEND_SECONDS = 60;
 
@@ -20,6 +21,7 @@ function Verify() {
   const location = useLocation();
   const clock = useClock();
   const { lang, setLang, t } = useLang();
+  useBodyClass('bg-animated-gradient');
   const nextPage = location.state?.next || '/login';
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');

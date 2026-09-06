@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import companyLogo from '../../assets/Logo.png';
 import { useLang } from '../../context/languageStore.js';
 import { LangToggle } from './LangToggle.jsx';
+import { useBodyClass } from '../../utils/useBodyClass.js';
 
 function useClock() {
   const [time, setTime] = useState(() => new Date());
@@ -17,6 +18,7 @@ function ResetPassword() {
   const navigate = useNavigate();
   const clock = useClock();
   const { lang, setLang, t } = useLang();
+  useBodyClass('bg-animated-gradient');
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showToast, setShowToast] = useState(false);

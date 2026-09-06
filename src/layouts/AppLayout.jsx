@@ -9,6 +9,7 @@ import { fetchAllReports } from '../context/reportsStore.js';
 import { fetchAllHistory } from '../context/historyStore.js';
 import { useTheme } from '../context/themeStore.js';
 import { useLang } from '../context/languageStore.js';
+import { useBodyClass } from '../utils/useBodyClass.js';
 import { Select } from '../components/Dropdown.jsx';
 import {
   BoxIcon,
@@ -148,6 +149,7 @@ function NavBadge({ count, active }) {
 
 function AppLayout({
   title, actions, children, hideHeader = false, hideHeaderMobile = false, fullBleed = false, hideFactorySelect = false,
+  hideFactorySelectMobile = false,
   mobileHeaderRight = false, mobileHeaderCenter = false, topSlot = null, mobileRailOffset = false, factoryRowBelowTitle = false,
   hideRoleBadge = false, hideRoleBadgeMobile = hideRoleBadge, showFactoryPill = !hideFactorySelect, factoryPillAlign = 'center',
   roleBadgeByAvatar = false, factoryBeforeRole = false, beforeFactorySlot = null, emphasizeFactorySelect = false,
@@ -167,6 +169,13 @@ function AppLayout({
   useEffect(() => {
     setMoreOpen(false);
   }, [location.pathname]);
+
+  // <html>/<body> default to the dark login-screen navy (see index.css) so the
+  // unauthenticated auth pages look right without their own fix-up. That
+  // color peeks through during elastic overscroll on this light app shell,
+  // showing as a mismatched flash at the top/bottom edge while scrolling —
+  // put the same gradient on <body> itself while this layout is mounted.
+  useBodyClass('bg-shell-gradient');
 
   // When the role badge/factory row sits below the title (mobile), it
   // scrolls out of view with the page content — this small pill fades in
@@ -419,7 +428,7 @@ function AppLayout({
       >
         {/* Persistent factory selector — mobile: when !factoryRowBelowTitle and !hideFactorySelect */}
         {!factoryRowBelowTitle && !hideFactorySelect && (
-          <div className={`${hideHeader ? 'flex lg:absolute lg:z-20 lg:top-6 lg:right-10 lg:w-auto lg:max-w-none' : 'flex lg:hidden'} ${mobileHeaderRight ? 'justify-end' : mobileHeaderCenter ? 'justify-center' : ''} w-full max-w-md items-center gap-2 px-6 pt-4`}>
+          <div className={`${hideHeader ? `${hideFactorySelectMobile ? 'hidden' : 'flex'} lg:absolute lg:z-20 lg:top-6 lg:right-10 lg:w-auto lg:max-w-none` : 'flex lg:hidden'} ${mobileHeaderRight ? 'justify-end' : mobileHeaderCenter ? 'justify-center' : ''} w-full max-w-md items-center gap-2 px-6 pt-4`}>
             <FactorySelect
               selectedFactory={selectedFactory}
               setSelectedFactory={setSelectedFactory}

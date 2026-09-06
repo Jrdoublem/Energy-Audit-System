@@ -59,16 +59,44 @@ function MonthlyUsageChart({ data, lang }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [hoverIdx, setHoverIdx] = useState(null);
+  const viewportRef = useRef(null);
+  const scrollBoxRef = useRef(null);
   const svgRef = useRef(null);
-  const [box, setBox] = useState({ w: 900, h: 220 });
+  const [viewportW, setViewportW] = useState(900);
+  const [svgH, setSvgH] = useState(220);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      if (w > 0) setViewportW(w);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // The horizontal scroll container clips anything overflowing it — including
+  // the tooltip, which floats above its anchor point. Rendering the tooltip
+  // as a sibling outside that container avoids the clip, but then its
+  // position has to be corrected for however far the chart has been scrolled.
+  useEffect(() => {
+    const el = scrollBoxRef.current;
+    if (!el) return undefined;
+    const onScroll = () => setScrollLeft(el.scrollLeft);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const el = svgRef.current;
     if (!el) return;
     const update = () => {
-      const w = el.clientWidth;
       const h = el.clientHeight;
-      if (w > 0 && h > 0) setBox({ w, h });
+      if (h > 0) setSvgH(h);
     };
     update();
     const ro = new ResizeObserver(update);
@@ -81,8 +109,16 @@ function MonthlyUsageChart({ data, lang }) {
   const maxVal = validVals.length > 0 ? Math.max(...validVals, 100) : 100;
   const niceMax = Math.ceil(maxVal * 1.15);
 
-  const W = box.w;
-  const H = box.h;
+  // On a wide-enough screen all 12 months fit legibly at their natural
+  // spacing. Once that spacing would drop below ~40px/month (narrow mobile),
+  // switch to a horizontally scrollable chart sized so ~4 months fill the
+  // visible width at a time, rather than cramming all 12 in place.
+  const VISIBLE_MONTHS = 4;
+  const MIN_PX_PER_POINT = 40;
+  const naturalPxPerPoint = viewportW / Math.max(data.length - 1, 1);
+  const needsScroll = naturalPxPerPoint < MIN_PX_PER_POINT;
+  const W = needsScroll ? (viewportW / VISIBLE_MONTHS) * (data.length - 1) : viewportW;
+  const H = svgH;
   const padL = 50;
   const padR = 25;
   const padT = 20;
@@ -113,8 +149,15 @@ function MonthlyUsageChart({ data, lang }) {
   const textColor = isDark ? '#7E93AF' : '#8CA3C0';
 
   return (
-    <div className="w-full relative">
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full h-56 lg:h-72 overflow-visible">
+    <div ref={viewportRef} className="w-full">
+      <div className={needsScroll ? 'overflow-x-auto -mx-1 px-1' : ''}>
+      <div className="relative" style={needsScroll ? { width: W } : undefined}>
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        style={needsScroll ? { width: W } : undefined}
+        className={`h-56 lg:h-72 overflow-visible ${needsScroll ? '' : 'w-full'}`}
+      >
         <defs>
           <linearGradient id="facMonthlyGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#4988C4" stopOpacity="0.35" />
@@ -169,7 +212,8 @@ function MonthlyUsageChart({ data, lang }) {
         ))}
       </svg>
 
-      {/* Floating Tooltip */}
+      {/* Floating Tooltip — lives in the same (scrolling) coordinate space as
+          the svg so its percentage-based position stays aligned while scrolled */}
       {hoverIdx !== null && points[hoverIdx]?.y !== null && (
         <div
           className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-full mb-2 bg-[#0F2854] dark:bg-[#1C4D8D] text-white text-xs font-mono px-3 py-1.5 rounded-xl shadow-lg border border-white/10"
@@ -181,6 +225,11 @@ function MonthlyUsageChart({ data, lang }) {
           <p className="text-[10px] text-sky-200">{points[hoverIdx].name}</p>
           <p className="font-bold">{fmt(points[hoverIdx].val)} kWh</p>
         </div>
+      )}
+      </div>
+      </div>
+      {needsScroll && (
+        <p className="text-[10px] text-gray-400 dark:text-[#7E93AF] text-center mt-1">{lang === 'th' ? 'เลื่อนซ้าย-ขวาเพื่อดูเดือนอื่น' : 'Scroll to see more months'}</p>
       )}
     </div>
   );
@@ -506,7 +555,7 @@ function FactoryDetail() {
   };
 
   return (
-    <AppLayout hideHeader fullBleed>
+    <AppLayout hideHeader fullBleed hideFactorySelectMobile>
       <div className="flex flex-col min-h-screen">
         {/* Header */}
         <div className="px-5 lg:px-10 pt-14 lg:pt-8 pb-5 flex flex-wrap items-center justify-between gap-4 border-b border-[#EEF3FB] dark:border-white/10 bg-white/80 dark:bg-[#111F35]/80 backdrop-blur-md sticky top-0 z-30">
@@ -540,7 +589,7 @@ function FactoryDetail() {
                   </button>
                 )}
               </div>
-              <p className="text-xs text-[#0F2854]/60 dark:text-[#7E93AF] flex items-center gap-1.5 mt-0.5 truncate">
+              <p className="text-sm lg:text-xs text-[#0F2854]/60 dark:text-[#7E93AF] flex items-center gap-1.5 mt-0.5 truncate">
                 {meta.province && (
                   <span className="flex items-center gap-1 shrink-0 font-medium">
                     <MapPinIcon className="w-3 h-3 text-[#4988C4]" />
@@ -591,14 +640,14 @@ function FactoryDetail() {
             <div className="flex-1 space-y-4 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-4 bg-[#4988C4] rounded-full" />
-                <h3 className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] uppercase tracking-wider">
+                <h3 className="text-sm lg:text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] uppercase tracking-wider">
                   {t.factories.performanceDashboard} ({name})
                 </h3>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-1">
                 <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl min-h-[104px] flex flex-col justify-center">
-                  <span className="text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
+                  <span className="text-sm lg:text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
                     {t.factories.activeEquipments}
                   </span>
                   <span className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono block mt-1">
@@ -607,7 +656,7 @@ function FactoryDetail() {
                 </div>
 
                 <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl min-h-[104px] flex flex-col justify-center">
-                  <span className="text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
+                  <span className="text-sm lg:text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
                     {t.factories.inspectionsPerformed}
                   </span>
                   <span className="text-2xl font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono block mt-1">
@@ -616,23 +665,23 @@ function FactoryDetail() {
                 </div>
 
                 <div className="p-4 bg-[#F4F7FC] dark:bg-white/5 border border-[#E4EBF6] dark:border-white/8 rounded-2xl min-h-[104px] flex flex-col justify-center">
-                  <span className="text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
+                  <span className="text-sm lg:text-[10px] text-gray-400 dark:text-[#7E93AF] font-bold uppercase tracking-wider block">
                     {t.factories.lastAuditDate}
                   </span>
-                  <span className="text-sm font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono block mt-2 truncate">
+                  <span className="text-base lg:text-sm font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono block mt-2 truncate">
                     {factoryDashboardStats.lastDate}
                   </span>
                 </div>
 
                 <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl min-h-[104px] flex flex-col justify-center">
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">
+                  <span className="text-sm lg:text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">
                     {t.factories.carbonSavingsPotential}
                   </span>
                   <div className="flex items-baseline gap-1 mt-1">
                     <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
                       {factoryDashboardStats.ghgSaved}
                     </span>
-                    <span className="text-[10px] font-semibold text-emerald-600/70 dark:text-emerald-400/70">tCO₂e/yr</span>
+                    <span className="text-xs lg:text-[10px] font-semibold text-emerald-600/70 dark:text-emerald-400/70">tCO₂e/yr</span>
                   </div>
                 </div>
               </div>
@@ -642,7 +691,7 @@ function FactoryDetail() {
             <div className="w-full lg:w-80 flex flex-col shrink-0 space-y-4">
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-4 bg-[#4988C4] rounded-full" />
-                <h4 className="text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
+                <h4 className="text-sm lg:text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider">
                   {t.factories.carbonShareByType}
                 </h4>
               </div>
@@ -656,12 +705,12 @@ function FactoryDetail() {
                       const catColor = CATEGORY_COLORS[item.key] || '#4988C4';
                       return (
                         <div key={item.key} className="space-y-1">
-                          <div className="flex justify-between items-center text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">
+                          <div className="flex justify-between items-center text-sm lg:text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">
                             <div className="flex items-center gap-1.5">
                               <Icon className="w-3.5 h-3.5" style={{ color: catColor }} />
                               <span>{item.name}</span>
                             </div>
-                            <span className="font-mono text-gray-500 dark:text-[#8CA3C0] text-[11px]">
+                            <span className="font-mono text-gray-500 dark:text-[#8CA3C0] text-xs lg:text-[11px]">
                               {item.ghg.toFixed(1)} tCO₂e ({pct}%)
                             </span>
                           </div>
@@ -676,7 +725,7 @@ function FactoryDetail() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-center text-xs text-gray-400 dark:text-[#7E93AF] italic">
+                  <p className="text-center text-sm lg:text-xs text-gray-400 dark:text-[#7E93AF] italic">
                     {t.factories.noSavingsRecorded}
                   </p>
                 )}
@@ -691,7 +740,7 @@ function FactoryDetail() {
                 <ActivityIcon className="w-5 h-5 text-[#4988C4]" />
                 {t.factories.monthlyUsageTitle} ({currentYear})
               </h3>
-              <span className="text-xs text-gray-400 dark:text-[#7E93AF] font-medium bg-[#EEF3FB] dark:bg-white/5 px-3 py-1 rounded-full">
+              <span className="text-sm lg:text-xs text-gray-400 dark:text-[#7E93AF] font-medium bg-[#EEF3FB] dark:bg-white/5 px-3 py-1 rounded-full">
                 {t.factories.monthlyUsageHint}
               </span>
             </div>
@@ -700,7 +749,7 @@ function FactoryDetail() {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
               {monthNames.map((mName, i) => (
                 <div key={i} className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-gray-400 dark:text-[#7E93AF] uppercase text-center">{mName}</label>
+                  <label className="text-xs lg:text-[10px] font-bold text-gray-400 dark:text-[#7E93AF] uppercase text-center">{mName}</label>
                   <input
                     type="number"
                     placeholder="kWh"
@@ -720,40 +769,40 @@ function FactoryDetail() {
             {/* 4 Summary Projection Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-[#EEF3FB] dark:border-white/8">
               <div className="p-3.5 bg-[#F4F7FC] dark:bg-white/5 rounded-2xl border border-[#E4EBF6] dark:border-white/8">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-[#7E93AF]">{t.factories.totalRecorded}</div>
+                <div className="text-xs lg:text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-[#7E93AF]">{t.factories.totalRecorded}</div>
                 <div className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono mt-1">
                   {fmt(totalKWhRecorded)} <span className="text-xs font-sans text-gray-400">kWh</span>
                 </div>
-                <div className="text-[10px] text-gray-400 dark:text-[#7E93AF] mt-0.5">{filledMonths.length} {lang === 'th' ? 'เดือน' : 'months'}</div>
+                <div className="text-xs lg:text-[10px] text-gray-400 dark:text-[#7E93AF] mt-0.5">{filledMonths.length} {lang === 'th' ? 'เดือน' : 'months'}</div>
               </div>
 
               <div className="p-3.5 bg-amber-50/70 dark:bg-amber-500/10 rounded-2xl border border-amber-200/60 dark:border-amber-500/20">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t.factories.annualizedEst}</div>
+                <div className="text-xs lg:text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t.factories.annualizedEst}</div>
                 <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono mt-1">
                   {fmt(annualizedKWh)} <span className="text-xs font-sans text-amber-600/70 dark:text-amber-400/70">kWh/yr</span>
                 </div>
-                <div className="text-[10px] text-amber-600/60 dark:text-amber-400/60 mt-0.5">{t.factories.annualizedHint}</div>
+                <div className="text-xs lg:text-[10px] text-amber-600/60 dark:text-amber-400/60 mt-0.5">{t.factories.annualizedHint}</div>
               </div>
 
               <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-500/10 rounded-2xl border border-emerald-200/60 dark:border-emerald-500/20">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">{t.factories.estCo2Year}</div>
+                <div className="text-xs lg:text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">{t.factories.estCo2Year}</div>
                 <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-1">
                   {annualCo2.toFixed(1)} <span className="text-xs font-sans text-emerald-600/70 dark:text-emerald-400/70">tCO₂e</span>
                 </div>
-                <div className="text-[10px] text-emerald-600/60 dark:text-emerald-400/60 mt-0.5">@ {emissionFactor} kgCO₂e/kWh</div>
+                <div className="text-xs lg:text-[10px] text-emerald-600/60 dark:text-emerald-400/60 mt-0.5">@ {emissionFactor} kgCO₂e/kWh</div>
               </div>
 
               <div className="p-3.5 bg-rose-50/70 dark:bg-rose-500/10 rounded-2xl border border-rose-200/60 dark:border-rose-500/20">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">{t.factories.carbonTaxEst}</div>
+                <div className="text-xs lg:text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">{t.factories.carbonTaxEst}</div>
                 <div className="text-lg font-extrabold text-rose-600 dark:text-rose-400 font-mono mt-1">
                   ฿{fmt(annualTax)}
                 </div>
-                <div className="text-[10px] text-rose-600/60 dark:text-rose-400/60 mt-0.5">@ ฿{carbonTaxRate}/tCO₂e</div>
+                <div className="text-xs lg:text-[10px] text-rose-600/60 dark:text-rose-400/60 mt-0.5">@ ฿{carbonTaxRate}/tCO₂e</div>
               </div>
             </div>
 
             {filledMonths.length === 0 && (
-              <div className="text-center text-xs text-gray-400 dark:text-[#7E93AF] py-2 border-t border-[#EEF3FB] dark:border-white/8">
+              <div className="text-center text-sm lg:text-xs text-gray-400 dark:text-[#7E93AF] py-2 border-t border-[#EEF3FB] dark:border-white/8">
                 {t.factories.monthlyInputPrompt}
               </div>
             )}
@@ -818,7 +867,7 @@ function FactoryDetail() {
                             </span>
                             <div>
                               <p className="font-extrabold text-sm text-[#0F2854] dark:text-[#E7EEF7] font-mono">{eq.id}</p>
-                              <p className="text-[11px] text-gray-400 dark:text-[#7E93AF]">
+                              <p className="text-xs lg:text-[11px] text-gray-400 dark:text-[#7E93AF]">
                                 {cat?.label || eq.category} &bull; {eq.brandModel || '-'}
                               </p>
                             </div>
@@ -831,25 +880,25 @@ function FactoryDetail() {
                         {/* Stats Row */}
                         <div className="grid grid-cols-3 gap-2 py-2 border-y border-[#EEF3FB] dark:border-white/8 text-center">
                           <div>
-                            <div className="text-[9px] font-bold uppercase text-gray-400">kWh/yr</div>
-                            <div className="text-xs font-extrabold text-amber-500 font-mono">{fmt(eq.kWhYear / 1000, 0)}k</div>
+                            <div className="text-[10px] lg:text-[9px] font-bold uppercase text-gray-400">kWh/yr</div>
+                            <div className="text-sm lg:text-xs font-extrabold text-amber-500 font-mono">{fmt(eq.kWhYear / 1000, 0)}k</div>
                           </div>
                           <div>
-                            <div className="text-[9px] font-bold uppercase text-gray-400">CO₂/yr</div>
-                            <div className="text-xs font-extrabold text-emerald-500 font-mono">{eq.co2PerYear.toFixed(1)}t</div>
+                            <div className="text-[10px] lg:text-[9px] font-bold uppercase text-gray-400">CO₂/yr</div>
+                            <div className="text-sm lg:text-xs font-extrabold text-emerald-500 font-mono">{eq.co2PerYear.toFixed(1)}t</div>
                           </div>
                           <div>
-                            <div className="text-[9px] font-bold uppercase text-gray-400">Tax/yr</div>
-                            <div className="text-xs font-extrabold text-rose-500 font-mono">฿{fmt(eq.taxPerYear)}</div>
+                            <div className="text-[10px] lg:text-[9px] font-bold uppercase text-gray-400">Tax/yr</div>
+                            <div className="text-sm lg:text-xs font-extrabold text-rose-500 font-mono">฿{fmt(eq.taxPerYear)}</div>
                           </div>
                         </div>
 
                         {/* Action Badge */}
                         <div className={`p-2.5 rounded-xl border ${actionBg}`}>
-                          <p className={`text-xs font-bold flex items-center gap-1.5 ${actionColor}`}>
+                          <p className={`text-sm lg:text-xs font-bold flex items-center gap-1.5 ${actionColor}`}>
                             <ActionIcon className="w-3.5 h-3.5 shrink-0" /> {action}
                           </p>
-                          <p className="text-[11px] text-gray-500 dark:text-[#8CA3C0] mt-0.5 leading-relaxed">{actionDesc}</p>
+                          <p className="text-xs lg:text-[11px] text-gray-500 dark:text-[#8CA3C0] mt-0.5 leading-relaxed">{actionDesc}</p>
                         </div>
 
                         {/* Suggested Model info */}
@@ -859,19 +908,19 @@ function FactoryDetail() {
                               <SparkleIcon className="w-3.5 h-3.5" />
                               {t.factories.suggestedReplacement}
                             </div>
-                            <p className="text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">
+                            <p className="text-sm lg:text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7]">
                               {eq.suggested.brand} {eq.suggested.model}
                             </p>
                             {eq.suggested.spec && (
-                              <p className="text-[10px] text-gray-500 dark:text-[#8CA3C0]">{eq.suggested.spec}</p>
+                              <p className="text-xs lg:text-[10px] text-gray-500 dark:text-[#8CA3C0]">{eq.suggested.spec}</p>
                             )}
-                            <div className="flex justify-between items-center pt-1 text-[10px] border-t border-[#4988C4]/15">
+                            <div className="flex justify-between items-center pt-1 text-xs lg:text-[10px] border-t border-[#4988C4]/15">
                               <span className="text-gray-500 dark:text-[#8CA3C0]">{t.factories.estSavingsYear}:</span>
                               <span className="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
                                 ฿{fmt(eq.bahtSaved)}
                               </span>
                             </div>
-                            <div className="flex justify-between items-center text-[10px]">
+                            <div className="flex justify-between items-center text-xs lg:text-[10px]">
                               <span className="text-gray-500 dark:text-[#8CA3C0]">{t.factories.estPayback}:</span>
                               <span className="font-extrabold text-amber-600 dark:text-amber-400 font-mono">
                                 {eq.paybackYears ? `${eq.paybackYears.toFixed(1)} ${lang === 'th' ? 'ปี' : 'yr'}` : '-'}
@@ -885,7 +934,7 @@ function FactoryDetail() {
                 })}
               </div>
             ) : (
-              <div className="text-center text-xs text-gray-400 dark:text-[#7E93AF] py-8 border border-dashed border-[#E4EBF6] dark:border-white/10 rounded-2xl">
+              <div className="text-center text-sm lg:text-xs text-gray-400 dark:text-[#7E93AF] py-8 border border-dashed border-[#E4EBF6] dark:border-white/10 rounded-2xl">
                 {t.factories.addEquipmentToSeeAdvisor}
               </div>
             )}
@@ -893,7 +942,7 @@ function FactoryDetail() {
 
           {/* ===== 4. Category Breakdown Filter Pills ===== */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider flex items-center gap-1.5">
+            <h3 className="text-sm lg:text-xs font-bold text-gray-500 dark:text-[#8CA3C0] uppercase tracking-wider flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#4988C4]" />
               {t.factories.categorySummary}
             </h3>
@@ -913,11 +962,11 @@ function FactoryDetail() {
                   <LayoutGridIcon className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-[#8CA3C0] truncate">
+                  <p className="text-xs lg:text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-[#8CA3C0] truncate">
                     {t.factories.allTypes}
                   </p>
                   <p className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono mt-0.5">
-                    {equipment.length} <span className="text-[10px] font-sans font-normal text-gray-400">{t.factories.units}</span>
+                    {equipment.length} <span className="text-xs lg:text-[10px] font-sans font-normal text-gray-400">{t.factories.units}</span>
                   </p>
                 </div>
               </button>
@@ -943,11 +992,11 @@ function FactoryDetail() {
                       <Icon className="w-5 h-5 text-[#4988C4]" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-[#8CA3C0] truncate" title={c.label}>
+                      <p className="text-xs lg:text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-[#8CA3C0] truncate" title={c.label}>
                         {c.label}
                       </p>
                       <p className="text-lg font-extrabold text-[#0F2854] dark:text-[#E7EEF7] font-mono mt-0.5">
-                        {c.count} <span className="text-[10px] font-sans font-normal text-gray-400">{t.factories.units}</span>
+                        {c.count} <span className="text-xs lg:text-[10px] font-sans font-normal text-gray-400">{t.factories.units}</span>
                       </p>
                     </div>
                   </button>
@@ -958,7 +1007,7 @@ function FactoryDetail() {
 
           {/* ===== 5. Equipment List Table ===== */}
           <Panel className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="text-base font-extrabold text-[#0F2854] dark:text-[#E7EEF7]">
                 {t.factories.equipmentInFactory} ({filteredEquipment.length})
               </h3>
@@ -966,7 +1015,7 @@ function FactoryDetail() {
                 <button
                   type="button"
                   onClick={() => navigate('/equipment', { state: { openAdd: true, factory: name } })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-xs font-bold shadow-sm transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm lg:text-xs font-bold shadow-sm transition-all active:scale-95"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -976,7 +1025,7 @@ function FactoryDetail() {
                 <button
                   type="button"
                   onClick={() => navigate('/equipment')}
-                  className="text-xs font-bold text-[#4988C4] hover:underline"
+                  className="text-sm lg:text-xs font-bold text-[#4988C4] hover:underline"
                 >
                   {t.factories.viewDetails} &rarr;
                 </button>
@@ -992,7 +1041,7 @@ function FactoryDetail() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-[#0F2854] dark:text-[#E7EEF7]">{t.factories.noEquipmentInFactory}</p>
-                  <p className="text-xs text-gray-400 dark:text-[#7E93AF] mt-1">กดปุ่มด้านล่างเพื่อลงทะเบียนอุปกรณ์เครื่องแรกในโรงงานนี้</p>
+                  <p className="text-sm lg:text-xs text-gray-400 dark:text-[#7E93AF] mt-1">กดปุ่มด้านล่างเพื่อลงทะเบียนอุปกรณ์เครื่องแรกในโรงงานนี้</p>
                 </div>
                 <button
                   type="button"
@@ -1009,7 +1058,7 @@ function FactoryDetail() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead>
-                    <tr className="text-xs text-gray-400 dark:text-[#7E93AF] border-b border-[#EEF3FB] dark:border-white/8 uppercase">
+                    <tr className="text-sm lg:text-xs text-gray-400 dark:text-[#7E93AF] border-b border-[#EEF3FB] dark:border-white/8 uppercase">
                       <th className="py-3 px-3 font-bold">{t.factories.tagOrId}</th>
                       <th className="py-3 px-3 font-bold">Category</th>
                       <th className="py-3 px-3 font-bold">{t.factories.buildingOrDept}</th>
