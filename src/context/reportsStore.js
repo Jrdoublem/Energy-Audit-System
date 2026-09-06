@@ -1,7 +1,7 @@
 // Saved M&V reports, backed by Firestore (collection 'reports'). Reads and
 // writes are open to any signed-in user — same as measures/history.
 import {
-  collection, doc, getDocs, setDoc, deleteDoc,
+  collection, doc, getDocs, setDoc, deleteDoc, onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 
@@ -10,6 +10,12 @@ const REPORTS_COLLECTION = 'reports';
 export async function fetchAllReports() {
   const snap = await getDocs(collection(db, REPORTS_COLLECTION));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToAllReports(callback) {
+  return onSnapshot(collection(db, REPORTS_COLLECTION), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
 }
 
 export async function saveReportItem(record) {

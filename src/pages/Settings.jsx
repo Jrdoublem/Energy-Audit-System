@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel, SectionHeader } from '../components/ui';
 import { getSession } from '../context/authStore.js';
-import { fetchAllEquipment, fetchAllCategories } from '../context/equipmentStore.js';
+import { subscribeToAllEquipment, fetchAllCategories } from '../context/equipmentStore.js';
 import { useLang } from '../context/languageStore.js';
 import {
   ArrowRightIcon, CalculatorIcon, ClipboardIcon, FactoryIcon, GaugeIcon, GearIcon, ShieldIcon,
@@ -26,8 +26,9 @@ function Settings() {
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
+    const unsubscribe = subscribeToAllEquipment(setEquipment);
     fetchAllCategories().then((cats) => setCategories(cats.filter((c) => c.key !== 'all'))).catch(() => setCategories([]));
+    return unsubscribe;
   }, []);
 
   const equipCounts = useMemo(

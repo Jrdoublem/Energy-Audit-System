@@ -6,8 +6,8 @@ import { Combobox } from '../components/Dropdown.jsx';
 import {
   getSession, fetchAllUsers, createUserAccount, updateUserAccount, deleteUserAccount,
 } from '../context/authStore.js';
-import { readFactories, fetchAllFactoryRecords } from '../context/factoryStore.js';
-import { fetchAllEquipment } from '../context/equipmentStore.js';
+import { readFactories, subscribeToAllFactoryRecords } from '../context/factoryStore.js';
+import { subscribeToAllEquipment } from '../context/equipmentStore.js';
 import { DEFAULT_SETTINGS, fetchSettings, saveSettingsItem } from '../context/settingsStore.js';
 import { useLang } from '../context/languageStore.js';
 import {
@@ -85,9 +85,13 @@ function AdminPanel() {
 
   useEffect(() => {
     fetchAllUsers().then(setUsers).catch(() => setUsers([]));
-    fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
-    fetchAllFactoryRecords().then(setFactoryRecords).catch(() => setFactoryRecords([]));
     fetchSettings().then(setSettings).catch(() => {});
+    const unsubEquipment = subscribeToAllEquipment(setEquipment);
+    const unsubFactoryRecords = subscribeToAllFactoryRecords(setFactoryRecords);
+    return () => {
+      unsubEquipment();
+      unsubFactoryRecords();
+    };
   }, []);
 
   const allFactories = useMemo(() => readFactories(undefined, equipment, factoryRecords), [equipment, factoryRecords]);

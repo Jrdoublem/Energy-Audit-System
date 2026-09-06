@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout, { RoleBadge, FactorySelect } from '../../layouts/AppLayout';
 import { matchesFactory, useFactory } from '../../context/factoryStore.js';
-import { fetchAllMeasures } from '../../context/measuresStore.js';
-import { fetchAllHistory, deleteHistoryItem } from '../../context/historyStore.js';
-import { fetchAllEquipment } from '../../context/equipmentStore.js';
+import { subscribeToAllMeasures } from '../../context/measuresStore.js';
+import { subscribeToAllHistory, deleteHistoryItem } from '../../context/historyStore.js';
+import { subscribeToAllEquipment } from '../../context/equipmentStore.js';
 import { getSession } from '../../context/authStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { GlassSearchInput, GlassSelect, Panel, PageHeader } from '../../components/ui';
@@ -74,18 +74,19 @@ function History() {
   const [equipmentList, setEquipmentList] = useState([]);
   const [allMeasures, setAllMeasures] = useState([]);
 
+  // Live listeners rather than one-time fetches — serve cached data
+  // immediately when offline instead of a one-shot getDocs() call.
   useEffect(() => {
-    fetchAllHistory()
-      .then((list) => setRecords([...list].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt))))
-      .catch(() => setRecords([]));
-
-    fetchAllEquipment()
-      .then(setEquipmentList)
-      .catch(() => setEquipmentList([]));
-
-    fetchAllMeasures()
-      .then(setAllMeasures)
-      .catch(() => setAllMeasures([]));
+    const unsubHistory = subscribeToAllHistory((list) => {
+      setRecords([...list].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)));
+    });
+    const unsubEquipment = subscribeToAllEquipment(setEquipmentList);
+    const unsubMeasures = subscribeToAllMeasures(setAllMeasures);
+    return () => {
+      unsubHistory();
+      unsubEquipment();
+      unsubMeasures();
+    };
   }, []);
 
   const getMeasuresForEquipment = (equipmentId) =>

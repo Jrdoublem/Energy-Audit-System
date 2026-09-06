@@ -7,10 +7,10 @@ import { matchesFactory, useFactory } from '../../context/factoryStore.js';
 import { useLang } from '../../context/languageStore.js';
 import { getSession } from '../../context/authStore.js';
 import {
-  fetchAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem, deleteCategoryItem,
+  subscribeToAllEquipment, saveEquipmentItem, deleteEquipmentItem, fetchAllCategories, saveCategoryItem, deleteCategoryItem,
 } from '../../context/equipmentStore.js';
 import { fetchAllCatalogItems } from '../../context/catalogStore.js';
-import { fetchAllMeasures } from '../../context/measuresStore.js';
+import { subscribeToAllMeasures } from '../../context/measuresStore.js';
 import { deleteImage } from '../../context/storageStore.js';
 import { Combobox, Select } from '../../components/Dropdown.jsx';
 import CalcModal from './CalcModal';
@@ -160,11 +160,20 @@ function Equipment() {
   const [savedToast, setSavedToast] = useState(false);
   const catScrollRef = useRef(null);
 
+  // Equipment and measures use a live listener rather than a one-time fetch —
+  // Firestore's onSnapshot serves cached data immediately when offline (and
+  // keeps it live once back online), which is more reliable offline than a
+  // one-shot getDocs() call. Categories/catalog items change far less often
+  // and aren't core page content, so a plain fetch is fine for those.
   useEffect(() => {
     fetchAllCategories().then(setCategories).catch(() => setCategories([]));
-    fetchAllEquipment().then(setEquipment).catch(() => setEquipment([]));
     fetchAllCatalogItems().then(setCatalogItems).catch(() => setCatalogItems([]));
-    fetchAllMeasures().then(setMeasures).catch(() => setMeasures([]));
+    const unsubEquipment = subscribeToAllEquipment(setEquipment);
+    const unsubMeasures = subscribeToAllMeasures(setMeasures);
+    return () => {
+      unsubEquipment();
+      unsubMeasures();
+    };
   }, []);
 
   // Auto-open add form when navigated from a factory page with state.openAdd

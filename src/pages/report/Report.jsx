@@ -23,7 +23,7 @@ import {
   PencilIcon,
   FactoryIcon,
 } from '../../components/icons';
-import { fetchAllReports, saveReportItem, deleteReportItem } from '../../context/reportsStore.js';
+import { subscribeToAllReports, saveReportItem, deleteReportItem } from '../../context/reportsStore.js';
 import ReportPrintPreview from './ReportPrintPreview.jsx';
 
 function formatThaiDate(iso) {
@@ -47,10 +47,13 @@ export default function Report() {
   const [showPreview, setShowPreview] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
 
+  // Live listener rather than a one-time fetch — serves cached data
+  // immediately when offline instead of a one-shot getDocs() call.
   useEffect(() => {
-    fetchAllReports()
-      .then((list) => setReports([...list].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))))
-      .catch(() => setReports([]));
+    const unsubscribe = subscribeToAllReports((list) => {
+      setReports([...list].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)));
+    });
+    return unsubscribe;
   }, []);
 
   const filteredReports = useMemo(() => {

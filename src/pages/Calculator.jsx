@@ -297,7 +297,7 @@ export default function Calculator() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* 1. CIRCLE & PIPE GEOMETRY */}
             {show('area') && (
-              <Panel className="p-5 space-y-4 rounded-3xl border-t-4 border-t-[#4988C4]">
+              <Panel className="p-5 rounded-3xl border-t-4 border-t-[#4988C4] h-full flex flex-col gap-4">
                 <SectionHeader
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -357,7 +357,7 @@ export default function Calculator() {
                 <button
                   type="button"
                   onClick={calcCircle}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-[#0F2854] to-[#4988C4]"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-[#0F2854] to-[#4988C4]"
                 >
                   <CalculatorIcon className="w-4 h-4" />
                   คำนวณขนาดและพื้นที่หน้าตัด
@@ -392,7 +392,7 @@ export default function Calculator() {
 
             {/* 2. TEMPERATURE CONVERTER */}
             {show('temp') && (
-              <Panel className="p-5 space-y-4 rounded-3xl border-t-4 border-t-amber-500">
+              <Panel className="p-5 rounded-3xl border-t-4 border-t-amber-500 h-full flex flex-col gap-4">
                 <SectionHeader
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -441,7 +441,7 @@ export default function Calculator() {
                 <button
                   type="button"
                   onClick={calcTemp}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-amber-600 to-orange-500"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-amber-600 to-orange-500"
                 >
                   <ThermometerIcon className="w-4 h-4" />
                   แปลงค่าอุณหภูมิ
@@ -466,7 +466,7 @@ export default function Calculator() {
 
             {/* 3. FLOW RATE CONVERTER & COOLING TR */}
             {show('flow') && (
-              <Panel className="p-5 space-y-4 rounded-3xl border-t-4 border-t-sky-500">
+              <Panel className="p-5 rounded-3xl border-t-4 border-t-sky-500 h-full flex flex-col gap-4">
                 <SectionHeader
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -523,7 +523,7 @@ export default function Calculator() {
                 <button
                   type="button"
                   onClick={calcFlow}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-sky-600 to-blue-600"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-sky-600 to-blue-600"
                 >
                   <DropletIcon className="w-4 h-4" />
                   แปลงอัตราการไหลและคำนวณ TR
@@ -563,7 +563,7 @@ export default function Calculator() {
 
             {/* 4. CHILLER PLANT SYSTEM EFFICIENCY */}
             {show('chiller') && (
-              <Panel className="p-5 space-y-4 rounded-3xl border-t-4 border-t-emerald-500">
+              <Panel className="p-5 rounded-3xl border-t-4 border-t-emerald-500 h-full flex flex-col gap-4">
                 <SectionHeader
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -634,7 +634,7 @@ export default function Calculator() {
                 <button
                   type="button"
                   onClick={calcPlant}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-emerald-600 to-teal-600"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-emerald-600 to-teal-600"
                 >
                   <LightningIcon className="w-4 h-4" />
                   คำนวณประสิทธิภาพ Chiller Plant ทั้งระบบ
@@ -672,7 +672,7 @@ export default function Calculator() {
 
             {/* 5. PIPE FLOW & VELOCITY */}
             {show('length') && (
-              <Panel className="p-5 space-y-4 rounded-3xl border-t-4 border-t-indigo-500">
+              <Panel className="p-5 rounded-3xl border-t-4 border-t-indigo-500 h-full flex flex-col gap-4">
                 <SectionHeader
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -710,7 +710,7 @@ export default function Calculator() {
                 <button
                   type="button"
                   onClick={calcPipe}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-indigo-600 to-blue-600"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-indigo-600 to-blue-600"
                 >
                   <CalculatorIcon className="w-4 h-4" />
                   คำนวณพื้นที่และขนาดท่อ
@@ -733,7 +733,7 @@ export default function Calculator() {
 
             {/* 6. RECTANGLE AREA */}
             {show('area') && (
-              <Panel className="p-5 space-y-4 rounded-3xl border-t-4 border-t-purple-500">
+              <Panel className="p-5 rounded-3xl border-t-4 border-t-purple-500 h-full flex flex-col gap-4">
                 <SectionHeader
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -771,7 +771,7 @@ export default function Calculator() {
                 <button
                   type="button"
                   onClick={calcRect}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-purple-600 to-indigo-600"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-purple-600 to-indigo-600"
                 >
                   <CalculatorIcon className="w-4 h-4" />
                   คำนวณพื้นที่และความยาวรอบรูป
@@ -793,7 +793,7 @@ export default function Calculator() {
 
             {/* 7. CYLINDER VOLUME */}
             {show('area') && (
-              <Panel className="p-5 space-y-4 rounded-3xl border-t-4 border-t-teal-500">
+              <Panel className="p-5 rounded-3xl border-t-4 border-t-teal-500 h-full flex flex-col gap-4">
                 <SectionHeader
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -831,7 +831,7 @@ export default function Calculator() {
                 <button
                   type="button"
                   onClick={calcCyl}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-teal-600 to-emerald-600"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-teal-600 to-emerald-600"
                 >
                   <CalculatorIcon className="w-4 h-4" />
                   คำนวณปริมาตรและพื้นที่ผิว
@@ -853,7 +853,7 @@ export default function Calculator() {
 
             {/* 8. PERCENTAGE CHANGE */}
             {show('math') && (
-              <Panel className="p-5 space-y-4 rounded-3xl border-t-4 border-t-rose-500">
+              <Panel className="p-5 rounded-3xl border-t-4 border-t-rose-500 h-full flex flex-col gap-4">
                 <SectionHeader
                   title={
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -891,7 +891,7 @@ export default function Calculator() {
                 <button
                   type="button"
                   onClick={calcPct}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-rose-600 to-pink-600"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity bg-gradient-to-r from-rose-600 to-pink-600"
                 >
                   <CalculatorIcon className="w-4 h-4" />
                   คำนวณร้อยละการเปลี่ยนแปลง

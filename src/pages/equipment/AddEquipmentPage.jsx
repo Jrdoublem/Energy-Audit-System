@@ -5,7 +5,8 @@ import { useLang } from '../../context/languageStore.js';
 import { fetchAllHistory } from '../../context/historyStore.js';
 import { getSession } from '../../context/authStore.js';
 import { fileToResizedDataUrl } from '../../utils/image.js';
-import { uploadImage, deleteImage } from '../../context/storageStore.js';
+import { deleteImage } from '../../context/storageStore.js';
+import { uploadImageWithFallback, getPendingImagesForDoc, cancelPendingImageByDataUrl } from '../../context/offlineImageQueue.js';
 import {
   ArrowLeftIcon,
   CameraIcon,
@@ -78,18 +79,49 @@ export default function AddEquipmentPage({
   const [imageError, setImageError] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
 
+  // Photos queued offline (see offlineImageQueue.js) for this equipment ID
+  // still show here if the page is reloaded before they've finished
+  // uploading — otherwise they'd look lost until the next successful sync.
+  useEffect(() => {
+    if (!form.id) return;
+    getPendingImagesForDoc('equipment', form.id).then((pending) => {
+      if (!pending.length) return;
+      setForm((p) => {
+        const already = new Set(p.images);
+        const toAdd = pending.map((item) => item.dataUrl).filter((u) => !already.has(u));
+        return toAdd.length ? { ...p, images: [...p.images, ...toAdd] } : p;
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleImageChange = async (e) => {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
     const remaining = MAX_EQUIPMENT_IMAGES - form.images.length;
     if (!files.length || remaining <= 0) return;
+    if (!form.id) {
+      setImageError('กรุณาระบุรหัสอุปกรณ์ก่อนแนบรูปภาพ');
+      return;
+    }
     setImageError('');
     setImageUploading(true);
     try {
       const urls = [];
       for (const file of files.slice(0, remaining)) {
         const dataUrl = await fileToResizedDataUrl(file);
-        urls.push(await uploadImage(dataUrl, 'equipment'));
+        // Uploads normally when online; if that's not working right now
+        // (no signal, or a slow/failing connection), shows the photo from
+        // its local copy immediately and queues the real upload for later
+        // instead of losing it or blocking the form on a retry.
+        const { src } = await uploadImageWithFallback({
+          dataUrl,
+          folder: 'equipment',
+          targetCollection: 'equipment',
+          targetDocId: form.id,
+          targetField: 'images',
+        });
+        urls.push(src);
       }
       setForm((p) => ({ ...p, images: [...p.images, ...urls] }));
     } catch (err) {
@@ -102,7 +134,13 @@ export default function AddEquipmentPage({
 
   const handleRemoveImage = (url) => {
     setForm((p) => ({ ...p, images: p.images.filter((u) => u !== url) }));
-    deleteImage(url);
+    if (url.startsWith('data:')) {
+      // Still queued, never actually uploaded — cancel it, or it would
+      // reappear once the offline queue next flushes.
+      if (form.id) cancelPendingImageByDataUrl('equipment', form.id, url);
+    } else {
+      deleteImage(url);
+    }
   };
 
   const [commentsList, setCommentsList] = useState(() => initialData.comments || []);
@@ -226,6 +264,11 @@ export default function AddEquipmentPage({
         id: form.id.trim(),
         brandModel: `${form.brand || ''} ${form.model || ''}`.trim() || form.brandModel || '',
         comments: finalComments,
+        // Photos still queued offline are raw data URLs (see handleImageChange)
+        // — too large to store inline in the document (Firestore's 1 MiB/doc
+        // limit), so they're left out here and patched in via arrayUnion once
+        // offlineImageQueue.js actually uploads them.
+        images: form.images.filter((url) => !url.startsWith('data:')),
       };
       await onSave(fullData);
     } catch (err) {

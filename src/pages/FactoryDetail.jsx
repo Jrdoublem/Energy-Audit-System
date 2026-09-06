@@ -4,11 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { Panel } from '../components/ui';
 import {
-  computeFactoryStats, getFactoryMeta, fetchAllFactoryRecords, saveFactoryRecord,
+  computeFactoryStats, getFactoryMeta, subscribeToAllFactoryRecords, saveFactoryRecord,
 } from '../context/factoryStore.js';
-import { fetchAllCategories, fetchAllEquipment, saveEquipmentItem } from '../context/equipmentStore.js';
-import { fetchAllMeasures } from '../context/measuresStore.js';
-import { fetchAllHistory } from '../context/historyStore.js';
+import { fetchAllCategories, subscribeToAllEquipment, saveEquipmentItem } from '../context/equipmentStore.js';
+import { subscribeToAllMeasures } from '../context/measuresStore.js';
+import { subscribeToAllHistory } from '../context/historyStore.js';
 import { fetchAllCatalogItems } from '../context/catalogStore.js';
 import { fetchSettings, getEmissionFactorValue } from '../context/settingsStore.js';
 import { getSession } from '../context/authStore.js';
@@ -149,9 +149,8 @@ function MonthlyUsageChart({ data, lang }) {
   const textColor = isDark ? '#7E93AF' : '#8CA3C0';
 
   return (
-    <div ref={viewportRef} className="w-full">
-      <div className={needsScroll ? 'overflow-x-auto -mx-1 px-1' : ''}>
-      <div className="relative" style={needsScroll ? { width: W } : undefined}>
+    <div ref={viewportRef} className="w-full relative">
+      <div ref={scrollBoxRef} className={needsScroll ? 'overflow-x-auto -mx-1 px-1' : ''}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
@@ -211,14 +210,16 @@ function MonthlyUsageChart({ data, lang }) {
           </text>
         ))}
       </svg>
+      </div>
 
-      {/* Floating Tooltip — lives in the same (scrolling) coordinate space as
-          the svg so its percentage-based position stays aligned while scrolled */}
+      {/* Floating Tooltip — rendered outside the scroll container (which
+          clips anything overflowing it, including a tooltip floating above
+          its anchor) and repositioned in raw px to account for scroll */}
       {hoverIdx !== null && points[hoverIdx]?.y !== null && (
         <div
           className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-full mb-2 bg-[#0F2854] dark:bg-[#1C4D8D] text-white text-xs font-mono px-3 py-1.5 rounded-xl shadow-lg border border-white/10"
           style={{
-            left: `${(points[hoverIdx].x / W) * 100}%`,
+            left: `${points[hoverIdx].x - scrollLeft}px`,
             top: `${(points[hoverIdx].y / H) * 100}%`,
           }}
         >
@@ -226,8 +227,6 @@ function MonthlyUsageChart({ data, lang }) {
           <p className="font-bold">{fmt(points[hoverIdx].val)} kWh</p>
         </div>
       )}
-      </div>
-      </div>
       {needsScroll && (
         <p className="text-[10px] text-gray-400 dark:text-[#7E93AF] text-center mt-1">{lang === 'th' ? 'เลื่อนซ้าย-ขวาเพื่อดูเดือนอื่น' : 'Scroll to see more months'}</p>
       )}
@@ -255,19 +254,29 @@ function FactoryDetail() {
 
   const refreshData = () => {
     fetchAllCategories().then(setCategories).catch(() => setCategories([]));
-    fetchAllEquipment().then(setAllEquipment).catch(() => setAllEquipment([]));
-    fetchAllMeasures().then(setMeasures).catch(() => setMeasures([]));
-    fetchAllHistory().then(setHistory).catch(() => setHistory([]));
     fetchAllCatalogItems().then(setCatalogItems).catch(() => setCatalogItems([]));
-    fetchAllFactoryRecords().then(setFactoryRecords).catch(() => setFactoryRecords([]));
     fetchSettings().then((s) => {
       setSettings(s || {});
       setDefaultOperatingHours(s?.defaultOperatingHours || '8000');
     }).catch(() => {});
   };
 
+  // Equipment/measures/history/factory records use live listeners rather than
+  // one-time fetches — Firestore's onSnapshot serves cached data immediately
+  // when offline (and stays live once back online), which held up in testing
+  // far better than a one-shot getDocs() call for this page's core content.
   useEffect(() => {
     refreshData();
+    const unsubEquipment = subscribeToAllEquipment(setAllEquipment);
+    const unsubMeasures = subscribeToAllMeasures(setMeasures);
+    const unsubHistory = subscribeToAllHistory(setHistory);
+    const unsubFactoryRecords = subscribeToAllFactoryRecords(setFactoryRecords);
+    return () => {
+      unsubEquipment();
+      unsubMeasures();
+      unsubHistory();
+      unsubFactoryRecords();
+    };
   }, []);
 
   const equipment = useMemo(() => allEquipment.filter((e) => e.factory === name), [allEquipment, name]);
@@ -588,6 +597,17 @@ function FactoryDetail() {
                     <PencilIcon className="w-3.5 h-3.5" />
                   </button>
                 )}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={openAddEquipment}
+                    title={t.factories.addNewEquipment}
+                    className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-full sm:rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95 shrink-0"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{t.factories.addNewEquipment}</span>
+                  </button>
+                )}
               </div>
               <p className="text-sm lg:text-xs text-[#0F2854]/60 dark:text-[#7E93AF] flex items-center gap-1.5 mt-0.5 truncate">
                 {meta.province && (
@@ -599,19 +619,6 @@ function FactoryDetail() {
                 {meta.description && <span>&bull; {meta.description}</span>}
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={openAddEquipment}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#0F2854] hover:bg-[#1C4D8D] text-white text-sm font-bold shadow-md shadow-[#0F2854]/20 transition-all active:scale-95"
-              >
-                <PlusIcon className="w-4 h-4" />
-                {t.factories.addNewEquipment}
-              </button>
-            )}
           </div>
         </div>
 
@@ -638,11 +645,16 @@ function FactoryDetail() {
             <>
           <Panel className="p-6 relative overflow-hidden group hover:border-[#4988C4]/40 transition-all flex flex-col lg:flex-row gap-6">
             <div className="flex-1 space-y-4 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-[#4988C4] rounded-full" />
-                <h3 className="text-sm lg:text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] uppercase tracking-wider">
-                  {t.factories.performanceDashboard} ({name})
-                </h3>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-4 bg-[#4988C4] rounded-full" />
+                  <h3 className="text-sm lg:text-xs font-bold text-[#0F2854] dark:text-[#E7EEF7] uppercase tracking-wider">
+                    {t.factories.performanceDashboard}
+                  </h3>
+                </div>
+                <p className="text-xs lg:text-[11px] text-gray-400 dark:text-[#7E93AF] font-semibold pl-3.5">
+                  {name}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-1">

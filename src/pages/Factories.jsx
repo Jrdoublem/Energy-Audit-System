@@ -5,12 +5,12 @@ import AppLayout from '../layouts/AppLayout';
 import { Panel } from '../components/ui';
 import {
   computeFactoryStats, FACTORY_NAME_PREFIX, getFactoryMeta,
-  fetchAllFactoryRecords, saveFactoryRecord, deleteFactoryRecord, readFactories,
+  subscribeToAllFactoryRecords, saveFactoryRecord, deleteFactoryRecord, readFactories,
 } from '../context/factoryStore.js';
 import { getSession, fetchAllUsers } from '../context/authStore.js';
-import { fetchAllEquipment } from '../context/equipmentStore.js';
-import { fetchAllMeasures } from '../context/measuresStore.js';
-import { fetchAllHistory } from '../context/historyStore.js';
+import { subscribeToAllEquipment } from '../context/equipmentStore.js';
+import { subscribeToAllMeasures } from '../context/measuresStore.js';
+import { subscribeToAllHistory } from '../context/historyStore.js';
 import { fetchSettings } from '../context/settingsStore.js';
 import {
   ActivityIcon, ArrowRightIcon, FactoryIcon, LightningIcon,
@@ -144,20 +144,22 @@ function Factories() {
   const session = getSession();
   const isAdmin = session.role === 'admin';
 
+  // Equipment/measures/history/factory records use live listeners rather than
+  // one-time fetches — serve cached data immediately when offline instead of
+  // a one-shot getDocs() call.
   const [equipment, setEquipment] = useState([]);
-  useEffect(() => { fetchAllEquipment().then(setEquipment).catch(() => setEquipment([])); }, []);
+  useEffect(() => subscribeToAllEquipment(setEquipment), []);
   const [measures, setMeasures] = useState([]);
-  useEffect(() => { fetchAllMeasures().then(setMeasures).catch(() => setMeasures([])); }, []);
+  useEffect(() => subscribeToAllMeasures(setMeasures), []);
   const [history, setHistory] = useState([]);
-  useEffect(() => { fetchAllHistory().then(setHistory).catch(() => setHistory([])); }, []);
+  useEffect(() => subscribeToAllHistory(setHistory), []);
   const [defaultOperatingHours, setDefaultOperatingHours] = useState('8000');
   useEffect(() => { fetchSettings().then((s) => setDefaultOperatingHours(s.defaultOperatingHours)).catch(() => {}); }, []);
   const [users, setUsers] = useState([]);
   useEffect(() => { fetchAllUsers().then(setUsers).catch(() => setUsers([])); }, []);
 
   const [factoryRecords, setFactoryRecords] = useState([]);
-  const refreshFactoryRecords = () => fetchAllFactoryRecords().then(setFactoryRecords).catch(() => setFactoryRecords([]));
-  useEffect(() => { refreshFactoryRecords(); }, []);
+  useEffect(() => subscribeToAllFactoryRecords(setFactoryRecords), []);
 
   const factories = useMemo(() => readFactories(undefined, equipment, factoryRecords), [equipment, factoryRecords]);
 
@@ -233,14 +235,12 @@ function Factories() {
     } else if (modalMode === 'edit' && editingName) {
       await saveFactoryRecord(editingName, { description: form.description.trim(), province: form.province.trim(), image: form.image });
     }
-    await refreshFactoryRecords();
     setModalMode(null);
   };
 
   const handleRemoveFactory = async (name) => {
     const meta = getFactoryMeta(name, factoryRecords);
     await deleteFactoryRecord(name);
-    await refreshFactoryRecords();
     if (meta.image) deleteImage(meta.image);
   };
 
